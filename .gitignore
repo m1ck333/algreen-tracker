@@ -1,0 +1,24 @@
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+.vite
+.DS_Store
+*.log
+
+# TypeScript build output (composite project refs)
+apps/**/*.js
+apps/**/*.js.map
+apps/**/*.d.ts
+apps/**/*.d.ts.map
+packages/**/*.js
+packages/**/*.js.map
+packages/**/*.d.ts
+packages/**/*.d.ts.map
+
+# Keep config JS files
+!apps/**/vite.config.ts
+!apps/**/tailwind.config.js
+!apps/**/postcss.config.js

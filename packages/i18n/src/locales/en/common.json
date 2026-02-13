@@ -1,0 +1,112 @@
+{
+  "appName": "AlGreen MES",
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "back": "Back",
+    "view": "View",
+    "approve": "Approve",
+    "reject": "Reject",
+    "logout": "Logout",
+    "signIn": "Sign In",
+    "filter": "Filter",
+    "configure": "Configure",
+    "add": "Add"
+  },
+  "labels": {
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "code": "Code",
+    "status": "Status",
+    "type": "Type",
+    "description": "Description",
+    "actions": "Actions",
+    "created": "Created",
+    "priority": "Priority",
+    "notes": "Notes",
+    "role": "Role",
+    "order": "Order",
+    "items": "Items",
+    "deliveryDate": "Delivery Date",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "start": "Start",
+    "end": "End",
+    "process": "Process",
+    "complexity": "Complexity"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "validation": {
+    "required": "Required field",
+    "invalidEmail": "Please enter a valid email address",
+    "enterTenantCode": "Please enter tenant code",
+    "enterEmail": "Please enter your email",
+    "enterPassword": "Please enter your password",
+    "enterValidEmail": "Please enter a valid email"
+  },
+  "messages": {
+    "noDataAvailable": "No data available",
+    "notFound": "Not found",
+    "loading": "Loading..."
+  },
+  "enums": {
+    "OrderStatus": {
+      "Draft": "Draft",
+      "Active": "Active",
+      "Paused": "Paused",
+      "Cancelled": "Cancelled",
+      "Completed": "Completed"
+    },
+    "OrderType": {
+      "Standard": "Standard",
+      "Repair": "Repair",
+      "Complaint": "Complaint",
+      "Rework": "Rework"
+    },
+    "ProcessStatus": {
+      "Pending": "Pending",
+      "InProgress": "In Progress",
+      "Completed": "Completed",
+      "Blocked": "Blocked",
+      "Stopped": "Stopped",
+      "Withdrawn": "Withdrawn"
+    },
+    "SubProcessStatus": {
+      "Pending": "Pending",
+      "InProgress": "In Progress",
+      "Completed": "Completed",
+      "Stopped": "Stopped",
+      "Withdrawn": "Withdrawn"
+    },
+    "RequestStatus": {
+      "Pending": "Pending",
+      "Approved": "Approved",
+      "Rejected": "Rejected"
+    },
+    "ChangeRequestType": {
+      "Modify": "Modify",
+      "Withdraw": "Withdraw",
+      "Cancel": "Cancel",
+      "Pause": "Pause",
+      "Resume": "Resume",
+      "PriorityChange": "Priority Change"
+    },
+    "UserRole": {
+      "Admin": "Admin",
+      "Manager": "Manager",
+      "Coordinator": "Coordinator",
+      "SalesManager": "Sales Manager",
+      "Department": "Department"
+    },
+    "ComplexityType": {
+      "T": "Heavy",
+      "S": "Medium",
+      "L": "Light"
+    }
+  }
+}

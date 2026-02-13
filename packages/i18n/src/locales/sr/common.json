@@ -1,0 +1,112 @@
+{
+  "appName": "AlGreen MES",
+  "actions": {
+    "save": "Sačuvaj",
+    "cancel": "Otkaži",
+    "create": "Kreiraj",
+    "back": "Nazad",
+    "view": "Pogledaj",
+    "approve": "Odobri",
+    "reject": "Odbij",
+    "logout": "Odjavi se",
+    "signIn": "Prijavi se",
+    "filter": "Filtriraj",
+    "configure": "Podesi",
+    "add": "Dodaj"
+  },
+  "labels": {
+    "email": "Email",
+    "password": "Lozinka",
+    "name": "Naziv",
+    "code": "Šifra",
+    "status": "Status",
+    "type": "Tip",
+    "description": "Opis",
+    "actions": "Akcije",
+    "created": "Kreirano",
+    "priority": "Prioritet",
+    "notes": "Napomene",
+    "role": "Uloga",
+    "order": "Redosled",
+    "items": "Stavke",
+    "deliveryDate": "Datum isporuke",
+    "firstName": "Ime",
+    "lastName": "Prezime",
+    "start": "Početak",
+    "end": "Kraj",
+    "process": "Proces",
+    "complexity": "Kompleksnost"
+  },
+  "status": {
+    "active": "Aktivno",
+    "inactive": "Neaktivno"
+  },
+  "validation": {
+    "required": "Obavezno polje",
+    "invalidEmail": "Unesite ispravnu email adresu",
+    "enterTenantCode": "Unesite kod firme",
+    "enterEmail": "Unesite email",
+    "enterPassword": "Unesite lozinku",
+    "enterValidEmail": "Unesite ispravnu email adresu"
+  },
+  "messages": {
+    "noDataAvailable": "Nema dostupnih podataka",
+    "notFound": "Nije pronađeno",
+    "loading": "Učitavanje..."
+  },
+  "enums": {
+    "OrderStatus": {
+      "Draft": "Nacrt",
+      "Active": "Aktivan",
+      "Paused": "Pauziran",
+      "Cancelled": "Otkazan",
+      "Completed": "Završen"
+    },
+    "OrderType": {
+      "Standard": "Standardna",
+      "Repair": "Popravka",
+      "Complaint": "Reklamacija",
+      "Rework": "Dorada"
+    },
+    "ProcessStatus": {
+      "Pending": "Na čekanju",
+      "InProgress": "U toku",
+      "Completed": "Završen",
+      "Blocked": "Blokiran",
+      "Stopped": "Zaustavljen",
+      "Withdrawn": "Povučen"
+    },
+    "SubProcessStatus": {
+      "Pending": "Na čekanju",
+      "InProgress": "U toku",
+      "Completed": "Završen",
+      "Stopped": "Zaustavljen",
+      "Withdrawn": "Povučen"
+    },
+    "RequestStatus": {
+      "Pending": "Na čekanju",
+      "Approved": "Odobreno",
+      "Rejected": "Odbijeno"
+    },
+    "ChangeRequestType": {
+      "Modify": "Izmena",
+      "Withdraw": "Povlačenje",
+      "Cancel": "Otkazivanje",
+      "Pause": "Pauziranje",
+      "Resume": "Nastavak",
+      "PriorityChange": "Promena prioriteta"
+    },
+    "UserRole": {
+      "Admin": "Administrator",
+      "Manager": "Menadžer",
+      "Coordinator": "Koordinator",
+      "SalesManager": "Menadžer prodaje",
+      "Department": "Odeljenje"
+    },
+    "ComplexityType": {
+      "T": "Teško",
+      "S": "Srednje",
+      "L": "Lako"
+    }
+  }
+}

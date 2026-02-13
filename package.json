@@ -1,0 +1,22 @@
+{
+  "name": "algreen-tracker-fe",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev:dashboard": "pnpm --filter dashboard dev",
+    "dev:tablet": "pnpm --filter tablet dev",
+    "build": "pnpm -r build",
+    "build:dashboard": "pnpm --filter dashboard build",
+    "build:tablet": "pnpm --filter tablet build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "eslint-plugin-i18next": "^6.1.0"
+  },
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=9"
+  }
+}

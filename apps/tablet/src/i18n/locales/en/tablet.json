@@ -1,0 +1,62 @@
+{
+  "nav": {
+    "checkIn": "Check In",
+    "queue": "Queue",
+    "incoming": "Incoming",
+    "checkOut": "Check Out"
+  },
+  "login": {
+    "subtitle": "Sign in to start your shift",
+    "tenantCode": "Tenant Code",
+    "email": "Email",
+    "password": "Password",
+    "signingIn": "Signing in...",
+    "signIn": "SIGN IN"
+  },
+  "checkin": {
+    "welcome": "Welcome, {{name}}",
+    "selectProcess": "Select your process and check in",
+    "noProcesses": "No processes available",
+    "checkIn": "CHECK IN"
+  },
+  "queue": {
+    "title": "Order Queue",
+    "activeOrders": "{{count}} active orders",
+    "activeOrder": "{{count}} active order",
+    "noOrders": "No orders in queue",
+    "loadingQueue": "Loading queue...",
+    "items": "{{count}} items",
+    "qty": "Qty: {{count}}",
+    "daysLeft": "{{count}}d left"
+  },
+  "work": {
+    "title": "Work Session",
+    "working": "Working...",
+    "readyToStart": "Ready to start",
+    "subProcesses": "Sub-processes",
+    "start": "START",
+    "stop": "STOP",
+    "complete": "COMPLETE",
+    "backToQueue": "Back to Queue",
+    "min": "min"
+  },
+  "incoming": {
+    "title": "Incoming Orders",
+    "subtitle": "Orders arriving from previous processes",
+    "noOrders": "No incoming orders",
+    "incoming": "Incoming",
+    "blocked": "{{count}} blocking processes"
+  },
+  "checkout": {
+    "title": "End of Shift",
+    "checkOut": "CHECK OUT",
+    "goBack": "Go Back"
+  },
+  "offline": {
+    "message": "You are offline. Some features may be unavailable."
+  },
+  "language": {
+    "sr": "SR",
+    "en": "EN"
+  }
+}

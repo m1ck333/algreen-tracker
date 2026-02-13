@@ -1,0 +1,161 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "orders": "Orders",
+    "sales": "Sales",
+    "blockRequests": "Block Requests",
+    "changeRequests": "Change Requests",
+    "admin": "Admin",
+    "users": "Users",
+    "processes": "Processes",
+    "categories": "Categories",
+    "specialRequests": "Special Requests",
+    "tenants": "Tenants",
+    "shifts": "Shifts"
+  },
+  "login": {
+    "title": "AlGreen MES",
+    "subtitle": "Sign in to your account",
+    "tenantCode": "Tenant Code",
+    "email": "Email",
+    "password": "Password"
+  },
+  "coordinator": {
+    "title": "Coordinator Dashboard",
+    "statistics": "Statistics",
+    "noStatistics": "No statistics available",
+    "stats": {
+      "ordersActive": "Active Orders",
+      "ordersCompleted": "Completed Orders",
+      "processesCompleted": "Completed Processes",
+      "avgProcessTime": "Avg Process Time",
+      "min": "min",
+      "criticalWarnings": "Critical Warnings",
+      "warnings": "Warnings",
+      "pendingBlockRequests": "Pending Blocks"
+    },
+    "deadlineWarnings": "Deadline Warnings",
+    "daysRemaining": "{{count}} days remaining",
+    "noWarnings": "No warnings",
+    "liveView": "Live View",
+    "noLiveData": "No live data",
+    "liveProcess": "Process",
+    "liveWorkers": "Worker",
+    "liveQueue": "Queue",
+    "liveInProgress": "In Progress",
+    "liveActiveOrders": "Active Orders",
+    "liveNoActiveOrders": "No active orders",
+    "workersStatus": "Workers Online",
+    "workerOnline": "Online",
+    "workerOffline": "Offline",
+    "noWorkersOnline": "No workers online",
+    "pendingBlocks": "Pending Block Requests",
+    "blockRequest": "Block Request {{id}}",
+    "pending": "Pending",
+    "noPendingBlocks": "No pending blocks"
+  },
+  "orders": {
+    "title": "Orders",
+    "orderNumber": "Order #",
+    "filterByStatus": "Filter by status",
+    "createOrder": "Create Order",
+    "orderNotFound": "Order not found",
+    "activateOrder": "Activate Order",
+    "order": "Order {{number}}",
+    "durationMin": "Duration (min)",
+    "items": "Items ({{count}})",
+    "qty": "Qty: {{count}}",
+    "createdSuccess": "Order created successfully",
+    "createFailed": "Failed to create order",
+    "updatedSuccess": "Order updated",
+    "updateFailed": "Failed to update order",
+    "cancelledSuccess": "Order cancelled",
+    "cancelFailed": "Failed to cancel order",
+    "pausedSuccess": "Order paused",
+    "resumedSuccess": "Order resumed",
+    "activatedSuccess": "Order activated",
+    "cancelOrder": "Cancel Order",
+    "cancelConfirm": "Are you sure you want to cancel this order?",
+    "pauseOrder": "Pause",
+    "resumeOrder": "Resume",
+    "editOrder": "Edit",
+    "addItem": "Add Item",
+    "addItemSuccess": "Item added",
+    "removeItemSuccess": "Item removed",
+    "productCategory": "Product Category",
+    "productName": "Product Name",
+    "quantity": "Quantity",
+    "warningDays": "Warning Days",
+    "criticalDays": "Critical Days",
+    "orderType": "Order Type",
+    "orderNumberLabel": "Order Number"
+  },
+  "sales": {
+    "title": "Sales Dashboard",
+    "myOrders": "My Orders",
+    "delivery": "Delivery",
+    "myChangeRequests": "My Change Requests"
+  },
+  "blockRequests": {
+    "title": "Block Requests",
+    "note": "Note",
+    "approved": "Block request approved",
+    "rejected": "Block request rejected"
+  },
+  "changeRequests": {
+    "title": "Change Requests",
+    "approved": "Change request approved",
+    "rejected": "Change request rejected"
+  },
+  "admin": {
+    "users": {
+      "title": "Users",
+      "addUser": "Add User",
+      "createUser": "Create User",
+      "created": "User created"
+    },
+    "processes": {
+      "title": "Processes",
+      "addProcess": "Add Process",
+      "createProcess": "Create Process",
+      "created": "Process created",
+      "subProcesses": "Sub-processes",
+      "sequenceOrder": "Sequence Order"
+    },
+    "productCategories": {
+      "title": "Product Categories",
+      "addCategory": "Add Category",
+      "createCategory": "Create Product Category",
+      "created": "Category created",
+      "categoryNotFound": "Category not found",
+      "processes": "Processes ({{count}})",
+      "dependencies": "Dependencies ({{count}})",
+      "dependsOn": "Depends On",
+      "defaultComplexity": "Default Complexity"
+    },
+    "specialRequestTypes": {
+      "title": "Special Request Types",
+      "addType": "Add Type",
+      "createType": "Create Special Request Type",
+      "created": "Special request type created"
+    },
+    "tenants": {
+      "title": "Tenants",
+      "addTenant": "Add Tenant",
+      "createTenant": "Create Tenant",
+      "created": "Tenant created"
+    },
+    "shifts": {
+      "title": "Shifts",
+      "addShift": "Add Shift",
+      "createShift": "Create Shift",
+      "created": "Shift created",
+      "startTime": "Start Time",
+      "endTime": "End Time"
+    }
+  },
+  "language": {
+    "sr": "Srpski",
+    "en": "English"
+  }
+}

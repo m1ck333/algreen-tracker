@@ -1,0 +1,62 @@
+{
+  "nav": {
+    "checkIn": "Prijava",
+    "queue": "Red",
+    "incoming": "Dolazne",
+    "checkOut": "Odjava"
+  },
+  "login": {
+    "subtitle": "Prijavite se za početak smene",
+    "tenantCode": "Kod firme",
+    "email": "Email",
+    "password": "Lozinka",
+    "signingIn": "Prijavljivanje...",
+    "signIn": "PRIJAVI SE"
+  },
+  "checkin": {
+    "welcome": "Dobrodošli, {{name}}",
+    "selectProcess": "Izaberite proces i prijavite se",
+    "noProcesses": "Nema dostupnih procesa",
+    "checkIn": "PRIJAVI SE"
+  },
+  "queue": {
+    "title": "Red narudžbina",
+    "activeOrders": "{{count}} aktivnih narudžbina",
+    "activeOrder": "{{count}} aktivna narudžbina",
+    "noOrders": "Nema narudžbina u redu",
+    "loadingQueue": "Učitavanje reda...",
+    "items": "{{count}} stavki",
+    "qty": "Kol: {{count}}",
+    "daysLeft": "{{count}}d preostalo"
+  },
+  "work": {
+    "title": "Radna sesija",
+    "working": "Rad u toku...",
+    "readyToStart": "Spremno za početak",
+    "subProcesses": "Pod-procesi",
+    "start": "START",
+    "stop": "STOP",
+    "complete": "ZAVRŠI",
+    "backToQueue": "Nazad u red",
+    "min": "min"
+  },
+  "incoming": {
+    "title": "Dolazne narudžbine",
+    "subtitle": "Narudžbine iz prethodnih procesa",
+    "noOrders": "Nema dolaznih narudžbina",
+    "incoming": "Dolazna",
+    "blocked": "{{count}} blokirajućih procesa"
+  },
+  "checkout": {
+    "title": "Kraj smene",
+    "checkOut": "ODJAVI SE",
+    "goBack": "Nazad"
+  },
+  "offline": {
+    "message": "Niste povezani. Neke funkcije možda neće biti dostupne."
+  },
+  "language": {
+    "sr": "SR",
+    "en": "EN"
+  }
+}

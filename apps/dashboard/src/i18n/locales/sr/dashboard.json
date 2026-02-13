@@ -1,0 +1,161 @@
+{
+  "nav": {
+    "dashboard": "Kontrolna tabla",
+    "orders": "Narudžbine",
+    "sales": "Prodaja",
+    "blockRequests": "Zahtevi za blokadu",
+    "changeRequests": "Zahtevi za izmenu",
+    "admin": "Administracija",
+    "users": "Korisnici",
+    "processes": "Procesi",
+    "categories": "Kategorije",
+    "specialRequests": "Specijalni zahtevi",
+    "tenants": "Firme",
+    "shifts": "Smene"
+  },
+  "login": {
+    "title": "AlGreen MES",
+    "subtitle": "Prijavite se na svoj nalog",
+    "tenantCode": "Kod firme",
+    "email": "Email",
+    "password": "Lozinka"
+  },
+  "coordinator": {
+    "title": "Kontrolna tabla koordinatora",
+    "statistics": "Statistika",
+    "noStatistics": "Nema dostupne statistike",
+    "stats": {
+      "ordersActive": "Aktivne narudžbine",
+      "ordersCompleted": "Završene narudžbine",
+      "processesCompleted": "Završeni procesi",
+      "avgProcessTime": "Prosečno vreme",
+      "min": "min",
+      "criticalWarnings": "Kritična upozorenja",
+      "warnings": "Upozorenja",
+      "pendingBlockRequests": "Zahtevi na čekanju"
+    },
+    "deadlineWarnings": "Upozorenja o rokovima",
+    "daysRemaining": "{{count}} dana preostalo",
+    "noWarnings": "Nema upozorenja",
+    "liveView": "Pregled uživo",
+    "noLiveData": "Nema podataka uživo",
+    "liveProcess": "Proces",
+    "liveWorkers": "Radnik",
+    "liveQueue": "U redu",
+    "liveInProgress": "U toku",
+    "liveActiveOrders": "Aktivne narudžbine",
+    "liveNoActiveOrders": "Nema aktivnih",
+    "workersStatus": "Radnici na mreži",
+    "workerOnline": "Na mreži",
+    "workerOffline": "Van mreže",
+    "noWorkersOnline": "Nema radnika na mreži",
+    "pendingBlocks": "Zahtevi za blokadu na čekanju",
+    "blockRequest": "Zahtev za blokadu {{id}}",
+    "pending": "Na čekanju",
+    "noPendingBlocks": "Nema zahteva na čekanju"
+  },
+  "orders": {
+    "title": "Narudžbine",
+    "orderNumber": "Br. narudžbine",
+    "filterByStatus": "Filtriraj po statusu",
+    "createOrder": "Kreiraj narudžbinu",
+    "orderNotFound": "Narudžbina nije pronađena",
+    "activateOrder": "Aktiviraj narudžbinu",
+    "order": "Narudžbina {{number}}",
+    "durationMin": "Trajanje (min)",
+    "items": "Stavke ({{count}})",
+    "qty": "Kol: {{count}}",
+    "createdSuccess": "Narudžbina uspešno kreirana",
+    "createFailed": "Kreiranje narudžbine nije uspelo",
+    "updatedSuccess": "Narudžbina ažurirana",
+    "updateFailed": "Ažuriranje narudžbine nije uspelo",
+    "cancelledSuccess": "Narudžbina otkazana",
+    "cancelFailed": "Otkazivanje narudžbine nije uspelo",
+    "pausedSuccess": "Narudžbina pauzirana",
+    "resumedSuccess": "Narudžbina nastavljena",
+    "activatedSuccess": "Narudžbina aktivirana",
+    "cancelOrder": "Otkaži narudžbinu",
+    "cancelConfirm": "Da li ste sigurni da želite da otkažete ovu narudžbinu?",
+    "pauseOrder": "Pauziraj",
+    "resumeOrder": "Nastavi",
+    "editOrder": "Izmeni",
+    "addItem": "Dodaj stavku",
+    "addItemSuccess": "Stavka dodata",
+    "removeItemSuccess": "Stavka uklonjena",
+    "productCategory": "Kategorija proizvoda",
+    "productName": "Naziv proizvoda",
+    "quantity": "Količina",
+    "warningDays": "Dani upozorenja",
+    "criticalDays": "Kritični dani",
+    "orderType": "Tip narudžbine",
+    "orderNumberLabel": "Broj narudžbine"
+  },
+  "sales": {
+    "title": "Kontrolna tabla prodaje",
+    "myOrders": "Moje narudžbine",
+    "delivery": "Isporuka",
+    "myChangeRequests": "Moji zahtevi za izmenu"
+  },
+  "blockRequests": {
+    "title": "Zahtevi za blokadu",
+    "note": "Napomena",
+    "approved": "Zahtev za blokadu odobren",
+    "rejected": "Zahtev za blokadu odbijen"
+  },
+  "changeRequests": {
+    "title": "Zahtevi za izmenu",
+    "approved": "Zahtev za izmenu odobren",
+    "rejected": "Zahtev za izmenu odbijen"
+  },
+  "admin": {
+    "users": {
+      "title": "Korisnici",
+      "addUser": "Dodaj korisnika",
+      "createUser": "Kreiraj korisnika",
+      "created": "Korisnik kreiran"
+    },
+    "processes": {
+      "title": "Procesi",
+      "addProcess": "Dodaj proces",
+      "createProcess": "Kreiraj proces",
+      "created": "Proces kreiran",
+      "subProcesses": "Pod-procesi",
+      "sequenceOrder": "Redosled"
+    },
+    "productCategories": {
+      "title": "Kategorije proizvoda",
+      "addCategory": "Dodaj kategoriju",
+      "createCategory": "Kreiraj kategoriju proizvoda",
+      "created": "Kategorija kreirana",
+      "categoryNotFound": "Kategorija nije pronađena",
+      "processes": "Procesi ({{count}})",
+      "dependencies": "Zavisnosti ({{count}})",
+      "dependsOn": "Zavisi od",
+      "defaultComplexity": "Podrazumevana kompleksnost"
+    },
+    "specialRequestTypes": {
+      "title": "Tipovi specijalnih zahteva",
+      "addType": "Dodaj tip",
+      "createType": "Kreiraj tip specijalnog zahteva",
+      "created": "Tip specijalnog zahteva kreiran"
+    },
+    "tenants": {
+      "title": "Firme",
+      "addTenant": "Dodaj firmu",
+      "createTenant": "Kreiraj firmu",
+      "created": "Firma kreirana"
+    },
+    "shifts": {
+      "title": "Smene",
+      "addShift": "Dodaj smenu",
+      "createShift": "Kreiraj smenu",
+      "created": "Smena kreirana",
+      "startTime": "Vreme početka",
+      "endTime": "Vreme završetka"
+    }
+  },
+  "language": {
+    "sr": "Srpski",
+    "en": "English"
+  }
+}
