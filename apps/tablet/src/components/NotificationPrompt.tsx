@@ -2,11 +2,16 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from '@algreen/i18n';
 import { subscribeToPush } from '../services/push';
 
+const DISMISSED_KEY = 'algreen_notif_prompt_dismissed';
+
 export function NotificationPrompt() {
   const { t } = useTranslation('tablet');
   const [show, setShow] = useState(false);
 
   useEffect(() => {
+    // Never show again if user already interacted with the prompt
+    if (localStorage.getItem(DISMISSED_KEY)) return;
+
     if (
       'Notification' in window &&
       'PushManager' in window &&
@@ -18,12 +23,14 @@ export function NotificationPrompt() {
 
   if (!show) return null;
 
-  const handleEnable = async () => {
-    const result = await subscribeToPush();
-    // Hide regardless — either granted or denied, no need to show again
+  const dismiss = () => {
+    localStorage.setItem(DISMISSED_KEY, '1');
     setShow(false);
-    // If user denied, nothing more to do
-    if (!result) return;
+  };
+
+  const handleEnable = async () => {
+    await subscribeToPush();
+    dismiss();
   };
 
   return (
@@ -38,7 +45,7 @@ export function NotificationPrompt() {
         {t('notifications.enable')}
       </button>
       <button
-        onClick={() => setShow(false)}
+        onClick={dismiss}
         className="text-blue-400 p-1 flex-shrink-0"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

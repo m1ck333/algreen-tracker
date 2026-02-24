@@ -17,6 +17,7 @@
     "@algreen/shared-types": "workspace:*",
     "@algreen/signalr-client": "workspace:*",
     "@tanstack/react-query": "^5.56.0",
+    "nosleep.js": "^0.12.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
