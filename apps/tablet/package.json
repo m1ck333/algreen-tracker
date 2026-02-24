@@ -11,15 +11,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@algreen/shared-types": "workspace:*",
     "@algreen/api-client": "workspace:*",
-    "@algreen/signalr-client": "workspace:*",
     "@algreen/auth": "workspace:*",
     "@algreen/i18n": "workspace:*",
+    "@algreen/shared-types": "workspace:*",
+    "@algreen/signalr-client": "workspace:*",
     "@tanstack/react-query": "^5.56.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
+    "workbox-precaching": "^7.4.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

@@ -1,25 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
-import { workSessionsApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import { useWorkSessionStore } from '../../stores/work-session-store';
-
-function getApiErrorCode(error: unknown): string | undefined {
-  return (error as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
-}
-
-function getTranslatedError(error: unknown, t: (key: string, opts?: Record<string, string>) => string, fallback: string): string {
-  const code = getApiErrorCode(error);
-  if (code) {
-    const translated = t(`common:errors.${code}`, { defaultValue: '' });
-    if (translated) return translated;
-  }
-  return fallback;
-}
+import { unsubscribeFromPush } from '../../services/push';
 
 export function CheckOutPage() {
   const navigate = useNavigate();
@@ -30,28 +16,14 @@ export function CheckOutPage() {
   const checkInTime = useWorkSessionStore((s) => s.checkInTime);
   const { t } = useTranslation('tablet');
   const { tEnum } = useEnumTranslation();
-  const [error, setError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const checkOutMutation = useMutation({
-    mutationFn: () => workSessionsApi.checkOut({ userId: user!.id }),
-    onSuccess: () => {
-      clearWorkSession();
-      logout();
-      navigate('/login', { replace: true });
-    },
-    onError: (err) => {
-      setShowConfirm(false);
-      const code = getApiErrorCode(err);
-      if (code === 'NOT_CHECKED_IN') {
-        clearWorkSession();
-        logout();
-        navigate('/login', { replace: true });
-      } else {
-        setError(getTranslatedError(err, t, t('checkout.checkOutFailed')));
-      }
-    },
-  });
+  const handleLogout = async () => {
+    await unsubscribeFromPush();
+    clearWorkSession();
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="space-y-6 pt-8">
@@ -86,17 +58,10 @@ export function CheckOutPage() {
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-tablet-sm">
-          {error}
-        </div>
-      )}
-
       <div className="space-y-3">
         <BigButton
           variant="danger"
-          onClick={() => { setError(null); setShowConfirm(true); }}
-          loading={checkOutMutation.isPending}
+          onClick={() => setShowConfirm(true)}
         >
           {t('checkout.checkOut')}
         </BigButton>
@@ -116,8 +81,7 @@ export function CheckOutPage() {
         confirmLabel={t('checkout.checkOut')}
         cancelLabel={t('common:actions.cancel')}
         variant="danger"
-        loading={checkOutMutation.isPending}
-        onConfirm={() => checkOutMutation.mutate()}
+        onConfirm={handleLogout}
         onCancel={() => setShowConfirm(false)}
       />
     </div>

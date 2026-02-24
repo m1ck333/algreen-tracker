@@ -1,6 +1,5 @@
 {
   "nav": {
-    "checkIn": "Check In",
     "queue": "Queue",
     "incoming": "Incoming",
     "checkOut": "Check Out"
@@ -14,14 +13,6 @@
     "signIn": "SIGN IN",
     "failed": "Login failed"
   },
-  "checkin": {
-    "welcome": "Welcome, {{name}}",
-    "selectProcess": "Select your process and check in",
-    "noProcesses": "No processes available",
-    "checkIn": "CHECK IN",
-    "loadFailed": "Failed to load processes",
-    "retry": "Retry"
-  },
   "queue": {
     "title": "Order Queue",
     "activeOrders": "{{count}} active orders",
@@ -29,6 +20,7 @@
     "noOrders": "No orders in queue",
     "loadingQueue": "Loading queue...",
     "loadFailed": "Failed to load queue",
+    "retry": "Retry",
     "items": "{{count}} items",
     "qty": "Qty: {{count}}",
     "daysLeft": "{{count}}d left",
@@ -69,7 +61,8 @@
     "blocked": "{{count}} blocking processes",
     "blockedBy": "Blocked by:",
     "daysLeft": "{{count}}d left",
-    "loadFailed": "Failed to load incoming orders"
+    "loadFailed": "Failed to load incoming orders",
+    "retry": "Retry"
   },
   "checkout": {
     "title": "End of Shift",

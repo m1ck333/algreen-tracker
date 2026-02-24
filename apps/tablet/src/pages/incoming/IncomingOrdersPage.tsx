@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { tabletApi, processesApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
@@ -12,6 +12,8 @@ export function IncomingOrdersPage() {
   const { t } = useTranslation('tablet');
   const { tEnum } = useEnumTranslation();
 
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+
   const { data: incoming, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['tablet-incoming', processId, tenantId],
     queryFn: () => tabletApi.getIncoming(processId!, tenantId!).then((r) => r.data),
@@ -19,7 +21,6 @@ export function IncomingOrdersPage() {
     refetchInterval: 60_000,
   });
 
-  // Fetch all processes for name lookup (hits cache from CheckInPage)
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
     queryFn: () => processesApi.getAll(tenantId!).then((r) => r.data.items),
@@ -54,7 +55,7 @@ export function IncomingOrdersPage() {
           onClick={() => refetch()}
           className="bg-primary-500 text-white px-6 py-3 rounded-xl text-tablet-sm font-semibold"
         >
-          {t('checkin.retry')}
+          {t('incoming.retry')}
         </button>
       </div>
     );
@@ -94,6 +95,12 @@ export function IncomingOrdersPage() {
             <IncomingCard
               key={item.orderItemProcessId}
               item={item}
+              isExpanded={expandedItemId === item.orderItemProcessId}
+              onToggle={() =>
+                setExpandedItemId(
+                  expandedItemId === item.orderItemProcessId ? null : item.orderItemProcessId,
+                )
+              }
               processNameMap={processNameMap}
               t={t}
               tEnum={tEnum}
@@ -107,11 +114,15 @@ export function IncomingOrdersPage() {
 
 function IncomingCard({
   item,
+  isExpanded,
+  onToggle,
   processNameMap,
   t,
   tEnum,
 }: {
   item: TabletIncomingDto;
+  isExpanded: boolean;
+  onToggle: () => void;
   processNameMap: Map<string, string>;
   t: (key: string, opts?: Record<string, unknown>) => string;
   tEnum: (enumName: string, value: string) => string;
@@ -128,51 +139,97 @@ function IncomingCard({
         : 'border-gray-200';
 
   return (
-    <div className={`card border-2 ${borderColor}`}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-tablet-lg font-bold">{item.orderNumber}</span>
-          <span className="bg-primary-500 text-white px-2 py-0.5 rounded-full text-tablet-xs font-medium">
-            P{item.priority}
+    <div className={`card border-2 ${borderColor} ${isExpanded ? 'ring-2 ring-primary-300' : ''}`}>
+      <button onClick={onToggle} className="w-full text-left">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-tablet-lg font-bold">{item.orderNumber}</span>
+            <span className="bg-primary-500 text-white px-2 py-0.5 rounded-full text-tablet-xs font-medium">
+              P{item.priority}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-tablet-sm font-medium">
+              {t('incoming.incoming')}
+            </span>
+            <svg
+              width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-tablet-sm text-gray-600 mb-2">
+          <span>{item.productName}</span>
+          <span>{t('queue.qty', { count: item.quantity })}</span>
+          <span className={daysUntilDelivery <= 3 ? 'text-red-600 font-bold' : ''}>
+            {t('incoming.daysLeft', { count: daysUntilDelivery })}
           </span>
         </div>
-        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-tablet-sm font-medium">
-          {t('incoming.incoming')}
-        </span>
-      </div>
 
-      <div className="flex items-center justify-between text-tablet-sm text-gray-600 mb-2">
-        <span>{item.productName}</span>
-        <span>{t('queue.qty', { count: item.quantity })}</span>
-        <span className={daysUntilDelivery <= 3 ? 'text-red-600 font-bold' : ''}>
-          {t('incoming.daysLeft', { count: daysUntilDelivery })}
-        </span>
-      </div>
-
-      <div className="flex items-center justify-between text-tablet-xs mb-2">
-        <span className="text-gray-500">
-          {t('queue.progress', { completed: item.completedProcessCount, total: item.totalProcessCount })}
-        </span>
-        {item.specialRequestNames.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {item.specialRequestNames.map((name) => (
-              <span key={name} className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-tablet-xs">
-                {name}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {item.blockingProcesses.length > 0 && (
-        <div className="border-t border-gray-100 pt-2 mt-1 space-y-1">
-          <span className="text-tablet-xs text-orange-600 font-medium">{t('incoming.blockedBy')}</span>
-          {item.blockingProcesses.map((bp) => (
-            <div key={bp.orderItemProcessId} className="flex items-center justify-between text-tablet-xs">
-              <span className="text-gray-700">{processNameMap.get(bp.processId) ?? bp.processId}</span>
-              <span className="text-gray-500">{tEnum('ProcessStatus', bp.status)}</span>
+        <div className="flex items-center justify-between text-tablet-xs">
+          <span className="text-gray-500">
+            {t('queue.progress', { completed: item.completedProcessCount, total: item.totalProcessCount })}
+          </span>
+          {item.specialRequestNames.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {item.specialRequestNames.map((name) => (
+                <span key={name} className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-tablet-xs">
+                  {name}
+                </span>
+              ))}
             </div>
-          ))}
+          )}
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div className="border-t border-gray-200 mt-3 pt-3 space-y-3">
+          {/* Expanded details */}
+          <div className="grid grid-cols-2 gap-2 text-tablet-xs">
+            <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5">
+              <span className="text-gray-500">{t('work.priority')}</span>
+              <span className="font-semibold">P{item.priority}</span>
+            </div>
+            <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5">
+              <span className="text-gray-500">{t('work.quantity')}</span>
+              <span className="font-semibold">{item.quantity}</span>
+            </div>
+            <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5">
+              <span className="text-gray-500">{t('work.deliveryDate')}</span>
+              <span className={`font-semibold ${daysUntilDelivery <= 3 ? 'text-red-600' : ''}`}>
+                {`${daysUntilDelivery}d`}
+              </span>
+            </div>
+            {item.complexity && (
+              <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5">
+                <span className="text-gray-500">{t('work.complexity')}</span>
+                <span className="font-semibold">{tEnum('ComplexityType', item.complexity)}</span>
+              </div>
+            )}
+            <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5 col-span-2">
+              <span className="text-gray-500">{t('work.progress')}</span>
+              <span className="font-semibold">
+                {item.completedProcessCount}/{item.totalProcessCount}
+              </span>
+            </div>
+          </div>
+
+          {/* Blocking processes */}
+          {item.blockingProcesses.length > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2">
+              <span className="text-tablet-sm text-orange-700 font-semibold">{t('incoming.blockedBy')}</span>
+              {item.blockingProcesses.map((bp) => (
+                <div key={bp.orderItemProcessId} className="flex items-center justify-between text-tablet-xs">
+                  <span className="text-gray-700 font-medium">{processNameMap.get(bp.processId) ?? bp.processId}</span>
+                  <span className="text-gray-500">{tEnum('ProcessStatus', bp.status)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

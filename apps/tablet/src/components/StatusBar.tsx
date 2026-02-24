@@ -1,8 +1,10 @@
 import { useAuthStore } from '@algreen/auth';
 import { useTranslation } from '@algreen/i18n';
+import { useWorkSessionStore } from '../stores/work-session-store';
 
 export function StatusBar() {
   const user = useAuthStore((s) => s.user);
+  const processName = useWorkSessionStore((s) => s.processName);
   const { i18n } = useTranslation('tablet');
 
   const toggleLanguage = () => {
@@ -13,8 +15,15 @@ export function StatusBar() {
 
   return (
     <div className="bg-primary-500 text-white px-4 py-3 flex items-center justify-between">
-      <img src="/algreen-logo-text.png" alt="AlGreen" className="h-6 object-contain" />
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <img src="/algreen-logo-text.png" alt="AlGreen" className="h-6 object-contain flex-shrink-0" />
+        {processName && (
+          <span className="bg-white/20 px-2.5 py-0.5 rounded-full text-tablet-xs font-semibold truncate">
+            {processName}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-3 flex-shrink-0">
         {user && (
           <span className="text-tablet-sm opacity-90">{user.fullName}</span>
         )}

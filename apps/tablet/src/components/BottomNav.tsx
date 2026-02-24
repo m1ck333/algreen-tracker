@@ -1,13 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '@algreen/i18n';
 
-const HomeIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    <polyline points="9 22 9 12 15 12 15 22" />
-  </svg>
-);
-
 const ListIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="8" y1="6" x2="21" y2="6" />
@@ -40,7 +33,6 @@ export function BottomNav() {
   const { t } = useTranslation('tablet');
 
   const navItems = [
-    { path: '/', label: t('nav.checkIn'), icon: <HomeIcon /> },
     { path: '/queue', label: t('nav.queue'), icon: <ListIcon /> },
     { path: '/incoming', label: t('nav.incoming'), icon: <InboxIcon /> },
     { path: '/checkout', label: t('nav.checkOut'), icon: <LogOutIcon /> },
@@ -49,10 +41,7 @@ export function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex safe-area-bottom">
       {navItems.map((item) => {
-        const isActive =
-          item.path === '/'
-            ? location.pathname === '/'
-            : location.pathname.startsWith(item.path);
+        const isActive = location.pathname.startsWith(item.path);
 
         return (
           <button

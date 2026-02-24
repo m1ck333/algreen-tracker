@@ -1,25 +1,61 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@algreen/auth';
+import { processesApi } from '@algreen/api-client';
 import { useTranslation } from '@algreen/i18n';
+import { useWorkSessionStore } from '../../stores/work-session-store';
+import { subscribeToPush } from '../../services/push';
 
 export function TabletLoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
+  const setSessionInfo = useWorkSessionStore((s) => s.setSessionInfo);
   const [tenantCode, setTenantCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [settingUp, setSettingUp] = useState(false);
   const { t } = useTranslation('tablet');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login(email, password, tenantCode);
-      navigate('/', { replace: true });
+
+      const { user, tenantId } = useAuthStore.getState();
+      if (!user?.processId || !tenantId) {
+        navigate('/queue', { replace: true });
+        return;
+      }
+
+      setSettingUp(true);
+
+      // Fetch process name for display
+      let processName = '';
+      try {
+        const { data: process } = await processesApi.getById(user.processId);
+        processName = process.name;
+      } catch {
+        // Non-critical — proceed without process name
+      }
+
+      setSessionInfo({
+        processId: user.processId,
+        processName,
+        checkInTime: new Date().toISOString(),
+      });
+
+      // Subscribe to push notifications (non-blocking)
+      subscribeToPush().catch(() => {});
+
+      navigate('/queue', { replace: true });
     } catch {
-      // Error handled by store
+      // Login failed — error is handled by auth store
+    } finally {
+      setSettingUp(false);
     }
   };
+
+  const submitting = isLoading || settingUp;
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
@@ -79,10 +115,10 @@ export function TabletLoginPage() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={submitting}
             className="btn-primary mt-4"
           >
-            {isLoading ? t('login.signingIn') : t('login.signIn')}
+            {submitting ? t('login.signingIn') : t('login.signIn')}
           </button>
         </form>
       </div>

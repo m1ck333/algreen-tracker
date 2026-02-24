@@ -1,6 +1,5 @@
 {
   "nav": {
-    "checkIn": "Prijava",
     "queue": "Red",
     "incoming": "Dolazne",
     "checkOut": "Odjava"
@@ -14,14 +13,6 @@
     "signIn": "PRIJAVI SE",
     "failed": "Prijava nije uspela"
   },
-  "checkin": {
-    "welcome": "Dobrodošli, {{name}}",
-    "selectProcess": "Izaberite proces i prijavite se",
-    "noProcesses": "Nema dostupnih procesa",
-    "checkIn": "PRIJAVI SE",
-    "loadFailed": "Učitavanje procesa nije uspelo",
-    "retry": "Pokušaj ponovo"
-  },
   "queue": {
     "title": "Red narudžbina",
     "activeOrders": "{{count}} aktivnih narudžbina",
@@ -29,6 +20,7 @@
     "noOrders": "Nema narudžbina u redu",
     "loadingQueue": "Učitavanje reda...",
     "loadFailed": "Učitavanje reda nije uspelo",
+    "retry": "Pokušaj ponovo",
     "items": "{{count}} stavki",
     "qty": "Kol: {{count}}",
     "daysLeft": "{{count}}d preostalo",
@@ -69,7 +61,8 @@
     "blocked": "{{count}} blokirajućih procesa",
     "blockedBy": "Blokirano od:",
     "daysLeft": "{{count}}d preostalo",
-    "loadFailed": "Učitavanje dolaznih narudžbina nije uspelo"
+    "loadFailed": "Učitavanje dolaznih narudžbina nije uspelo",
+    "retry": "Pokušaj ponovo"
   },
   "checkout": {
     "title": "Kraj smene",
