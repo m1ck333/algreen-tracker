@@ -27,8 +27,16 @@ export function TabletLayout() {
 
     let cancelled = false;
 
-    createConnection(jwt);
+    const conn = createConnection(jwt);
     console.log('[SignalR] Connecting...');
+
+    // Debug: log ALL incoming messages
+    conn.on('OrderActivated', (d: unknown) => console.log('[SignalR] OrderActivated', d));
+    conn.on('ProcessStarted', (d: unknown) => console.log('[SignalR] ProcessStarted', d));
+    conn.on('ProcessCompleted', (d: unknown) => console.log('[SignalR] ProcessCompleted', d));
+    conn.on('ProcessBlocked', (d: unknown) => console.log('[SignalR] ProcessBlocked', d));
+    conn.on('ProcessReadyForQueue', (d: unknown) => console.log('[SignalR] ProcessReadyForQueue', d));
+
     startConnection()
       .then(async () => {
         if (cancelled) return;
