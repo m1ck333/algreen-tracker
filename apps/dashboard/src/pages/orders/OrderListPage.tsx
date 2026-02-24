@@ -1004,6 +1004,7 @@ export function OrderListPage() {
                                   placeholder={process?.code ?? '?'}
                                   allowClear
                                   style={{ width: 72 }}
+                                  popupMatchSelectWidth={false}
                                   options={Object.values(ComplexityType).map((c) => ({
                                     label: `${process?.code ?? '?'} ${tEnum('ComplexityType', c)}`,
                                     value: c,
