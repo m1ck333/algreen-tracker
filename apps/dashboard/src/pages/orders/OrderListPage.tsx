@@ -630,7 +630,7 @@ export function OrderListPage() {
                 <Form.Item
                   name="orderNumber"
                   label={t('orders.orderNumberLabel')}
-                  rules={[{ required: true }]}
+                  rules={[{ required: true }, { whitespace: true, message: t('common:errors.INVALID_ORDER_NUMBER') }]}
                 >
                   <Input />
                 </Form.Item>
@@ -675,7 +675,7 @@ export function OrderListPage() {
                 <Form.Item
                   name="priority"
                   label={t('common:labels.priority')}
-                  rules={[{ required: true }]}
+                  rules={[{ required: true }, { type: 'number', min: 1, message: t('common:errors.INVALID_PRIORITY') }]}
                   initialValue={1}
                 >
                   <InputNumber min={1} max={100} style={{ width: '100%' }} />
@@ -713,6 +713,10 @@ export function OrderListPage() {
                 {detailOrder.status === OrderStatus.Draft && (
                   <Button type="primary" size="small" loading={activateMutation.isPending}
                     onClick={() => {
+                      if (detailOrder.items.length === 0) {
+                        message.error(t('common:errors.NO_ITEMS'));
+                        return;
+                      }
                       activateMutation.mutate(detailOrder.id, {
                         onSuccess: () => message.success(t('orders.activatedSuccess')),
                         onError: (err) => message.error(getTranslatedError(err, t, t('orders.activateFailed'))),
@@ -877,14 +881,14 @@ export function OrderListPage() {
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item name="productName" label={t('orders.productName')} rules={[{ required: true }]}>
+                      <Form.Item name="productName" label={t('orders.productName')} rules={[{ required: true }, { whitespace: true, message: t('common:errors.INVALID_PRODUCT_NAME') }]}>
                         <Input />
                       </Form.Item>
                     </Col>
                   </Row>
                   <Row gutter={12}>
                     <Col span={8}>
-                      <Form.Item name="quantity" label={t('orders.quantity')} rules={[{ required: true }]} initialValue={1}>
+                      <Form.Item name="quantity" label={t('orders.quantity')} rules={[{ required: true }, { type: 'number', min: 1, message: t('common:errors.INVALID_QUANTITY') }]} initialValue={1}>
                         <InputNumber min={1} style={{ width: '100%' }} />
                       </Form.Item>
                     </Col>
