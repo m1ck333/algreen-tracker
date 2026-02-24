@@ -7,7 +7,6 @@ export function NotificationPrompt() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    // Only show if push is supported and permission not yet decided
     if (
       'Notification' in window &&
       'PushManager' in window &&
@@ -20,12 +19,11 @@ export function NotificationPrompt() {
   if (!show) return null;
 
   const handleEnable = async () => {
-    await subscribeToPush();
+    const result = await subscribeToPush();
+    // Hide regardless — either granted or denied, no need to show again
     setShow(false);
-  };
-
-  const handleDismiss = () => {
-    setShow(false);
+    // If user denied, nothing more to do
+    if (!result) return;
   };
 
   return (
@@ -40,7 +38,7 @@ export function NotificationPrompt() {
         {t('notifications.enable')}
       </button>
       <button
-        onClick={handleDismiss}
+        onClick={() => setShow(false)}
         className="text-blue-400 p-1 flex-shrink-0"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
