@@ -11,7 +11,7 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['favicon.png', 'algreen-logo.png'],
+      includeAssets: ['favicon.png', 'algreen-logo.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'AlGreen MES - Tablet',
         short_name: 'AlGreen',
