@@ -28,13 +28,16 @@ export function TabletLayout() {
     let cancelled = false;
 
     createConnection(jwt);
+    console.log('[SignalR] Connecting...');
     startConnection()
       .then(async () => {
         if (cancelled) return;
+        console.log('[SignalR] Connected. Joining groups...');
         await joinTenantGroup(tenantId);
         if (processId) await joinProcessGroup(processId);
+        console.log('[SignalR] Joined tenant:', tenantId, 'process:', processId);
       })
-      .catch(console.error);
+      .catch((err) => console.error('[SignalR] Connection failed:', err));
 
     return () => {
       cancelled = true;
