@@ -1,6 +1,7 @@
 export {
   createConnection,
   getConnection,
+  onConnectionReady,
   startConnection,
   stopConnection,
   joinTenantGroup,

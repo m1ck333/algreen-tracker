@@ -8,6 +8,26 @@ const SIGNALR_URL =
     ? import.meta.env?.VITE_SIGNALR_URL
     : undefined;
 
+// Listeners notified when connection becomes available
+type ConnectionListener = (conn: signalR.HubConnection) => void;
+const connectionListeners = new Set<ConnectionListener>();
+
+export function onConnectionReady(listener: ConnectionListener): () => void {
+  // If already connected, invoke immediately
+  if (connection && connection.state === signalR.HubConnectionState.Connected) {
+    listener(connection);
+  }
+  connectionListeners.add(listener);
+  return () => {
+    connectionListeners.delete(listener);
+  };
+}
+
+function notifyConnectionReady() {
+  if (!connection) return;
+  connectionListeners.forEach((listener) => listener(connection!));
+}
+
 export function getConnection(): signalR.HubConnection | null {
   return connection;
 }
@@ -33,6 +53,11 @@ export function createConnection(token: string, url?: string): signalR.HubConnec
     .configureLogging(signalR.LogLevel.Warning)
     .build();
 
+  // Re-notify listeners after automatic reconnect so event handlers are re-registered
+  connection.onreconnected(() => {
+    notifyConnectionReady();
+  });
+
   return connection;
 }
 
@@ -52,6 +77,9 @@ export async function startConnection(): Promise<void> {
 
   startPromise = connection
     .start()
+    .then(() => {
+      notifyConnectionReady();
+    })
     .catch((err) => {
       // Ignore the harmless "not in Disconnected state" error from StrictMode double-mount
       if (

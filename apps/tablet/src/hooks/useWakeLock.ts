@@ -14,7 +14,15 @@ export function useWakeLock() {
     noSleepRef.current = noSleep;
 
     const enable = () => {
-      noSleep.enable().catch(() => {});
+      // Suppress nosleep.js internal "Wake Lock active" console.log
+      const origLog = console.log;
+      console.log = (...args: unknown[]) => {
+        if (typeof args[0] === 'string' && args[0].includes('Wake Lock')) return;
+        origLog.apply(console, args);
+      };
+      noSleep.enable().catch(() => {}).finally(() => {
+        console.log = origLog;
+      });
     };
 
     // Re-enable on every touch — iOS can kill the video at any time

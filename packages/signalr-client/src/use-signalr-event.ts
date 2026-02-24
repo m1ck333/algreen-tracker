@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { getConnection } from './connection-manager';
+import { getConnection, onConnectionReady } from './connection-manager';
 import type { SignalREventName } from './event-names';
 
 export function useSignalREvent<T = unknown>(
@@ -10,17 +10,29 @@ export function useSignalREvent<T = unknown>(
   handlerRef.current = handler;
 
   useEffect(() => {
-    const connection = getConnection();
-    if (!connection) return;
-
     const callback = (data: T) => {
       handlerRef.current(data);
     };
 
-    connection.on(eventName, callback);
+    // If already connected, register immediately
+    const existing = getConnection();
+    if (existing) {
+      existing.on(eventName, callback);
+    }
+
+    // Subscribe to future connection readiness (handles late-mount or reconnect)
+    const unsubscribe = onConnectionReady((conn) => {
+      // Remove first to avoid double-registering
+      conn.off(eventName, callback);
+      conn.on(eventName, callback);
+    });
 
     return () => {
-      connection.off(eventName, callback);
+      unsubscribe();
+      const conn = getConnection();
+      if (conn) {
+        conn.off(eventName, callback);
+      }
     };
   }, [eventName]);
 }
