@@ -1,4 +1,5 @@
 import { pushApi } from '@algreen/api-client';
+import { useAuthStore } from '@algreen/auth';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -25,7 +26,8 @@ export async function subscribeToPush(): Promise<boolean> {
     const registration = await navigator.serviceWorker.ready;
 
     // Get VAPID key from server
-    const { data: vapidPublicKey } = await pushApi.getVapidPublicKey();
+    const { data } = await pushApi.getVapidPublicKey();
+    const vapidPublicKey = data.publicKey;
     if (!vapidPublicKey) return false;
 
     // Subscribe to push
@@ -40,7 +42,12 @@ export async function subscribeToPush(): Promise<boolean> {
     }
 
     // Register subscription on the server
+    const { tenantId, user } = useAuthStore.getState();
+    if (!tenantId || !user?.id) return false;
+
     await pushApi.subscribe({
+      tenantId,
+      userId: user.id,
       endpoint: json.endpoint,
       p256dhKey: json.keys.p256dh,
       authKey: json.keys.auth,

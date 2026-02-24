@@ -2,10 +2,10 @@ import { apiClient } from '../axios-instance';
 
 export const pushApi = {
   getVapidPublicKey() {
-    return apiClient.get<string>('/push/vapid-public-key');
+    return apiClient.get<{ publicKey: string }>('/push/vapid-public-key');
   },
 
-  subscribe(data: { endpoint: string; p256dhKey: string; authKey: string }) {
+  subscribe(data: { tenantId: string; userId: string; endpoint: string; p256dhKey: string; authKey: string }) {
     return apiClient.post('/push/subscribe', data);
   },
 
