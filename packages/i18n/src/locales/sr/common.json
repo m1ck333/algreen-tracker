@@ -81,7 +81,17 @@
     "PROCESS_NOT_IN_CATEGORY": "Proces nije u ovoj kategoriji",
     "PROCESS_CODE_EXISTS": "Proces sa ovom šifrom već postoji",
     "LOG_ALREADY_OPEN": "Već postoji otvoren zapis",
-    "BLOCK_REASON_REQUIRED": "Razlog blokade je obavezan"
+    "BLOCK_REASON_REQUIRED": "Razlog blokade je obavezan",
+    "NO_ITEMS": "Narudžbina mora imati bar jednu stavku pre aktivacije",
+    "ORDER_NOT_DRAFT": "Ova akcija je dozvoljena samo za narudžbine u pripremi",
+    "DUPLICATE_PROCESS": "Ovaj proces je već dodat",
+    "DUPLICATE_SUBPROCESS": "Ovaj podproces je već dodat",
+    "SUBPROCESSES_NOT_COMPLETE": "Svi podprocesi moraju biti završeni",
+    "REASON_REQUIRED": "Razlog je obavezan",
+    "NOT_BLOCKED": "Ovaj proces nije blokiran",
+    "DUPLICATE_DEPENDENCY": "Ova zavisnost već postoji",
+    "CIRCULAR_DEPENDENCY": "Ovo bi stvorilo kružnu zavisnost",
+    "INTERNAL_ERROR": "Došlo je do neočekivane greške"
   },
   "enums": {
     "OrderStatus": {

@@ -81,7 +81,17 @@
     "PROCESS_NOT_IN_CATEGORY": "Process is not in this category",
     "PROCESS_CODE_EXISTS": "A process with this code already exists",
     "LOG_ALREADY_OPEN": "There is already an open log entry",
-    "BLOCK_REASON_REQUIRED": "Block reason is required"
+    "BLOCK_REASON_REQUIRED": "Block reason is required",
+    "NO_ITEMS": "Order must have at least one item before activation",
+    "ORDER_NOT_DRAFT": "This action is only allowed on draft orders",
+    "DUPLICATE_PROCESS": "This process is already added",
+    "DUPLICATE_SUBPROCESS": "This sub-process is already added",
+    "SUBPROCESSES_NOT_COMPLETE": "All sub-processes must be completed first",
+    "REASON_REQUIRED": "Reason is required",
+    "NOT_BLOCKED": "This process is not blocked",
+    "DUPLICATE_DEPENDENCY": "This dependency already exists",
+    "CIRCULAR_DEPENDENCY": "This would create a circular dependency",
+    "INTERNAL_ERROR": "An unexpected error occurred"
   },
   "enums": {
     "OrderStatus": {
