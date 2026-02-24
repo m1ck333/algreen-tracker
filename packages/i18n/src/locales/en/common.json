@@ -91,6 +91,7 @@
     "NOT_BLOCKED": "This process is not blocked",
     "DUPLICATE_DEPENDENCY": "This dependency already exists",
     "CIRCULAR_DEPENDENCY": "This would create a circular dependency",
+    "ORDER_NUMBER_EXISTS": "An order with this number already exists",
     "INTERNAL_ERROR": "An unexpected error occurred"
   },
   "enums": {

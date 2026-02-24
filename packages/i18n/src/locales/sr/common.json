@@ -91,6 +91,7 @@
     "NOT_BLOCKED": "Ovaj proces nije blokiran",
     "DUPLICATE_DEPENDENCY": "Ova zavisnost već postoji",
     "CIRCULAR_DEPENDENCY": "Ovo bi stvorilo kružnu zavisnost",
+    "ORDER_NUMBER_EXISTS": "Narudžbina sa ovim brojem već postoji",
     "INTERNAL_ERROR": "Došlo je do neočekivane greške"
   },
   "enums": {
