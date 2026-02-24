@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Typography, Table, Button, Space, Select, Tag, Drawer, Form, Input,
   InputNumber, DatePicker, App, Row, Col, Spin, Popconfirm, Divider,
@@ -331,6 +331,8 @@ export function OrderListPage() {
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [addingItem, setAddingItem] = useState(false);
+  const [localPriority, setLocalPriority] = useState<number | null>(null);
+  const priorityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [itemForm] = Form.useForm();
@@ -419,8 +421,22 @@ export function OrderListPage() {
         customWarningDays: detailOrder.customWarningDays,
         customCriticalDays: detailOrder.customCriticalDays,
       });
+      setLocalPriority(detailOrder.priority);
     }
   }, [detailOrder, editForm]);
+
+  const debouncedPriorityChange = useCallback((orderId: string, val: number) => {
+    if (priorityTimerRef.current) clearTimeout(priorityTimerRef.current);
+    priorityTimerRef.current = setTimeout(() => {
+      changePriorityMutation.mutate(
+        { id: orderId, priority: val },
+        {
+          onSuccess: () => message.success(t('orders.priorityChanged')),
+          onError: (err) => message.error(getTranslatedError(err, t, t('orders.priorityChangeFailed'))),
+        },
+      );
+    }, 600);
+  }, [changePriorityMutation, message, t]);
 
   const canCreate =
     user?.role === UserRole.SalesManager ||
@@ -802,18 +818,15 @@ export function OrderListPage() {
                       size="small"
                       min={1}
                       max={100}
-                      value={detailOrder.priority}
+                      value={localPriority}
                       style={{ width: 64 }}
                       disabled={detailOrder.status === OrderStatus.Cancelled || detailOrder.status === OrderStatus.Completed}
                       onChange={(val) => {
-                        if (val && val !== detailOrder.priority) {
-                          changePriorityMutation.mutate(
-                            { id: detailOrder.id, priority: val },
-                            {
-                              onSuccess: () => message.success(t('orders.priorityChanged')),
-                              onError: (err) => message.error(getTranslatedError(err, t, t('orders.priorityChangeFailed'))),
-                            },
-                          );
+                        if (val != null) {
+                          setLocalPriority(val);
+                          if (val !== detailOrder.priority) {
+                            debouncedPriorityChange(detailOrder.id, val);
+                          }
                         }
                       }}
                     />
