@@ -77,6 +77,10 @@
   "offline": {
     "message": "Niste povezani. Neke funkcije možda neće biti dostupne."
   },
+  "notifications": {
+    "prompt": "Uključite obaveštenja za nove narudžbine i blokade",
+    "enable": "Uključi"
+  },
   "language": {
     "sr": "SR",
     "en": "EN"

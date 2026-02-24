@@ -77,6 +77,10 @@
   "offline": {
     "message": "You are offline. Some features may be unavailable."
   },
+  "notifications": {
+    "prompt": "Enable notifications to get alerts about new orders and blocks",
+    "enable": "Enable"
+  },
   "language": {
     "sr": "SR",
     "en": "EN"
