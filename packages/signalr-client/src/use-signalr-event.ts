@@ -11,17 +11,20 @@ export function useSignalREvent<T = unknown>(
 
   useEffect(() => {
     const callback = (data: T) => {
+      console.log(`[useSignalREvent] ${eventName} fired`);
       handlerRef.current(data);
     };
 
     // If already connected, register immediately
     const existing = getConnection();
+    console.log(`[useSignalREvent] registering ${eventName}, connection exists:`, !!existing);
     if (existing) {
       existing.on(eventName, callback);
     }
 
     // Subscribe to future connection readiness (handles late-mount or reconnect)
     const unsubscribe = onConnectionReady((conn) => {
+      console.log(`[useSignalREvent] onConnectionReady -> re-registering ${eventName}`);
       // Remove first to avoid double-registering
       conn.off(eventName, callback);
       conn.on(eventName, callback);
