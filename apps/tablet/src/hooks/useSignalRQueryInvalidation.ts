@@ -27,4 +27,9 @@ export function useSignalRQueryInvalidation() {
     queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
     queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
   });
+
+  useSignalREvent(SignalREvents.ProcessReadyForQueue, () => {
+    queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-incoming'] });
+  });
 }

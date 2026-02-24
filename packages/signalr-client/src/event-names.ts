@@ -9,6 +9,7 @@ export const SignalREvents = {
   WorkerCheckedIn: 'WorkerCheckedIn',
   WorkerCheckedOut: 'WorkerCheckedOut',
   DeadlineWarning: 'DeadlineWarning',
+  ProcessReadyForQueue: 'ProcessReadyForQueue',
 } as const;
 
 export type SignalREventName = (typeof SignalREvents)[keyof typeof SignalREvents];

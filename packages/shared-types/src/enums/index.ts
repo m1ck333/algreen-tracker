@@ -49,7 +49,10 @@ export enum NotificationType {
   DeadlineWarning = 'DeadlineWarning',
   DeadlineCritical = 'DeadlineCritical',
   BlockRequest = 'BlockRequest',
+  BlockRequestApproved = 'BlockRequestApproved',
   ProcessCompleted = 'ProcessCompleted',
+  ProcessBlocked = 'ProcessBlocked',
+  OrderActivated = 'OrderActivated',
 }
 
 export enum HistoryAction {
