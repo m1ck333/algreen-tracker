@@ -31,6 +31,7 @@ export function useCreateOrder() {
     mutationFn: (data: CreateOrderRequest) => ordersApi.create(data).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
     },
   });
 }
@@ -42,6 +43,7 @@ export function useUpdateOrder() {
       ordersApi.update(id, data).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
     },
   });
 }
@@ -73,6 +75,7 @@ export function useActivateOrder() {
     mutationFn: (id: string) => ordersApi.activate(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
     },
   });
 }
@@ -83,6 +86,7 @@ export function usePauseOrder() {
     mutationFn: (id: string) => ordersApi.pause(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
     },
   });
 }
@@ -93,6 +97,7 @@ export function useResumeOrder() {
     mutationFn: (id: string) => ordersApi.resume(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
     },
   });
 }
@@ -103,6 +108,7 @@ export function useCancelOrder() {
     mutationFn: (id: string) => ordersApi.cancel(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
     },
   });
 }

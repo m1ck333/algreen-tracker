@@ -1,4 +1,4 @@
-import type { ChangeRequestDto, RequestStatus } from '@algreen/shared-types';
+import type { ChangeRequestDto, PagedResult, RequestStatus } from '@algreen/shared-types';
 import type {
   CreateChangeRequestRequest,
   HandleChangeRequestRequest,
@@ -7,13 +7,15 @@ import { apiClient } from '../axios-instance';
 
 export const changeRequestsApi = {
   getAll(tenantId: string, status?: RequestStatus) {
-    return apiClient.get<ChangeRequestDto[]>('/change-requests', {
+    return apiClient.get<PagedResult<ChangeRequestDto>>('/change-requests', {
       params: { tenantId, status },
     });
   },
 
-  getMy(userId: string) {
-    return apiClient.get<ChangeRequestDto[]>('/change-requests/my', { params: { userId } });
+  getMy(tenantId: string, userId: string) {
+    return apiClient.get<PagedResult<ChangeRequestDto>>('/change-requests/my', {
+      params: { tenantId, userId },
+    });
   },
 
   create(data: CreateChangeRequestRequest) {

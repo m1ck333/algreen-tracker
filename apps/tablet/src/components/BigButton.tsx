@@ -1,5 +1,3 @@
-import { useTranslation } from '@algreen/i18n';
-
 interface BigButtonProps {
   children: React.ReactNode;
   variant?: 'primary' | 'danger' | 'secondary';
@@ -15,7 +13,6 @@ export function BigButton({
   disabled,
   loading,
 }: BigButtonProps) {
-  const { t } = useTranslation('common');
   const classes = {
     primary: 'btn-primary',
     danger: 'btn-danger',
@@ -29,7 +26,7 @@ export function BigButton({
       disabled={disabled || loading}
     >
       {loading ? (
-        <span className="animate-pulse">{t('messages.loading')}</span>
+        <span className="inline-block w-6 h-6 border-3 border-current/30 border-t-current rounded-full animate-spin" />
       ) : (
         children
       )}

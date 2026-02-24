@@ -6,6 +6,20 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+let _onForceLogout: (() => void) | null = null;
+
+export function setOnForceLogout(callback: () => void) {
+  _onForceLogout = callback;
+}
+
+function forceLogout() {
+  tokenManager.clear();
+  if (_onForceLogout) {
+    _onForceLogout();
+  }
+  window.location.href = '/login';
+}
+
 // Attach JWT token to every request
 apiClient.interceptors.request.use((config) => {
   const token = tokenManager.getToken();
@@ -44,8 +58,7 @@ apiClient.interceptors.response.use(
 
     // Don't try to refresh on the refresh endpoint itself
     if (originalRequest.url?.includes('/auth/refresh')) {
-      tokenManager.clear();
-      window.location.href = '/login';
+      forceLogout();
       return Promise.reject(error);
     }
 
@@ -63,8 +76,7 @@ apiClient.interceptors.response.use(
 
     const refreshToken = tokenManager.getRefreshToken();
     if (!refreshToken) {
-      tokenManager.clear();
-      window.location.href = '/login';
+      forceLogout();
       return Promise.reject(error);
     }
 
@@ -76,8 +88,7 @@ apiClient.interceptors.response.use(
       return apiClient(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
-      tokenManager.clear();
-      window.location.href = '/login';
+      forceLogout();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

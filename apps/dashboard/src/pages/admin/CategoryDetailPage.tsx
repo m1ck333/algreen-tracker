@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Typography, Card, Descriptions, Table, Button, Spin, Space } from 'antd';
+import { Typography, Card, Descriptions, Table, Button, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { productCategoriesApi } from '@algreen/api-client';

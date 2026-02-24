@@ -12,7 +12,6 @@ import { ChangeRequestsPage } from './pages/change-requests/ChangeRequestsPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { ProcessesPage } from './pages/admin/ProcessesPage';
 import { ProductCategoriesPage } from './pages/admin/ProductCategoriesPage';
-import { CategoryDetailPage } from './pages/admin/CategoryDetailPage';
 import { SpecialRequestTypesPage } from './pages/admin/SpecialRequestTypesPage';
 import { TenantsPage } from './pages/admin/TenantsPage';
 import { ShiftsPage } from './pages/admin/ShiftsPage';
@@ -101,14 +100,6 @@ export function AppRoutes() {
           element={
             <RequireRole roles={[UserRole.Admin, UserRole.Manager]}>
               <ProductCategoriesPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/admin/product-categories/:id"
-          element={
-            <RequireRole roles={[UserRole.Admin, UserRole.Manager]}>
-              <CategoryDetailPage />
             </RequireRole>
           }
         />

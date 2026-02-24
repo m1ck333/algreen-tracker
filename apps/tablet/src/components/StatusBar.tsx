@@ -3,11 +3,13 @@ import { useTranslation } from '@algreen/i18n';
 
 export function StatusBar() {
   const user = useAuthStore((s) => s.user);
-  const { t, i18n } = useTranslation('tablet');
+  const { i18n } = useTranslation('tablet');
 
   const toggleLanguage = () => {
     i18n.changeLanguage(i18n.language === 'sr' ? 'en' : 'sr');
   };
+
+  const isSr = i18n.language === 'sr';
 
   return (
     <div className="bg-primary-500 text-white px-4 py-3 flex items-center justify-between">
@@ -18,9 +20,11 @@ export function StatusBar() {
         )}
         <button
           onClick={toggleLanguage}
-          className="text-tablet-sm font-medium bg-white/20 px-2 py-0.5 rounded"
+          className="min-w-[48px] min-h-[48px] flex items-center justify-center gap-1 text-tablet-sm font-medium bg-white/20 px-3 rounded-lg"
         >
-          {i18n.language === 'sr' ? t('language.en') : t('language.sr')}
+          <span className={isSr ? 'font-bold' : 'opacity-60'}>SR</span>
+          <span className="opacity-40">/</span>
+          <span className={!isSr ? 'font-bold' : 'opacity-60'}>EN</span>
         </button>
       </div>
     </div>

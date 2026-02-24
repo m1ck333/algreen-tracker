@@ -1,6 +1,7 @@
 import type {
   ProductCategoryDto,
   ProductCategoryDetailDto,
+  PagedResult,
 } from '@algreen/shared-types';
 import type {
   CreateProductCategoryRequest,
@@ -12,7 +13,7 @@ import { apiClient } from '../axios-instance';
 
 export const productCategoriesApi = {
   getAll(tenantId: string) {
-    return apiClient.get<ProductCategoryDto[]>('/product-categories', { params: { tenantId } });
+    return apiClient.get<PagedResult<ProductCategoryDto>>('/product-categories', { params: { tenantId } });
   },
 
   getById(id: string) {

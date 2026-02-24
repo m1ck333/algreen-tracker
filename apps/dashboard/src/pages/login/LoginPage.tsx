@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Form, Input, Button, Typography, Alert } from 'antd';
 import { UserOutlined, LockOutlined, BankOutlined } from '@ant-design/icons';
@@ -32,7 +31,7 @@ export function LoginPage() {
       </div>
 
       {error && (
-        <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} />
+        <Alert message={t(`common:errors.${error === 'NOT_FOUND' ? 'INVALID_CREDENTIALS' : error}`, { defaultValue: '' }) || t('login.failed')} type="error" showIcon style={{ marginBottom: 16 }} />
       )}
 
       <Form form={form} onFinish={onFinish} layout="vertical" size="large">

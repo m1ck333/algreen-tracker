@@ -11,13 +11,16 @@
     "email": "Email",
     "password": "Password",
     "signingIn": "Signing in...",
-    "signIn": "SIGN IN"
+    "signIn": "SIGN IN",
+    "failed": "Login failed"
   },
   "checkin": {
     "welcome": "Welcome, {{name}}",
     "selectProcess": "Select your process and check in",
     "noProcesses": "No processes available",
-    "checkIn": "CHECK IN"
+    "checkIn": "CHECK IN",
+    "loadFailed": "Failed to load processes",
+    "retry": "Retry"
   },
   "queue": {
     "title": "Order Queue",
@@ -25,9 +28,11 @@
     "activeOrder": "{{count}} active order",
     "noOrders": "No orders in queue",
     "loadingQueue": "Loading queue...",
+    "loadFailed": "Failed to load queue",
     "items": "{{count}} items",
     "qty": "Qty: {{count}}",
-    "daysLeft": "{{count}}d left"
+    "daysLeft": "{{count}}d left",
+    "progress": "{{completed}}/{{total}} processes"
   },
   "work": {
     "title": "Work Session",
@@ -38,19 +43,43 @@
     "stop": "STOP",
     "complete": "COMPLETE",
     "backToQueue": "Back to Queue",
-    "min": "min"
+    "min": "min",
+    "startFailed": "Failed to start process",
+    "stopFailed": "Failed to stop process",
+    "completeFailed": "Failed to complete process",
+    "priority": "Priority",
+    "deliveryDate": "Delivery",
+    "quantity": "Quantity",
+    "complexity": "Complexity",
+    "startedAt": "Started at",
+    "confirmCompleteTitle": "Complete Process",
+    "confirmCompleteMessage": "Are you sure you want to mark this process as complete? This cannot be undone.",
+    "withdrawn": "Withdrawn",
+    "reportIssue": "Report Issue",
+    "blockReasonPlaceholder": "Describe the issue...",
+    "submitBlock": "Submit Report",
+    "blockFailed": "Failed to submit report",
+    "progress": "Order progress"
   },
   "incoming": {
     "title": "Incoming Orders",
     "subtitle": "Orders arriving from previous processes",
     "noOrders": "No incoming orders",
     "incoming": "Incoming",
-    "blocked": "{{count}} blocking processes"
+    "blocked": "{{count}} blocking processes",
+    "blockedBy": "Blocked by:",
+    "daysLeft": "{{count}}d left",
+    "loadFailed": "Failed to load incoming orders"
   },
   "checkout": {
     "title": "End of Shift",
     "checkOut": "CHECK OUT",
-    "goBack": "Go Back"
+    "checkOutFailed": "Failed to check out",
+    "goBack": "Go Back",
+    "confirmTitle": "End Shift",
+    "confirmMessage": "Are you sure you want to end your shift and check out?",
+    "process": "Process",
+    "checkedInAt": "Checked in at"
   },
   "offline": {
     "message": "You are offline. Some features may be unavailable."

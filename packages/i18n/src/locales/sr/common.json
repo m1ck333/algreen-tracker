@@ -3,6 +3,9 @@
   "actions": {
     "save": "Sačuvaj",
     "cancel": "Otkaži",
+    "close": "Zatvori",
+    "confirm": "Potvrdi",
+    "no": "Ne",
     "create": "Kreiraj",
     "back": "Nazad",
     "view": "Pogledaj",
@@ -12,7 +15,8 @@
     "signIn": "Prijavi se",
     "filter": "Filtriraj",
     "configure": "Podesi",
-    "add": "Dodaj"
+    "add": "Dodaj",
+    "edit": "Izmeni"
   },
   "labels": {
     "email": "Email",
@@ -38,8 +42,8 @@
     "complexity": "Kompleksnost"
   },
   "status": {
-    "active": "Aktivno",
-    "inactive": "Neaktivno"
+    "active": "Aktivan",
+    "inactive": "Neaktivan"
   },
   "validation": {
     "required": "Obavezno polje",
@@ -53,6 +57,31 @@
     "noDataAvailable": "Nema dostupnih podataka",
     "notFound": "Nije pronađeno",
     "loading": "Učitavanje..."
+  },
+  "errors": {
+    "NOT_CHECKED_IN": "Morate se prvo prijaviti na proces",
+    "SESSION_MISMATCH": "Vaša radna sesija je za drugi proces",
+    "ALREADY_CHECKED_IN": "Već imate aktivnu sesiju",
+    "ALREADY_CHECKED_OUT": "Već ste odjavljeni",
+    "ALREADY_RUNNING": "Rad je već u toku",
+    "ALREADY_ENDED": "Zapis je već završen",
+    "INVALID_STATUS": "Ova akcija nije dozvoljena u trenutnom statusu",
+    "INVALID_CREDENTIALS": "Pogrešan email ili lozinka",
+    "INVALID_PRIORITY": "Prioritet mora biti pozitivan broj",
+    "INVALID_DATE": "Datum isporuke mora biti u budućnosti",
+    "INVALID_ORDER_NUMBER": "Broj narudžbine je obavezan",
+    "INVALID_PRODUCT_NAME": "Naziv proizvoda je obavezan",
+    "INVALID_QUANTITY": "Količina mora biti pozitivan broj",
+    "INVALID_CODE": "Šifra je obavezna",
+    "INVALID_NAME": "Naziv je obavezan",
+    "INVALID_CURRENT_PASSWORD": "Trenutna lozinka nije ispravna",
+    "INVALID_REFRESH_TOKEN": "Sesija je istekla, prijavite se ponovo",
+    "NOT_FOUND": "Tražena stavka nije pronađena",
+    "PROCESS_NOT_STARTED": "Glavni proces mora biti pokrenut prvo",
+    "PROCESS_NOT_IN_CATEGORY": "Proces nije u ovoj kategoriji",
+    "PROCESS_CODE_EXISTS": "Proces sa ovom šifrom već postoji",
+    "LOG_ALREADY_OPEN": "Već postoji otvoren zapis",
+    "BLOCK_REASON_REQUIRED": "Razlog blokade je obavezan"
   },
   "enums": {
     "OrderStatus": {

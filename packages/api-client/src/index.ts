@@ -1,4 +1,4 @@
-export { apiClient } from './axios-instance';
+export { apiClient, setOnForceLogout } from './axios-instance';
 export { tokenManager } from './token-manager';
 
 export { authApi } from './api/auth';

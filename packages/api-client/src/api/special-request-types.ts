@@ -1,4 +1,4 @@
-import type { SpecialRequestTypeDto } from '@algreen/shared-types';
+import type { SpecialRequestTypeDto, PagedResult } from '@algreen/shared-types';
 import type {
   CreateSpecialRequestTypeRequest,
   UpdateSpecialRequestTypeRequest,
@@ -7,7 +7,7 @@ import { apiClient } from '../axios-instance';
 
 export const specialRequestTypesApi = {
   getAll(tenantId: string) {
-    return apiClient.get<SpecialRequestTypeDto[]>('/special-request-types', {
+    return apiClient.get<PagedResult<SpecialRequestTypeDto>>('/special-request-types', {
       params: { tenantId },
     });
   },

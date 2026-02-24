@@ -1,4 +1,4 @@
-import type { BlockRequestDto, RequestStatus } from '@algreen/shared-types';
+import type { BlockRequestDto, PagedResult, RequestStatus } from '@algreen/shared-types';
 import type {
   CreateBlockRequestRequest,
   HandleBlockRequestRequest,
@@ -7,7 +7,7 @@ import { apiClient } from '../axios-instance';
 
 export const blockRequestsApi = {
   getAll(tenantId: string, status?: RequestStatus) {
-    return apiClient.get<BlockRequestDto[]>('/block-requests', { params: { tenantId, status } });
+    return apiClient.get<PagedResult<BlockRequestDto>>('/block-requests', { params: { tenantId, status } });
   },
 
   create(data: CreateBlockRequestRequest) {

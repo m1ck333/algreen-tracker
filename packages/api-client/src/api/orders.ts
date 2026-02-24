@@ -1,9 +1,12 @@
-import type { OrderDto, OrderDetailDto, PagedResult } from '@algreen/shared-types';
+import type { OrderDto, OrderDetailDto, OrderMasterViewDto, PagedResult } from '@algreen/shared-types';
 import type { OrderStatus, OrderType } from '@algreen/shared-types';
 import type {
   CreateOrderRequest,
   UpdateOrderRequest,
   AddOrderItemRequest,
+  WithdrawOrderToProcessRequest,
+  AddSpecialRequestRequest,
+  OverrideComplexityRequest,
 } from '@algreen/shared-types';
 import { apiClient } from '../axios-instance';
 
@@ -21,6 +24,10 @@ export interface OrdersQuery {
 export const ordersApi = {
   getAll(params: OrdersQuery) {
     return apiClient.get<PagedResult<OrderDto>>('/orders', { params });
+  },
+
+  getMasterView(params: OrdersQuery) {
+    return apiClient.get<PagedResult<OrderMasterViewDto>>('/orders/master-view', { params });
   },
 
   getById(id: string) {
@@ -52,7 +59,7 @@ export const ordersApi = {
   },
 
   changePriority(id: string, priority: number) {
-    return apiClient.post(`/orders/${id}/change-priority`, { priority });
+    return apiClient.put(`/orders/${id}/priority`, { priority });
   },
 
   addItem(orderId: string, data: AddOrderItemRequest) {
@@ -61,5 +68,21 @@ export const ordersApi = {
 
   removeItem(orderId: string, itemId: string) {
     return apiClient.delete(`/orders/${orderId}/items/${itemId}`);
+  },
+
+  withdraw(id: string, data: WithdrawOrderToProcessRequest) {
+    return apiClient.post(`/orders/${id}/withdraw`, data);
+  },
+
+  addSpecialRequest(orderId: string, itemId: string, data: AddSpecialRequestRequest) {
+    return apiClient.post(`/orders/${orderId}/items/${itemId}/special-requests`, data);
+  },
+
+  removeSpecialRequest(orderId: string, itemId: string, specialRequestId: string) {
+    return apiClient.delete(`/orders/${orderId}/items/${itemId}/special-requests/${specialRequestId}`);
+  },
+
+  overrideComplexity(orderId: string, itemId: string, processId: string, data: OverrideComplexityRequest) {
+    return apiClient.put(`/orders/${orderId}/items/${itemId}/processes/${processId}/complexity`, data);
   },
 };

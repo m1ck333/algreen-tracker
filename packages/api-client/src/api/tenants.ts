@@ -1,4 +1,4 @@
-import type { TenantDto, TenantSettingsDto } from '@algreen/shared-types';
+import type { TenantDto, TenantSettingsDto, PagedResult } from '@algreen/shared-types';
 import type {
   CreateTenantRequest,
   UpdateTenantRequest,
@@ -8,7 +8,7 @@ import { apiClient } from '../axios-instance';
 
 export const tenantsApi = {
   getAll() {
-    return apiClient.get<TenantDto[]>('/tenants');
+    return apiClient.get<PagedResult<TenantDto>>('/tenants');
   },
 
   getById(id: string) {

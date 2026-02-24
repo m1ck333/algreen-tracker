@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { dashboardApi } from '@algreen/api-client';
+import { dashboardApi, changeRequestsApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
+import { RequestStatus } from '@algreen/shared-types';
 
 export function useDashboardWarnings() {
   const tenantId = useAuthStore((s) => s.tenantId);
@@ -49,5 +50,18 @@ export function useDashboardStatistics() {
     queryFn: () => dashboardApi.getStatistics(tenantId!).then((r) => r.data),
     enabled: !!tenantId,
     refetchInterval: 300_000,
+  });
+}
+
+export function usePendingChangeRequests() {
+  const tenantId = useAuthStore((s) => s.tenantId);
+  return useQuery({
+    queryKey: ['dashboard', 'pending-change-requests', tenantId],
+    queryFn: () =>
+      changeRequestsApi
+        .getAll(tenantId!, RequestStatus.Pending)
+        .then((r) => r.data.items),
+    enabled: !!tenantId,
+    refetchInterval: 120_000,
   });
 }

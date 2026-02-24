@@ -1,10 +1,10 @@
-import type { UserDto } from '@algreen/shared-types';
+import type { UserDto, PagedResult } from '@algreen/shared-types';
 import type { CreateUserRequest, UpdateUserRequest, ChangePasswordRequest } from '@algreen/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const usersApi = {
   getAll(tenantId: string) {
-    return apiClient.get<UserDto[]>('/users', { params: { tenantId } });
+    return apiClient.get<PagedResult<UserDto>>('/users', { params: { tenantId } });
   },
 
   getById(id: string) {

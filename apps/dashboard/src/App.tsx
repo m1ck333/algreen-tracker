@@ -23,7 +23,7 @@ export function App() {
   const { i18n } = useTranslation();
 
   return (
-    <ConfigProvider theme={theme} locale={antdLocales[i18n.language] || srRS}>
+    <ConfigProvider theme={theme} locale={antdLocales[i18n.language] || srRS} form={{ requiredMark: (label, { required }) => <>{label}{required && <span style={{ color: '#ff4d4f', marginLeft: 2 }}>*</span>}</> }}>
       <AntApp>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter

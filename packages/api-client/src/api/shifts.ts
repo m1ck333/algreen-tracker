@@ -1,10 +1,10 @@
-import type { ShiftDto } from '@algreen/shared-types';
+import type { ShiftDto, PagedResult } from '@algreen/shared-types';
 import type { CreateShiftRequest, UpdateShiftRequest } from '@algreen/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const shiftsApi = {
   getAll(tenantId: string) {
-    return apiClient.get<ShiftDto[]>('/shifts', { params: { tenantId } });
+    return apiClient.get<PagedResult<ShiftDto>>('/shifts', { params: { tenantId } });
   },
 
   create(data: CreateShiftRequest) {

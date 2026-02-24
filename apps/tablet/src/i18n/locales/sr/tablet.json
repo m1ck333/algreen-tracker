@@ -11,13 +11,16 @@
     "email": "Email",
     "password": "Lozinka",
     "signingIn": "Prijavljivanje...",
-    "signIn": "PRIJAVI SE"
+    "signIn": "PRIJAVI SE",
+    "failed": "Prijava nije uspela"
   },
   "checkin": {
     "welcome": "Dobrodošli, {{name}}",
     "selectProcess": "Izaberite proces i prijavite se",
     "noProcesses": "Nema dostupnih procesa",
-    "checkIn": "PRIJAVI SE"
+    "checkIn": "PRIJAVI SE",
+    "loadFailed": "Učitavanje procesa nije uspelo",
+    "retry": "Pokušaj ponovo"
   },
   "queue": {
     "title": "Red narudžbina",
@@ -25,9 +28,11 @@
     "activeOrder": "{{count}} aktivna narudžbina",
     "noOrders": "Nema narudžbina u redu",
     "loadingQueue": "Učitavanje reda...",
+    "loadFailed": "Učitavanje reda nije uspelo",
     "items": "{{count}} stavki",
     "qty": "Kol: {{count}}",
-    "daysLeft": "{{count}}d preostalo"
+    "daysLeft": "{{count}}d preostalo",
+    "progress": "{{completed}}/{{total}} procesa"
   },
   "work": {
     "title": "Radna sesija",
@@ -38,19 +43,43 @@
     "stop": "STOP",
     "complete": "ZAVRŠI",
     "backToQueue": "Nazad u red",
-    "min": "min"
+    "min": "min",
+    "startFailed": "Pokretanje procesa nije uspelo",
+    "stopFailed": "Zaustavljanje procesa nije uspelo",
+    "completeFailed": "Završavanje procesa nije uspelo",
+    "priority": "Prioritet",
+    "deliveryDate": "Isporuka",
+    "quantity": "Količina",
+    "complexity": "Složenost",
+    "startedAt": "Započeto u",
+    "confirmCompleteTitle": "Završi proces",
+    "confirmCompleteMessage": "Da li ste sigurni da želite da označite ovaj proces kao završen? Ovo se ne može poništiti.",
+    "withdrawn": "Povučeno",
+    "reportIssue": "Prijavi problem",
+    "blockReasonPlaceholder": "Opišite problem...",
+    "submitBlock": "Pošalji prijavu",
+    "blockFailed": "Slanje prijave nije uspelo",
+    "progress": "Napredak narudžbine"
   },
   "incoming": {
     "title": "Dolazne narudžbine",
     "subtitle": "Narudžbine iz prethodnih procesa",
     "noOrders": "Nema dolaznih narudžbina",
     "incoming": "Dolazna",
-    "blocked": "{{count}} blokirajućih procesa"
+    "blocked": "{{count}} blokirajućih procesa",
+    "blockedBy": "Blokirano od:",
+    "daysLeft": "{{count}}d preostalo",
+    "loadFailed": "Učitavanje dolaznih narudžbina nije uspelo"
   },
   "checkout": {
     "title": "Kraj smene",
     "checkOut": "ODJAVI SE",
-    "goBack": "Nazad"
+    "checkOutFailed": "Odjava nije uspela",
+    "goBack": "Nazad",
+    "confirmTitle": "Kraj smene",
+    "confirmMessage": "Da li ste sigurni da želite da završite smenu i odjavite se?",
+    "process": "Proces",
+    "checkedInAt": "Prijavljeni u"
   },
   "offline": {
     "message": "Niste povezani. Neke funkcije možda neće biti dostupne."

@@ -4,25 +4,25 @@ import { useEnumTranslation } from '@algreen/i18n';
 
 const orderStatusColors: Record<OrderStatus, string> = {
   [OrderStatus.Draft]: 'default',
-  [OrderStatus.Active]: 'processing',
-  [OrderStatus.Paused]: 'warning',
-  [OrderStatus.Cancelled]: 'error',
-  [OrderStatus.Completed]: 'success',
+  [OrderStatus.Active]: 'green',
+  [OrderStatus.Paused]: 'orange',
+  [OrderStatus.Cancelled]: 'red',
+  [OrderStatus.Completed]: 'cyan',
 };
 
 const processStatusColors: Record<ProcessStatus, string> = {
   [ProcessStatus.Pending]: 'default',
-  [ProcessStatus.InProgress]: 'processing',
-  [ProcessStatus.Completed]: 'success',
-  [ProcessStatus.Blocked]: 'error',
-  [ProcessStatus.Stopped]: 'warning',
+  [ProcessStatus.InProgress]: 'blue',
+  [ProcessStatus.Completed]: 'green',
+  [ProcessStatus.Blocked]: 'red',
+  [ProcessStatus.Stopped]: 'orange',
   [ProcessStatus.Withdrawn]: 'default',
 };
 
 const requestStatusColors: Record<RequestStatus, string> = {
-  [RequestStatus.Pending]: 'warning',
-  [RequestStatus.Approved]: 'success',
-  [RequestStatus.Rejected]: 'error',
+  [RequestStatus.Pending]: 'orange',
+  [RequestStatus.Approved]: 'green',
+  [RequestStatus.Rejected]: 'red',
 };
 
 interface StatusBadgeProps {

@@ -1,27 +1,56 @@
-import { Row, Col, Card, Typography, Table, Spin, Alert, Statistic, List, Tag, Badge, Tooltip } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { Row, Col, Card, Typography, Table, Alert, Statistic, List, Tag, Badge, Tooltip, Button } from 'antd';
 import {
   WarningOutlined,
   ClockCircleOutlined,
   StopOutlined,
   BarChartOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
+import type {
+  DashboardStatisticsDto,
+  DeadlineWarningDto,
+  LiveViewProcessDto,
+  LiveViewOrderDto,
+  WorkerStatusDto,
+  PendingBlockRequestDto,
+  ChangeRequestDto,
+} from '@algreen/shared-types';
 import {
   useDashboardWarnings,
   useDashboardLiveView,
   useDashboardWorkersStatus,
   useDashboardPendingBlocks,
   useDashboardStatistics,
+  usePendingChangeRequests,
 } from '../../hooks/useDashboard';
 import { useTranslation } from '@algreen/i18n';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}.`;
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return `${formatDate(iso)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 export function CoordinatorDashboard() {
+  const navigate = useNavigate();
   const warnings = useDashboardWarnings();
   const liveView = useDashboardLiveView();
   const workers = useDashboardWorkersStatus();
   const pendingBlocks = useDashboardPendingBlocks();
   const statistics = useDashboardStatistics();
+  const changeRequests = usePendingChangeRequests();
   const { t } = useTranslation('dashboard');
 
   return (
@@ -33,21 +62,29 @@ export function CoordinatorDashboard() {
         <Col xs={24} lg={12}>
           <Card title={<><BarChartOutlined /> {t('coordinator.statistics')}</>} loading={statistics.isLoading}>
             {statistics.data ? (() => {
-              const s = statistics.data as {
-                today?: { ordersCompleted?: number; ordersActive?: number; processesCompleted?: number; averageProcessTimeMinutes?: number };
-                warnings?: { criticalCount?: number; warningCount?: number };
-                pendingBlockRequests?: number;
-              };
+              const s = statistics.data as DashboardStatisticsDto;
+              const items: { title: string; value: number; suffix?: string; color?: string }[] = [
+                { title: t('coordinator.stats.ordersActive'), value: s.today?.ordersActive ?? 0 },
+                { title: t('coordinator.stats.ordersCompleted'), value: s.today?.ordersCompleted ?? 0 },
+                { title: t('coordinator.stats.processesCompleted'), value: s.today?.processesCompleted ?? 0 },
+                { title: t('coordinator.stats.avgProcessTime'), value: s.today?.averageProcessTimeMinutes ?? 0, suffix: t('coordinator.stats.min') },
+                { title: t('coordinator.stats.criticalWarnings'), value: s.warnings?.criticalCount ?? 0, color: s.warnings?.criticalCount ? '#cf1322' : undefined },
+                { title: t('coordinator.stats.warnings'), value: s.warnings?.warningCount ?? 0, color: s.warnings?.warningCount ? '#faad14' : undefined },
+                { title: t('coordinator.stats.pendingBlockRequests'), value: s.pendingBlockRequests ?? 0 },
+              ];
               return (
-                <Row gutter={[16, 16]}>
-                  <Col span={6}><Statistic title={t('coordinator.stats.ordersActive')} value={s.today?.ordersActive ?? 0} /></Col>
-                  <Col span={6}><Statistic title={t('coordinator.stats.ordersCompleted')} value={s.today?.ordersCompleted ?? 0} /></Col>
-                  <Col span={6}><Statistic title={t('coordinator.stats.processesCompleted')} value={s.today?.processesCompleted ?? 0} /></Col>
-                  <Col span={6}><Statistic title={t('coordinator.stats.avgProcessTime')} value={s.today?.averageProcessTimeMinutes ?? 0} suffix={t('coordinator.stats.min')} /></Col>
-                  <Col span={8}><Statistic title={t('coordinator.stats.criticalWarnings')} value={s.warnings?.criticalCount ?? 0} valueStyle={s.warnings?.criticalCount ? { color: '#cf1322' } : undefined} /></Col>
-                  <Col span={8}><Statistic title={t('coordinator.stats.warnings')} value={s.warnings?.warningCount ?? 0} valueStyle={s.warnings?.warningCount ? { color: '#faad14' } : undefined} /></Col>
-                  <Col span={8}><Statistic title={t('coordinator.stats.pendingBlockRequests')} value={s.pendingBlockRequests ?? 0} /></Col>
-                </Row>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px 16px' }}>
+                  {items.map((item) => (
+                    <div key={item.title} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 64 }}>
+                      <div style={{ fontSize: 13, color: 'rgba(0,0,0,0.45)', lineHeight: 1.3, marginBottom: 4 }}>{item.title}</div>
+                      <Statistic
+                        value={item.value}
+                        suffix={item.suffix}
+                        valueStyle={{ fontSize: 24, ...(item.color ? { color: item.color } : {}) }}
+                      />
+                    </div>
+                  ))}
+                </div>
               );
             })() : (
               !statistics.isLoading && <Alert message={t('coordinator.noStatistics')} type="info" />
@@ -64,18 +101,35 @@ export function CoordinatorDashboard() {
             {Array.isArray(warnings.data) && warnings.data.length > 0 ? (
               <List
                 size="small"
-                dataSource={warnings.data}
-                renderItem={(item: Record<string, unknown>) => (
+                dataSource={warnings.data as DeadlineWarningDto[]}
+                renderItem={(item: DeadlineWarningDto) => {
+                  const isOverdue = item.daysRemaining < 0;
+                  const daysText = isOverdue
+                    ? t('coordinator.daysOverdue', { count: Math.abs(item.daysRemaining) })
+                    : t('coordinator.daysRemaining', { count: item.daysRemaining });
+                  return (
                   <List.Item>
                     <List.Item.Meta
-                      title={item.orderNumber as string}
-                      description={t('coordinator.daysRemaining', { count: item.daysRemaining as number })}
+                      title={item.orderNumber}
+                      description={
+                        <>
+                          <span style={isOverdue ? { color: '#cf1322', fontWeight: 500 } : undefined}>
+                            {daysText}
+                          </span>
+                          {' · '}
+                          {t('coordinator.deliveryDate')}: {formatDate(item.deliveryDate)}
+                          {item.currentProcess && (
+                            <> · {t('coordinator.currentProcess')}: {item.currentProcess}</>
+                          )}
+                        </>
+                      }
                     />
                     <Tag color={item.level === 'Critical' ? 'red' : 'orange'}>
-                      {item.level as string}
+                      {item.level === 'Critical' ? t('coordinator.levelCritical') : t('coordinator.levelWarning')}
                     </Tag>
                   </List.Item>
-                )}
+                  );
+                }}
               />
             ) : (
               !warnings.isLoading && <Alert message={t('coordinator.noWarnings')} type="success" />
@@ -87,37 +141,45 @@ export function CoordinatorDashboard() {
         <Col xs={24}>
           <Card title={<><ClockCircleOutlined /> {t('coordinator.liveView')}</>} loading={liveView.isLoading || workers.isLoading}>
             {Array.isArray(liveView.data) && liveView.data.length > 0 ? (
-              <Table
+              <Table<LiveViewProcessDto>
                 size="small"
                 dataSource={liveView.data}
-                rowKey={(r: Record<string, unknown>) => r.processId as string}
+                rowKey={(r) => r.processId}
                 pagination={false}
                 scroll={{ x: 'max-content' }}
                 columns={[
                   {
                     title: t('coordinator.liveProcess'),
                     key: 'process',
-                    render: (_: unknown, r: Record<string, unknown>) => (
+                    render: (_, r) => (
                       <>{r.processCode} — {r.processName}</>
                     ),
                   },
                   {
                     title: t('coordinator.liveWorkers'),
                     key: 'workers',
-                    width: 60,
-                    align: 'center' as const,
-                    render: (_: unknown, r: Record<string, unknown>) => {
-                      const workersList = Array.isArray(workers.data) ? workers.data as Record<string, unknown>[] : [];
+                    width: 180,
+                    render: (_, r) => {
+                      const workersList = Array.isArray(workers.data) ? workers.data as WorkerStatusDto[] : [];
                       const match = workersList.find((w) => w.processId === r.processId);
-                      const isOnline = !!(match as Record<string, unknown> | undefined)?.isWorkerCheckedIn;
-                      const worker = (match as Record<string, unknown> | undefined)?.worker as Record<string, unknown> | null;
-                      const tooltip = isOnline && worker
-                        ? `${worker.name} — ${t('coordinator.workerOnline')}`
-                        : t('coordinator.workerOffline');
+                      const isOnline = !!match?.isWorkerCheckedIn;
+                      const worker = match?.worker;
                       return (
-                        <Tooltip title={tooltip}>
-                          <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', backgroundColor: isOnline ? '#52c41a' : '#ff4d4f' }} />
-                        </Tooltip>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: isOnline ? '#52c41a' : '#ff4d4f', flexShrink: 0 }} />
+                          {isOnline && worker ? (
+                            <Text style={{ fontSize: 13 }}>
+                              {worker.name}
+                              {worker.checkInTime && (
+                                <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
+                                  ({formatTime(worker.checkInTime)})
+                                </Text>
+                              )}
+                            </Text>
+                          ) : (
+                            <Text type="secondary" style={{ fontSize: 13 }}>{t('coordinator.workerOffline')}</Text>
+                          )}
+                        </div>
                       );
                     },
                   },
@@ -140,14 +202,36 @@ export function CoordinatorDashboard() {
                   {
                     title: t('coordinator.liveActiveOrders'),
                     key: 'activeOrders',
-                    render: (_: unknown, r: Record<string, unknown>) => {
-                      const orders = r.activeOrders as Record<string, unknown>[];
-                      if (!Array.isArray(orders) || orders.length === 0) {
-                        return <Typography.Text type="secondary">{t('coordinator.liveNoActiveOrders')}</Typography.Text>;
+                    render: (_, r) => {
+                      if (!Array.isArray(r.activeOrders) || r.activeOrders.length === 0) {
+                        return <Text type="secondary">{t('coordinator.liveNoActiveOrders')}</Text>;
                       }
-                      return orders.map((o) => (
-                        <Tag key={o.orderNumber as string}>{o.orderNumber as string}</Tag>
-                      ));
+                      return (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {r.activeOrders.map((o: LiveViewOrderDto, idx: number) => {
+                            const key = `${r.processId}-${o.orderItemId ?? idx}`;
+                            if (o.isBlocked) {
+                              return (
+                                <Tooltip key={key} title={`${t('coordinator.blockReason')}: ${o.blockReason ?? '—'}`}>
+                                  <Tag
+                                    color="red"
+                                    icon={<StopOutlined />}
+                                    style={{ borderStyle: 'dashed', margin: 0 }}
+                                  >
+                                    {o.orderNumber} · {o.productName}
+                                  </Tag>
+                                </Tooltip>
+                              );
+                            }
+                            const tagColor = o.status === 'InProgress' ? 'green' : o.status === 'Pending' ? 'default' : 'blue';
+                            return (
+                              <Tag key={key} color={tagColor} style={{ margin: 0 }}>
+                                {o.orderNumber} · {o.productName}
+                              </Tag>
+                            );
+                          })}
+                        </div>
+                      );
                     },
                   },
                 ]}
@@ -159,24 +243,71 @@ export function CoordinatorDashboard() {
         </Col>
 
         {/* Pending Blocks */}
-        <Col xs={24}>
+        <Col xs={24} lg={12}>
           <Card title={<><StopOutlined /> {t('coordinator.pendingBlocks')}</>} loading={pendingBlocks.isLoading}>
             {Array.isArray(pendingBlocks.data) && pendingBlocks.data.length > 0 ? (
               <List
                 size="small"
-                dataSource={pendingBlocks.data}
-                renderItem={(item: Record<string, unknown>) => (
-                  <List.Item>
+                dataSource={pendingBlocks.data as PendingBlockRequestDto[]}
+                renderItem={(item: PendingBlockRequestDto) => (
+                  <List.Item
+                    extra={
+                      <div style={{ textAlign: 'right', fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>
+                        <div>{item.requestedBy}</div>
+                        <div>{formatDateTime(item.requestedAt)}</div>
+                      </div>
+                    }
+                  >
                     <List.Item.Meta
-                      title={t('coordinator.blockRequest', { id: (item.id as string)?.slice(0, 8) })}
-                      description={item.requestNote as string}
+                      title={<>{item.orderNumber} — {item.processName}</>}
+                      description={
+                        <>
+                          {item.productName}
+                          {item.requestNote && <> · {item.requestNote}</>}
+                        </>
+                      }
                     />
-                    <Tag color="warning">{t('coordinator.pending')}</Tag>
                   </List.Item>
                 )}
               />
             ) : (
               !pendingBlocks.isLoading && <Alert message={t('coordinator.noPendingBlocks')} type="success" />
+            )}
+          </Card>
+        </Col>
+
+        {/* Pending Change Requests */}
+        <Col xs={24} lg={12}>
+          <Card
+            title={<><SwapOutlined /> {t('coordinator.pendingChangeRequests')}</>}
+            loading={changeRequests.isLoading}
+            extra={
+              Array.isArray(changeRequests.data) && changeRequests.data.length > 0
+                ? <Button type="link" size="small" onClick={() => navigate('/change-requests')}>{t('coordinator.viewAll')}</Button>
+                : undefined
+            }
+          >
+            {Array.isArray(changeRequests.data) && changeRequests.data.length > 0 ? (
+              <List
+                size="small"
+                dataSource={(changeRequests.data as ChangeRequestDto[]).slice(0, 5)}
+                renderItem={(item: ChangeRequestDto) => (
+                  <List.Item
+                    extra={
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {formatDateTime(item.createdAt)}
+                      </Text>
+                    }
+                  >
+                    <List.Item.Meta
+                      title={<Tag color="blue">{item.requestType}</Tag>}
+                      description={item.description}
+                    />
+                  </List.Item>
+                )}
+              />
+            ) : (
+              !changeRequests.isLoading && <Alert message={t('coordinator.noPendingChangeRequests')} type="success" />
             )}
           </Card>
         </Col>

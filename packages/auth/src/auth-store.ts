@@ -39,10 +39,9 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
         } catch (err: unknown) {
-          const message =
-            (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-            'Login failed';
-          set({ isLoading: false, error: message });
+          const code =
+            (err as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
+          set({ isLoading: false, error: code || 'LOGIN_FAILED' });
           throw err;
         }
       },

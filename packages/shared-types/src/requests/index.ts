@@ -21,6 +21,7 @@ export interface CreateUserRequest {
   firstName: string;
   lastName: string;
   role: UserRole;
+  processId?: string | null;
 }
 
 export interface UpdateUserRequest {
@@ -29,6 +30,7 @@ export interface UpdateUserRequest {
   role: UserRole;
   isActive: boolean;
   canIncludeWithdrawnInAnalysis: boolean;
+  processId?: string | null;
 }
 
 export interface ChangePasswordRequest {
@@ -74,6 +76,20 @@ export interface AddOrderItemRequest {
   productName: string;
   quantity: number;
   notes?: string;
+}
+
+export interface WithdrawOrderToProcessRequest {
+  targetProcessId: string;
+  reason: string;
+  userId: string;
+}
+
+export interface AddSpecialRequestRequest {
+  specialRequestTypeId: string;
+}
+
+export interface OverrideComplexityRequest {
+  complexity: ComplexityType;
 }
 
 // ─── Block Requests ──────────────────────────────────────

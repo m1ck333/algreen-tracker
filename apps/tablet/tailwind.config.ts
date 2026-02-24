@@ -19,6 +19,7 @@ export default {
         },
       },
       fontSize: {
+        'tablet-xs': '0.875rem',
         'tablet-sm': '1rem',
         'tablet-base': '1.125rem',
         'tablet-lg': '1.375rem',

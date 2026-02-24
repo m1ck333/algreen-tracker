@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { useAuthStore } from '@algreen/auth';
 import {
   createConnection,
   startConnection,
-  stopConnection,
   joinTenantGroup,
   joinProcessGroup,
 } from '@algreen/signalr-client';
@@ -17,8 +16,6 @@ import { useSignalRQueryInvalidation } from '../hooks/useSignalRQueryInvalidatio
 export function TabletLayout() {
   const tenantId = useAuthStore((s) => s.tenantId);
   const processId = useAuthStore((s) => s.user?.processId);
-  const navigate = useNavigate();
-
   useSignalRQueryInvalidation();
 
   useEffect(() => {

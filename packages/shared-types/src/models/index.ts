@@ -123,6 +123,21 @@ export interface OrderItemSpecialRequestDto {
   specialRequestTypeId: string;
 }
 
+export interface OrderMasterViewDto {
+  id: string;
+  orderNumber: string;
+  orderType: OrderType;
+  status: OrderStatus;
+  deliveryDate: string;
+  priority: number;
+  customWarningDays: number | null;
+  customCriticalDays: number | null;
+  completedProcesses: number;
+  totalProcesses: number;
+  /** Map of processId → aggregated ProcessStatus string */
+  processStatuses: Record<string, string>;
+}
+
 // ─── Block & Change Requests ─────────────────────────────
 
 export interface BlockRequestDto {
@@ -247,6 +262,70 @@ export interface SpecialRequestTypeDto {
   isActive: boolean;
 }
 
+// ─── Dashboard ──────────────────────────────────────────
+
+export interface DashboardStatisticsDto {
+  today: {
+    ordersCompleted: number;
+    ordersActive: number;
+    processesCompleted: number;
+    averageProcessTimeMinutes: number;
+  };
+  warnings: {
+    criticalCount: number;
+    warningCount: number;
+  };
+  pendingBlockRequests: number;
+}
+
+export interface DeadlineWarningDto {
+  orderId: string;
+  orderNumber: string;
+  deliveryDate: string;
+  daysRemaining: number;
+  level: 'Warning' | 'Critical';
+  currentProcess: string | null;
+}
+
+export interface LiveViewProcessDto {
+  processId: string;
+  processCode: string;
+  processName: string;
+  queueCount: number;
+  inProgressCount: number;
+  activeOrders: LiveViewOrderDto[];
+}
+
+export interface LiveViewOrderDto {
+  orderItemId: string;
+  orderId: string;
+  orderNumber: string;
+  productName: string;
+  status: string;
+  isBlocked: boolean;
+  blockReason: string | null;
+}
+
+export interface WorkerStatusDto {
+  processId: string;
+  isWorkerCheckedIn: boolean;
+  worker: {
+    id: string;
+    name: string;
+    checkInTime: string | null;
+  } | null;
+}
+
+export interface PendingBlockRequestDto {
+  id: string;
+  orderNumber: string;
+  processName: string;
+  productName: string;
+  requestNote: string | null;
+  requestedBy: string;
+  requestedAt: string;
+}
+
 // ─── Tenancy ─────────────────────────────────────────────
 
 export interface TenantDto {
@@ -279,6 +358,9 @@ export interface TabletQueueItemDto {
   quantity: number;
   complexity: ComplexityType | null;
   status: ProcessStatus;
+  specialRequestNames: string[];
+  completedProcessCount: number;
+  totalProcessCount: number;
 }
 
 export interface TabletActiveWorkDto {
@@ -291,6 +373,9 @@ export interface TabletActiveWorkDto {
   quantity: number;
   complexity: ComplexityType | null;
   status: ProcessStatus;
+  specialRequestNames: string[];
+  completedProcessCount: number;
+  totalProcessCount: number;
   startedAt: string | null;
   totalDurationMinutes: number;
   subProcesses: TabletSubProcessDto[];
@@ -314,6 +399,9 @@ export interface TabletIncomingDto {
   quantity: number;
   complexity: ComplexityType | null;
   status: ProcessStatus;
+  specialRequestNames: string[];
+  completedProcessCount: number;
+  totalProcessCount: number;
   blockingProcesses: BlockingProcessDto[];
 }
 

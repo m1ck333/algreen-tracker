@@ -12,15 +12,18 @@ export function CheckInPage() {
   const tenantId = useAuthStore((s) => s.tenantId);
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
-  const setWorkProcessId = useWorkSessionStore((s) => s.setProcessId);
+  const setSessionInfo = useWorkSessionStore((s) => s.setSessionInfo);
   const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
   const { t } = useTranslation('tablet');
 
-  const { data: processes } = useQuery({
+  const { data: processes, isLoading, isError, refetch } = useQuery({
     queryKey: ['processes', tenantId],
     queryFn: () => processesApi.getAll(tenantId!).then((r) => r.data.items),
     enabled: !!tenantId,
   });
+
+  const activeProcesses = processes?.filter((p) => p.isActive) ?? [];
+  const selectedProcess = activeProcesses.find((p) => p.id === selectedProcessId);
 
   const checkInMutation = useMutation({
     mutationFn: () =>
@@ -30,19 +33,48 @@ export function CheckInPage() {
         userId: user!.id,
       }),
     onSuccess: () => {
-      setWorkProcessId(selectedProcessId!);
+      setSessionInfo({
+        processId: selectedProcessId!,
+        processName: selectedProcess?.name ?? '',
+        checkInTime: new Date().toISOString(),
+      });
       queryClient.invalidateQueries({ queryKey: ['work-session'] });
       navigate('/queue');
     },
-    onError: (error: any) => {
+    onError: (error: { response?: { data?: { error?: { code?: string } } } }) => {
       if (error.response?.data?.error?.code === 'ALREADY_CHECKED_IN') {
-        setWorkProcessId(selectedProcessId!);
+        setSessionInfo({
+          processId: selectedProcessId!,
+          processName: selectedProcess?.name ?? '',
+          checkInTime: new Date().toISOString(),
+        });
         navigate('/queue');
       }
     },
   });
 
-  const activeProcesses = processes?.filter((p) => p.isActive) ?? [];
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-3">
+        <span className="inline-block w-8 h-8 border-3 border-primary-200 border-t-primary-500 rounded-full animate-spin" />
+        <span className="text-tablet-sm text-gray-400">{t('common:messages.loading')}</span>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <p className="text-tablet-base text-red-600">{t('checkin.loadFailed')}</p>
+        <button
+          onClick={() => refetch()}
+          className="bg-primary-500 text-white px-6 py-3 rounded-xl text-tablet-sm font-semibold"
+        >
+          {t('checkin.retry')}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

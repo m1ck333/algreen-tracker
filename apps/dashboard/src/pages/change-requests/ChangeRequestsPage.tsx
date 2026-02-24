@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Typography, Table, Select, Space, Button, App } from 'antd';
+import { Typography, Table, Space, Button, App, Popconfirm, Tag } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { changeRequestsApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
@@ -10,6 +10,19 @@ import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
+
+function getApiErrorCode(error: unknown): string | undefined {
+  return (error as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
+}
+
+function getTranslatedError(error: unknown, t: (key: string, opts?: Record<string, string>) => string, fallback: string): string {
+  const code = getApiErrorCode(error);
+  if (code) {
+    const translated = t(`common:errors.${code}`, { defaultValue: '' });
+    if (translated) return translated;
+  }
+  return fallback;
+}
 
 export function ChangeRequestsPage() {
   const tenantId = useAuthStore((s) => s.tenantId);
@@ -22,7 +35,7 @@ export function ChangeRequestsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['change-requests', tenantId, statusFilter],
-    queryFn: () => changeRequestsApi.getAll(tenantId!, statusFilter).then((r) => { const d = r.data as any; return Array.isArray(d) ? d : d.items; }),
+    queryFn: () => changeRequestsApi.getAll(tenantId!, statusFilter).then((r) => r.data.items),
     enabled: !!tenantId,
   });
 
@@ -33,6 +46,7 @@ export function ChangeRequestsPage() {
       queryClient.invalidateQueries({ queryKey: ['change-requests'] });
       message.success(t('changeRequests.approved'));
     },
+    onError: (err) => message.error(getTranslatedError(err, t, t('changeRequests.approveFailed'))),
   });
 
   const rejectMutation = useMutation({
@@ -42,62 +56,101 @@ export function ChangeRequestsPage() {
       queryClient.invalidateQueries({ queryKey: ['change-requests'] });
       message.success(t('changeRequests.rejected'));
     },
+    onError: (err) => message.error(getTranslatedError(err, t, t('changeRequests.rejectFailed'))),
   });
 
   const columns = [
-    { title: t('common:labels.type'), dataIndex: 'requestType', render: (rt: string) => <>{tEnum('ChangeRequestType', rt)}</> },
+    {
+      title: t('common:labels.type'),
+      dataIndex: 'requestType',
+      width: 140,
+      render: (rt: string) => <Tag color="blue">{tEnum('ChangeRequestType', rt)}</Tag>,
+    },
     { title: t('common:labels.description'), dataIndex: 'description', ellipsis: true },
+    {
+      title: t('changeRequests.responseNote'),
+      dataIndex: 'responseNote',
+      ellipsis: true,
+      render: (note: string | null, record: ChangeRequestDto) => {
+        if (!note) return '—';
+        const color = record.status === RequestStatus.Approved ? 'success' : record.status === RequestStatus.Rejected ? 'danger' : undefined;
+        return <Typography.Text type={color}>{note}</Typography.Text>;
+      },
+    },
     {
       title: t('common:labels.status'),
       dataIndex: 'status',
+      width: 110,
+      filters: Object.values(RequestStatus).map((s) => ({ text: tEnum('RequestStatus', s), value: s })),
+      filteredValue: statusFilter ? [statusFilter] : null,
+      filterMultiple: false,
       render: (s: RequestStatus) => <StatusBadge status={s} />,
     },
     {
       title: t('common:labels.created'),
       dataIndex: 'createdAt',
-      render: (d: string) => dayjs(d).format('DD.MM.YYYY HH:mm'),
+      width: 150,
+      sorter: (a: ChangeRequestDto, b: ChangeRequestDto) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
+      defaultSortOrder: 'descend' as const,
+      render: (d: string) => dayjs(d).format('DD.MM.YYYY. HH:mm'),
     },
     {
       title: t('common:labels.actions'),
-      render: (_: unknown, record: ChangeRequestDto) =>
-        record.status === RequestStatus.Pending ? (
-          <Space>
-            <Button
-              type="primary"
-              size="small"
-              loading={approveMutation.isPending}
-              onClick={() => approveMutation.mutate(record.id)}
-            >
-              {t('common:actions.approve')}
-            </Button>
-            <Button
-              danger
-              size="small"
-              loading={rejectMutation.isPending}
-              onClick={() => rejectMutation.mutate(record.id)}
-            >
-              {t('common:actions.reject')}
-            </Button>
-          </Space>
-        ) : null,
+      width: 180,
+      render: (_: unknown, record: ChangeRequestDto) => {
+        if (record.status === RequestStatus.Pending) {
+          return (
+            <Space>
+              <Popconfirm
+                title={t('changeRequests.approveConfirm')}
+                okText={t('common:actions.confirm')}
+                cancelText={t('common:actions.no')}
+                onConfirm={() => approveMutation.mutate(record.id)}
+              >
+                <Button
+                  type="primary"
+                  size="small"
+                  loading={approveMutation.isPending}
+                >
+                  {t('common:actions.approve')}
+                </Button>
+              </Popconfirm>
+              <Popconfirm
+                title={t('changeRequests.rejectConfirm')}
+                okText={t('common:actions.confirm')}
+                cancelText={t('common:actions.no')}
+                onConfirm={() => rejectMutation.mutate(record.id)}
+              >
+                <Button
+                  danger
+                  size="small"
+                  loading={rejectMutation.isPending}
+                >
+                  {t('common:actions.reject')}
+                </Button>
+              </Popconfirm>
+            </Space>
+          );
+        }
+        return null;
+      },
     },
   ];
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>
-          {t('changeRequests.title')}
-        </Title>
-        <Select
-          placeholder={t('orders.filterByStatus')}
-          allowClear
-          style={{ width: 160 }}
-          onChange={setStatusFilter}
-          options={Object.values(RequestStatus).map((s) => ({ label: tEnum('RequestStatus', s), value: s }))}
-        />
-      </div>
-      <Table columns={columns} dataSource={data} rowKey="id" loading={isLoading} scroll={{ x: 'max-content' }} />
+      <Title level={4} style={{ marginBottom: 16 }}>{t('changeRequests.title')}</Title>
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="id"
+        loading={isLoading}
+        scroll={{ x: 'max-content' }}
+        onChange={(_pagination, filters) => {
+          const val = filters.status?.[0] as RequestStatus | undefined;
+          setStatusFilter(val);
+        }}
+      />
     </div>
   );
 }

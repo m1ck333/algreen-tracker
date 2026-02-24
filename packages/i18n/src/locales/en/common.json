@@ -3,6 +3,9 @@
   "actions": {
     "save": "Save",
     "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "no": "No",
     "create": "Create",
     "back": "Back",
     "view": "View",
@@ -12,7 +15,8 @@
     "signIn": "Sign In",
     "filter": "Filter",
     "configure": "Configure",
-    "add": "Add"
+    "add": "Add",
+    "edit": "Edit"
   },
   "labels": {
     "email": "Email",
@@ -53,6 +57,31 @@
     "noDataAvailable": "No data available",
     "notFound": "Not found",
     "loading": "Loading..."
+  },
+  "errors": {
+    "NOT_CHECKED_IN": "You must be checked in first",
+    "SESSION_MISMATCH": "Your work session is for a different process",
+    "ALREADY_CHECKED_IN": "You already have an active session",
+    "ALREADY_CHECKED_OUT": "Already checked out",
+    "ALREADY_RUNNING": "Work is already in progress",
+    "ALREADY_ENDED": "Log already ended",
+    "INVALID_STATUS": "This action is not allowed in the current status",
+    "INVALID_CREDENTIALS": "Invalid email or password",
+    "INVALID_PRIORITY": "Priority must be a positive number",
+    "INVALID_DATE": "Delivery date must be in the future",
+    "INVALID_ORDER_NUMBER": "Order number is required",
+    "INVALID_PRODUCT_NAME": "Product name is required",
+    "INVALID_QUANTITY": "Quantity must be a positive number",
+    "INVALID_CODE": "Code is required",
+    "INVALID_NAME": "Name is required",
+    "INVALID_CURRENT_PASSWORD": "Current password is incorrect",
+    "INVALID_REFRESH_TOKEN": "Session expired, please sign in again",
+    "NOT_FOUND": "The requested item was not found",
+    "PROCESS_NOT_STARTED": "The parent process must be started first",
+    "PROCESS_NOT_IN_CATEGORY": "Process is not in this category",
+    "PROCESS_CODE_EXISTS": "A process with this code already exists",
+    "LOG_ALREADY_OPEN": "There is already an open log entry",
+    "BLOCK_REASON_REQUIRED": "Block reason is required"
   },
   "enums": {
     "OrderStatus": {

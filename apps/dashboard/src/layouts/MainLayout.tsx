@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { Layout, theme } from 'antd';
 import { useAuthStore } from '@algreen/auth';
 import {
   createConnection,
   startConnection,
-  stopConnection,
   joinTenantGroup,
 } from '@algreen/signalr-client';
 import { tokenManager } from '@algreen/api-client';
-import { useTranslation } from '@algreen/i18n';
 import { SidebarMenu } from '../components/SidebarMenu';
 import { AppHeader } from '../components/AppHeader';
 import { useSignalRQueryInvalidation } from '../hooks/useSignalRQueryInvalidation';
@@ -20,8 +18,6 @@ export function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const tenantId = useAuthStore((s) => s.tenantId);
   const { token: themeToken } = theme.useToken();
-  const navigate = useNavigate();
-  const { t } = useTranslation('common');
 
   useSignalRQueryInvalidation();
 
