@@ -33,6 +33,26 @@ export function TabletLayout() {
     return () => navigator.serviceWorker?.removeEventListener('message', handler);
   }, [navigate]);
 
+  // iOS PWA fallback: check CacheStorage for pending navigation on app resume
+  useEffect(() => {
+    const checkPendingNav = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const cache = await caches.open('sw-navigate');
+        const resp = await cache.match('/_pending_navigate');
+        if (resp) {
+          const path = await resp.text();
+          await cache.delete('/_pending_navigate');
+          if (path) navigate(path);
+        }
+      } catch { /* ignore */ }
+    };
+    // Check immediately on mount (app just opened from notification)
+    checkPendingNav();
+    document.addEventListener('visibilitychange', checkPendingNav);
+    return () => document.removeEventListener('visibilitychange', checkPendingNav);
+  }, [navigate]);
+
   useEffect(() => {
     const jwt = tokenManager.getToken();
     if (!jwt || !tenantId) return;

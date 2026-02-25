@@ -25,11 +25,10 @@ export function BigButton({
       onClick={onClick}
       disabled={disabled || loading}
     >
-      {loading ? (
+      {loading && (
         <span className="inline-block w-6 h-6 border-3 border-current/30 border-t-current rounded-full animate-spin" />
-      ) : (
-        children
       )}
+      {children}
     </button>
   );
 }

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@algreen/auth';
 import { notificationsApi } from '@algreen/api-client';
 import { useTranslation } from '@algreen/i18n';
@@ -39,6 +40,7 @@ export function NotificationsPage() {
   const userId = useAuthStore((s) => s.user?.id) ?? '';
   const { t } = useTranslation('tablet');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ['notifications', userId],
@@ -69,6 +71,21 @@ export function NotificationsPage() {
   const handleTap = (n: NotificationDto) => {
     if (!n.isRead) {
       markReadMutation.mutate(n.id);
+    }
+    // Navigate based on notification type
+    switch (n.type) {
+      case 'OrderActivated':
+        navigate('/incoming');
+        break;
+      case 'ProcessCompleted':
+      case 'ProcessBlocked':
+      case 'BlockRequestApproved':
+        navigate('/queue');
+        break;
+      case 'DeadlineWarning':
+      case 'DeadlineCritical':
+        navigate('/queue');
+        break;
     }
   };
 
@@ -129,6 +146,9 @@ export function NotificationsPage() {
                     {n.message}
                   </p>
                 </div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-gray-300 ml-1">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
               </div>
             </button>
           ))}

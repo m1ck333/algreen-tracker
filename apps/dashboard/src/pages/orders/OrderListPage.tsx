@@ -324,9 +324,11 @@ export function OrderListPage() {
   const user = useAuthStore((s) => s.user);
   const tenantId = useAuthStore((s) => s.tenantId);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>(undefined);
-  const { data: masterData, isLoading } = useQuery({
-    queryKey: ['orders-master-view', tenantId, statusFilter],
-    queryFn: () => ordersApi.getMasterView({ tenantId: tenantId!, status: statusFilter }).then((r) => r.data.items),
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const { data: masterResult, isLoading } = useQuery({
+    queryKey: ['orders-master-view', tenantId, statusFilter, page, pageSize],
+    queryFn: () => ordersApi.getMasterView({ tenantId: tenantId!, status: statusFilter, page, pageSize }).then((r) => r.data),
     enabled: !!tenantId,
   });
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
@@ -607,16 +609,31 @@ export function OrderListPage() {
       <Table<OrderMasterViewDto>
         className="master-table"
         columns={masterColumns}
-        dataSource={masterData}
+        dataSource={masterResult?.items}
         rowKey="id"
         loading={isLoading}
-        pagination={false}
+        pagination={{
+          current: page,
+          pageSize,
+          total: masterResult?.totalCount ?? 0,
+          showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50'],
+          showTotal: (total) => `${total} total`,
+        }}
         scroll={{ x: 'max-content' }}
         size="small"
         bordered
-        onChange={(_pagination, filters) => {
+        onChange={(pagination, filters) => {
+          if (pagination.current !== page) setPage(pagination.current ?? 1);
+          if (pagination.pageSize !== pageSize) {
+            setPageSize(pagination.pageSize ?? 20);
+            setPage(1);
+          }
           const val = filters.status?.[0] as OrderStatus | undefined;
-          setStatusFilter(val);
+          if (val !== statusFilter) {
+            setStatusFilter(val);
+            setPage(1);
+          }
         }}
         rowClassName={(record) => {
           if (record.status === OrderStatus.Completed) return 'master-row-completed';

@@ -43,9 +43,9 @@ self.addEventListener('notificationclick', (event) => {
   console.log('[SW] notificationclick data:', JSON.stringify(data));
 
   let path = '/queue';
-  if (data?.type === 'OrderActivated') {
+  if (data?.type === 'OrderActivated' || data?.type === 'ProcessReadyForQueue') {
     path = '/incoming';
-  } else if (data?.type === 'DeadlineWarning') {
+  } else if (data?.type === 'DeadlineWarning' || data?.type === 'DeadlineCritical') {
     path = '/notifications';
   }
 
@@ -55,12 +55,16 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      // Try to focus an existing window and navigate it
       for (const client of clients) {
         if ('focus' in client) {
-          return client.navigate(url).then(() => client.focus()).catch(() => {
-            // navigate() can fail on iOS — fall back to focus + postMessage
-            client.postMessage({ type: 'navigate', url: path });
+          return client.navigate(url).then(() => client.focus()).catch(async () => {
+            // navigate() can fail on iOS — try postMessage first, then persist for visibilitychange
+            try {
+              client.postMessage({ type: 'navigate', url: path });
+            } catch { /* ignore */ }
+            // Persist path so the app can pick it up on visibilitychange (iOS fallback)
+            const cache = await caches.open('sw-navigate');
+            await cache.put('/_pending_navigate', new Response(path));
             return client.focus();
           });
         }

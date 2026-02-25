@@ -7,6 +7,7 @@ import type { TabletQueueItemDto, TabletActiveWorkDto, TabletSubProcessDto } fro
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
+import { AttachmentIndicator } from '../../components/AttachmentIndicator';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import { useWorkSessionStore } from '../../stores/work-session-store';
 
@@ -228,9 +229,12 @@ function QueueCard({
           </span>
         </div>
         <div className="flex items-center justify-between mt-2 text-tablet-xs">
-          <span className="text-gray-500">
-            {t('queue.progress', { completed: item.completedProcessCount, total: item.totalProcessCount })}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500">
+              {t('queue.progress', { completed: item.completedProcessCount, total: item.totalProcessCount })}
+            </span>
+            <AttachmentIndicator orderId={item.orderId} />
+          </div>
           {item.specialRequestNames.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {item.specialRequestNames.map((name) => (
@@ -300,7 +304,7 @@ function WorkPanel({
     return () => clearInterval(interval);
   }, [isWorking]);
 
-  const invalidate = () => {
+  const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
     queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
   };
@@ -311,13 +315,17 @@ function WorkPanel({
 
   const startMutation = useMutation({
     mutationFn: () => processWorkflowApi.start(orderItemProcessId, { userId }),
-    onSuccess: () => { setError(null); invalidate(); },
+    onSuccess: () => {
+      setError(null);
+      // Only refresh active work — keep item visible in queue
+      queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
+    },
     onError: (err) => handleError(err, 'work.startFailed'),
   });
 
   const stopMutation = useMutation({
     mutationFn: () => processWorkflowApi.stop(orderItemProcessId, { userId }),
-    onSuccess: () => { setError(null); invalidate(); },
+    onSuccess: () => { setError(null); invalidateAll(); },
     onError: (err) => handleError(err, 'work.stopFailed'),
   });
 
@@ -326,7 +334,7 @@ function WorkPanel({
     onSuccess: () => {
       setError(null);
       setShowCompleteConfirm(false);
-      invalidate();
+      invalidateAll();
     },
     onError: (err) => {
       setShowCompleteConfirm(false);
@@ -336,13 +344,13 @@ function WorkPanel({
 
   const startSubMutation = useMutation({
     mutationFn: (id: string) => subProcessWorkflowApi.start(id, { userId }),
-    onSuccess: () => { setError(null); setActiveMutationId(null); invalidate(); },
+    onSuccess: () => { setError(null); setActiveMutationId(null); invalidateAll(); },
     onError: (err) => { setActiveMutationId(null); handleError(err, 'work.startFailed'); },
   });
 
   const completeSubMutation = useMutation({
     mutationFn: (id: string) => subProcessWorkflowApi.complete(id, { userId }),
-    onSuccess: () => { setError(null); setActiveMutationId(null); invalidate(); },
+    onSuccess: () => { setError(null); setActiveMutationId(null); invalidateAll(); },
     onError: (err) => { setActiveMutationId(null); handleError(err, 'work.completeFailed'); },
   });
 
@@ -358,7 +366,7 @@ function WorkPanel({
       setError(null);
       setShowBlockModal(false);
       setBlockReason('');
-      invalidate();
+      invalidateAll();
     },
     onError: (err) => {
       setShowBlockModal(false);

@@ -4,6 +4,8 @@ import { tabletApi, processesApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
 import type { TabletIncomingDto } from '@algreen/shared-types';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
+import { AttachmentIndicator } from '../../components/AttachmentIndicator';
+import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { useWorkSessionStore } from '../../stores/work-session-store';
 
 export function IncomingOrdersPage() {
@@ -171,9 +173,12 @@ function IncomingCard({
         </div>
 
         <div className="flex items-center justify-between text-tablet-xs">
-          <span className="text-gray-500">
-            {t('queue.progress', { completed: item.completedProcessCount, total: item.totalProcessCount })}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500">
+              {t('queue.progress', { completed: item.completedProcessCount, total: item.totalProcessCount })}
+            </span>
+            <AttachmentIndicator orderId={item.orderId} />
+          </div>
           {item.specialRequestNames.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {item.specialRequestNames.map((name) => (
@@ -230,6 +235,8 @@ function IncomingCard({
               ))}
             </div>
           )}
+
+          <AttachmentViewer orderId={item.orderId} />
         </div>
       )}
     </div>
