@@ -346,6 +346,17 @@ export interface TenantSettingsDto {
   criticalColor: string;
 }
 
+// ─── Order Attachments ──────────────────────────────────
+
+export interface OrderAttachmentDto {
+  id: string;
+  orderId: string;
+  originalFileName: string;
+  contentType: string;
+  fileSizeBytes: number;
+  uploadedAt: string;
+}
+
 // ─── Tablet ─────────────────────────────────────────────
 
 export interface TabletQueueItemDto {

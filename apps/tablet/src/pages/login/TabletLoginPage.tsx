@@ -45,7 +45,10 @@ export function TabletLoginPage() {
       });
 
       // Subscribe to push notifications (non-blocking)
-      subscribeToPush().catch(() => {});
+      subscribeToPush().then(
+        (ok) => console.log('[Push] subscribeToPush result:', ok),
+        (err) => console.error('[Push] subscribeToPush error:', err),
+      );
 
       navigate('/queue', { replace: true });
     } catch {

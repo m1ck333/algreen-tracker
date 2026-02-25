@@ -17,6 +17,7 @@ import {
 import { productCategoriesApi, processesApi, ordersApi, specialRequestTypesApi } from '@algreen/api-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { StatusBadge } from '../../components/StatusBadge';
+import { OrderAttachments } from '../../components/OrderAttachments';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import dayjs from 'dayjs';
 
@@ -1089,6 +1090,10 @@ export function OrderListPage() {
                 <Text>{detailOrder.notes}</Text>
               </div>
             ) : null}
+
+            {/* E) Attachments */}
+            <Divider style={{ margin: '12px 0' }} />
+            <OrderAttachments orderId={detailOrder.id} />
           </>
         ) : (
           <Typography.Text>{t('orders.orderNotFound')}</Typography.Text>

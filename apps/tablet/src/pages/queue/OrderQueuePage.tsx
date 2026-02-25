@@ -6,6 +6,7 @@ import { ProcessStatus, SubProcessStatus } from '@algreen/shared-types';
 import type { TabletQueueItemDto, TabletActiveWorkDto, TabletSubProcessDto } from '@algreen/shared-types';
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import { useWorkSessionStore } from '../../stores/work-session-store';
 
@@ -243,15 +244,18 @@ function QueueCard({
       </button>
 
       {isExpanded && (
-        <WorkPanel
-          orderItemProcessId={item.orderItemProcessId}
-          activeWork={activeWork}
-          subProcessNameMap={subProcessNameMap}
-          userId={userId}
-          tenantId={tenantId}
-          t={t}
-          tEnum={tEnum}
-        />
+        <>
+          <WorkPanel
+            orderItemProcessId={item.orderItemProcessId}
+            activeWork={activeWork}
+            subProcessNameMap={subProcessNameMap}
+            userId={userId}
+            tenantId={tenantId}
+            t={t}
+            tEnum={tEnum}
+          />
+          <AttachmentViewer orderId={item.orderId} />
+        </>
       )}
     </div>
   );

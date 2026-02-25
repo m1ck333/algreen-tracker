@@ -1,4 +1,4 @@
-import type { OrderDto, OrderDetailDto, OrderMasterViewDto, PagedResult } from '@algreen/shared-types';
+import type { OrderDto, OrderDetailDto, OrderMasterViewDto, OrderAttachmentDto, PagedResult } from '@algreen/shared-types';
 import type { OrderStatus, OrderType } from '@algreen/shared-types';
 import type {
   CreateOrderRequest,
@@ -9,6 +9,7 @@ import type {
   OverrideComplexityRequest,
 } from '@algreen/shared-types';
 import { apiClient } from '../axios-instance';
+import { tokenManager } from '../token-manager';
 
 export interface OrdersQuery {
   tenantId: string;
@@ -84,5 +85,32 @@ export const ordersApi = {
 
   overrideComplexity(orderId: string, itemId: string, processId: string, data: OverrideComplexityRequest) {
     return apiClient.put(`/orders/${orderId}/items/${itemId}/processes/${processId}/complexity`, data);
+  },
+
+  // --- Attachments ---
+
+  getAttachments(orderId: string) {
+    return apiClient.get<OrderAttachmentDto[]>(`/orders/${orderId}/attachments`);
+  },
+
+  uploadAttachment(orderId: string, file: File, tenantId: string) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post<OrderAttachmentDto>(`/orders/${orderId}/attachments`, formData, {
+      params: { tenantId },
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  deleteAttachment(orderId: string, attachmentId: string, tenantId: string) {
+    return apiClient.delete(`/orders/${orderId}/attachments/${attachmentId}`, {
+      params: { tenantId },
+    });
+  },
+
+  getAttachmentDownloadUrl(orderId: string, attachmentId: string) {
+    const baseUrl = apiClient.defaults.baseURL || '';
+    const token = tokenManager.getToken() || '';
+    return `${baseUrl}/orders/${orderId}/attachments/${attachmentId}/download?access_token=${encodeURIComponent(token)}`;
   },
 };
