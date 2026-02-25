@@ -23,15 +23,23 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: '/pwa-192x192.png',
-      badge: '/pwa-192x192.png',
-      data: payload.data,
-    } as NotificationOptions).then(
-      () => console.log('[SW] showNotification succeeded'),
-      (err) => console.error('[SW] showNotification failed:', err),
-    ),
+    Promise.all([
+      self.registration.showNotification(payload.title, {
+        body: payload.body,
+        icon: '/pwa-192x192.png',
+        badge: '/pwa-192x192.png',
+        data: payload.data,
+      } as NotificationOptions).then(
+        () => console.log('[SW] showNotification succeeded'),
+        (err) => console.error('[SW] showNotification failed:', err),
+      ),
+      // Notify app to refresh notification badge immediately
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        for (const client of clients) {
+          client.postMessage({ type: 'push-received' });
+        }
+      }),
+    ]),
   );
 });
 

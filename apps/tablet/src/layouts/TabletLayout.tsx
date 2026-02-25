@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@algreen/auth';
 import {
   createConnection,
@@ -19,19 +20,25 @@ export function TabletLayout() {
   const tenantId = useAuthStore((s) => s.tenantId);
   const processId = useAuthStore((s) => s.user?.processId);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   useSignalRQueryInvalidation();
   useWakeLock();
 
-  // Listen for SW postMessage navigation (iOS fallback)
+  // Listen for SW postMessage events
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.data?.type === 'navigate' && event.data?.url) {
         navigate(event.data.url);
       }
+      if (event.data?.type === 'push-received') {
+        // Sync badge + notification list immediately when push arrives
+        queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      }
     };
     navigator.serviceWorker?.addEventListener('message', handler);
     return () => navigator.serviceWorker?.removeEventListener('message', handler);
-  }, [navigate]);
+  }, [navigate, queryClient]);
 
   // iOS PWA fallback: check CacheStorage for pending navigation on app resume
   useEffect(() => {
