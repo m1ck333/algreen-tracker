@@ -12,6 +12,7 @@ import { tokenManager } from '@algreen/api-client';
 import { BottomNav } from '../components/BottomNav';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { StatusBar } from '../components/StatusBar';
+import { PullToRefresh } from '../components/PullToRefresh';
 
 import { useSignalRQueryInvalidation } from '../hooks/useSignalRQueryInvalidation';
 import { useWakeLock } from '../hooks/useWakeLock';
@@ -99,9 +100,11 @@ export function TabletLayout() {
       <StatusBar />
 
       <OfflineBanner />
-      <main className="flex-1 p-4 pb-24 overflow-auto">
-        <Outlet />
-      </main>
+      <PullToRefresh>
+        <main className="p-4 pb-24">
+          <Outlet />
+        </main>
+      </PullToRefresh>
       <BottomNav />
     </div>
   );
