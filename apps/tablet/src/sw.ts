@@ -9,13 +9,17 @@ cleanupOutdatedCaches();
 
 // Push notification handler
 self.addEventListener('push', (event) => {
+  console.log('[SW] push event received', event.data ? 'with data' : 'no data');
+
   if (!event.data) return;
 
   let payload: { title: string; body: string; data?: Record<string, unknown> };
   try {
     payload = event.data.json();
+    console.log('[SW] push payload:', JSON.stringify(payload));
   } catch {
     payload = { title: 'AlGreen MES', body: event.data.text() };
+    console.log('[SW] push payload (text fallback):', payload.body);
   }
 
   event.waitUntil(
@@ -24,8 +28,10 @@ self.addEventListener('push', (event) => {
       icon: '/pwa-192x192.png',
       badge: '/pwa-192x192.png',
       data: payload.data,
-      tag: payload.data?.type as string | undefined,
-    } as NotificationOptions),
+    } as NotificationOptions).then(
+      () => console.log('[SW] showNotification succeeded'),
+      (err) => console.error('[SW] showNotification failed:', err),
+    ),
   );
 });
 
