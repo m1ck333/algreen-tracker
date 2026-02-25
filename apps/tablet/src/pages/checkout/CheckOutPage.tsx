@@ -51,7 +51,7 @@ export function CheckOutPage() {
             <div className="flex justify-between text-tablet-sm">
               <span className="text-gray-500">{t('checkout.checkedInAt')}</span>
               <span className="font-semibold">
-                {new Date(checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(checkInTime).toLocaleTimeString('sr-Latn-RS', { hour: '2-digit', minute: '2-digit', hour12: false })}
               </span>
             </div>
           )}

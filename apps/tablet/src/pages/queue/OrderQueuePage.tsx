@@ -474,7 +474,7 @@ function WorkPanel({
             <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5 col-span-2">
               <span className="text-gray-500">{t('work.startedAt')}</span>
               <span className="font-semibold">
-                {new Date(activeWork.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(activeWork.startedAt).toLocaleTimeString('sr-Latn-RS', { hour: '2-digit', minute: '2-digit', hour12: false })}
               </span>
             </div>
           )}
