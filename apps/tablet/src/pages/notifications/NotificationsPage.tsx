@@ -82,7 +82,30 @@ export function NotificationsPage() {
       markReadMutation.mutate(n.id);
     }
     const state = n.referenceId ? { highlightId: n.referenceId } : undefined;
-    // Navigate based on notification type
+
+    // Check cached data to find where the order actually is
+    const refId = n.referenceId;
+    if (refId) {
+      type OrderRef = { orderId: string; orderItemProcessId: string };
+      const getFirstCached = (prefix: string) => {
+        const entries = queryClient.getQueriesData<OrderRef[]>({ queryKey: [prefix] });
+        return entries[0]?.[1]; // first matching cache entry's data
+      };
+
+      const match = (items: OrderRef[] | undefined) =>
+        items?.some((i) => i.orderId === refId || i.orderItemProcessId === refId);
+
+      if (match(getFirstCached('tablet-queue')) || match(getFirstCached('tablet-active'))) {
+        navigate('/queue', { state });
+        return;
+      }
+      if (match(getFirstCached('tablet-incoming'))) {
+        navigate('/incoming', { state });
+        return;
+      }
+    }
+
+    // Fallback by notification type when cached data doesn't have the item
     switch (n.type) {
       case 'OrderActivated':
         navigate('/incoming', { state });
