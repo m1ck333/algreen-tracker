@@ -2,6 +2,7 @@
   "nav": {
     "queue": "Queue",
     "incoming": "Incoming",
+    "notifications": "Alerts",
     "checkOut": "Check Out"
   },
   "login": {
@@ -80,6 +81,12 @@
   "notifications": {
     "prompt": "Enable notifications to get alerts about new orders and blocks",
     "enable": "Enable"
+  },
+  "notificationsPage": {
+    "title": "Notifications",
+    "loading": "Loading...",
+    "empty": "No notifications",
+    "markAllRead": "Mark all read"
   },
   "language": {
     "sr": "SR",

@@ -2,6 +2,7 @@
   "nav": {
     "queue": "Red",
     "incoming": "Dolazne",
+    "notifications": "Obaveštenja",
     "checkOut": "Odjava"
   },
   "login": {
@@ -80,6 +81,12 @@
   "notifications": {
     "prompt": "Uključite obaveštenja za nove narudžbine i blokade",
     "enable": "Uključi"
+  },
+  "notificationsPage": {
+    "title": "Obaveštenja",
+    "loading": "Učitavanje...",
+    "empty": "Nema obaveštenja",
+    "markAllRead": "Označi sve kao pročitano"
   },
   "language": {
     "sr": "SR",

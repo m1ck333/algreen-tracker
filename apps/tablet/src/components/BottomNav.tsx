@@ -1,5 +1,8 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '@algreen/i18n';
+import { useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '@algreen/auth';
+import { notificationsApi } from '@algreen/api-client';
 
 const ListIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -19,6 +22,13 @@ const InboxIcon = () => (
   </svg>
 );
 
+const BellIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+);
+
 const LogOutIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -31,11 +41,20 @@ export function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation('tablet');
+  const userId = useAuthStore((s) => s.user?.id) ?? '';
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['unread-count', userId],
+    queryFn: () => notificationsApi.getUnreadCount(userId).then((r) => r.data),
+    enabled: !!userId,
+    refetchInterval: 30_000,
+  });
 
   const navItems = [
-    { path: '/queue', label: t('nav.queue'), icon: <ListIcon /> },
-    { path: '/incoming', label: t('nav.incoming'), icon: <InboxIcon /> },
-    { path: '/checkout', label: t('nav.checkOut'), icon: <LogOutIcon /> },
+    { path: '/queue', label: t('nav.queue'), icon: <ListIcon />, badge: 0 },
+    { path: '/incoming', label: t('nav.incoming'), icon: <InboxIcon />, badge: 0 },
+    { path: '/notifications', label: t('nav.notifications'), icon: <BellIcon />, badge: unreadCount },
+    { path: '/checkout', label: t('nav.checkOut'), icon: <LogOutIcon />, badge: 0 },
   ];
 
   return (
@@ -56,7 +75,14 @@ export function BottomNav() {
             {isActive && (
               <span className="absolute top-0 left-2 right-2 h-[3px] bg-primary-500 rounded-b" />
             )}
-            {item.icon}
+            <span className="relative">
+              {item.icon}
+              {item.badge > 0 && (
+                <span className="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+              )}
+            </span>
             <span className="text-xs mt-1">{item.label}</span>
           </button>
         );
