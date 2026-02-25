@@ -509,18 +509,26 @@ function WorkPanel({
         <div>
           <h3 className="text-tablet-sm font-semibold mb-2">{t('work.subProcesses')}</h3>
           <div className="space-y-2">
-            {activeWork.subProcesses.map((sp) => (
-              <SubProcessRow
-                key={sp.id}
-                subProcess={sp}
-                name={subProcessNameMap.get(sp.subProcessId)}
-                isLoading={activeMutationId === sp.id}
-                onStart={() => { setActiveMutationId(sp.id); startSubMutation.mutate(sp.id); }}
-                onComplete={() => { setActiveMutationId(sp.id); completeSubMutation.mutate(sp.id); }}
-                tEnum={tEnum}
-                t={t}
-              />
-            ))}
+            {activeWork.subProcesses.map((sp) => {
+              // Only allow starting the next pending sub-process (no in-progress one exists, and all before it are completed)
+              const hasInProgress = activeWork.subProcesses.some(
+                (s) => s.status === SubProcessStatus.InProgress,
+              );
+              const canStart = sp.status === SubProcessStatus.Pending && !hasInProgress;
+              return (
+                <SubProcessRow
+                  key={sp.id}
+                  subProcess={sp}
+                  name={subProcessNameMap.get(sp.subProcessId)}
+                  isLoading={activeMutationId === sp.id}
+                  canStart={canStart}
+                  onStart={() => { setActiveMutationId(sp.id); startSubMutation.mutate(sp.id); }}
+                  onComplete={() => { setActiveMutationId(sp.id); completeSubMutation.mutate(sp.id); }}
+                  tEnum={tEnum}
+                  t={t}
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -615,6 +623,7 @@ function SubProcessRow({
   subProcess,
   name,
   isLoading,
+  canStart,
   onStart,
   onComplete,
   tEnum,
@@ -623,6 +632,7 @@ function SubProcessRow({
   subProcess: TabletSubProcessDto;
   name?: string;
   isLoading: boolean;
+  canStart: boolean;
   onStart: () => void;
   onComplete: () => void;
   tEnum: (enumName: string, value: string) => string;
@@ -630,7 +640,6 @@ function SubProcessRow({
 }) {
   const isActive = subProcess.status === SubProcessStatus.InProgress;
   const isCompleted = subProcess.status === SubProcessStatus.Completed;
-  const isPending = subProcess.status === SubProcessStatus.Pending;
   const isWithdrawn = subProcess.isWithdrawn;
 
   if (isWithdrawn) {
@@ -661,12 +670,14 @@ function SubProcessRow({
             {tEnum('SubProcessStatus', subProcess.status)}
           </span>
         )}
-        <span className="text-tablet-xs text-gray-500 ml-2">
-          {subProcess.totalDurationMinutes} {t('work.min')}
-        </span>
+        {subProcess.totalDurationMinutes > 0 && (
+          <span className="text-tablet-xs text-gray-500 ml-2">
+            {subProcess.totalDurationMinutes} {t('work.min')}
+          </span>
+        )}
       </div>
       <div>
-        {isPending && (
+        {canStart && (
           <button
             onClick={onStart}
             disabled={isLoading}
