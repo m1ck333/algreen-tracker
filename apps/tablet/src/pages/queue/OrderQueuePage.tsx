@@ -269,7 +269,7 @@ function QueueCard({
             )}
             {isStopped && (
               <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-tablet-xs font-medium">
-                {tEnum('ProcessStatus', ProcessStatus.Stopped)}
+                {t('work.paused')}
               </span>
             )}
           </div>
@@ -358,6 +358,7 @@ function WorkPanel({
   const [pendingAction, setPendingAction] = useState(false);
 
   const isWorking = activeWork?.status === ProcessStatus.InProgress;
+  const isPaused = activeWork?.status === ProcessStatus.Stopped;
 
   // Compute elapsed from startedAt + totalDurationMinutes (prior accumulated time)
   const elapsed = useMemo(() => {
@@ -515,7 +516,7 @@ function WorkPanel({
           {formatTime(elapsed)}
         </div>
         <p className="text-gray-500 mt-1 text-tablet-xs">
-          {isWorking ? t('work.working') : t('work.readyToStart')}
+          {isWorking ? t('work.working') : isPaused ? t('work.paused') : t('work.readyToStart')}
         </p>
       </div>
 
