@@ -42,11 +42,15 @@ self.addEventListener('notificationclick', (event) => {
   const data = event.notification.data as Record<string, unknown> | undefined;
   let url = '/queue';
 
-  if (data?.type === 'OrderActivated') {
+  if (data?.type === 'ProcessReadyForQueue') {
     url = '/queue';
+  } else if (data?.type === 'OrderActivated') {
+    url = '/incoming';
   } else if (data?.type === 'ProcessBlocked') {
     url = '/queue';
   } else if (data?.type === 'DeadlineWarning') {
+    url = '/queue';
+  } else if (data?.type === 'BlockRequestApproved') {
     url = '/queue';
   }
 
