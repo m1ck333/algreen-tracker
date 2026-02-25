@@ -136,6 +136,7 @@ export interface OrderMasterViewDto {
   totalProcesses: number;
   /** Map of processId → aggregated ProcessStatus string */
   processStatuses: Record<string, string>;
+  attachmentCount: number;
 }
 
 // ─── Block & Change Requests ─────────────────────────────

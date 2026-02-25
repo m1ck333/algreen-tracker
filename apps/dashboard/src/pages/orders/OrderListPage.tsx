@@ -4,7 +4,7 @@ import {
   InputNumber, DatePicker, App, Row, Col, Spin, Popconfirm, Divider,
   Tooltip, Progress, Card, Statistic,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, CheckOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useAuthStore } from '@algreen/auth';
 import { OrderStatus, OrderType, ProcessStatus, ComplexityType, UserRole } from '@algreen/shared-types';
@@ -478,9 +478,16 @@ export function OrderListPage() {
         dataIndex: 'orderNumber',
         width: 160,
         render: (text: string, record: OrderMasterViewDto) => (
-          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => setDetailOrderId(record.id)}>
-            {text}
-          </Button>
+          <Space size={4}>
+            <Button type="link" size="small" style={{ padding: 0 }} onClick={() => setDetailOrderId(record.id)}>
+              {text}
+            </Button>
+            {record.attachmentCount > 0 && (
+              <Tooltip title={`${record.attachmentCount} ${record.attachmentCount === 1 ? 'dokument' : 'dokumenata'}`}>
+                <PaperClipOutlined style={{ color: '#1677ff', fontSize: 13 }} />
+              </Tooltip>
+            )}
+          </Space>
         ),
       },
       {
