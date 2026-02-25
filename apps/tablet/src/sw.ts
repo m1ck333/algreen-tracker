@@ -40,28 +40,32 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const data = event.notification.data as Record<string, unknown> | undefined;
-  let url = '/queue';
+  console.log('[SW] notificationclick data:', JSON.stringify(data));
 
-  if (data?.type === 'ProcessReadyForQueue') {
-    url = '/queue';
-  } else if (data?.type === 'OrderActivated') {
-    url = '/incoming';
-  } else if (data?.type === 'ProcessBlocked') {
-    url = '/queue';
+  let path = '/queue';
+  if (data?.type === 'OrderActivated') {
+    path = '/incoming';
   } else if (data?.type === 'DeadlineWarning') {
-    url = '/queue';
-  } else if (data?.type === 'BlockRequestApproved') {
-    url = '/queue';
+    path = '/notifications';
   }
+
+  // Build full URL from SW scope
+  const url = new URL(path, self.location.origin).href;
+  console.log('[SW] navigating to:', url);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Try to focus an existing window and navigate it
       for (const client of clients) {
-        if (new URL(client.url).pathname.startsWith('/') && 'focus' in client) {
-          client.navigate(url);
-          return client.focus();
+        if ('focus' in client) {
+          return client.navigate(url).then(() => client.focus()).catch(() => {
+            // navigate() can fail on iOS — fall back to focus + postMessage
+            client.postMessage({ type: 'navigate', url: path });
+            return client.focus();
+          });
         }
       }
+      // No existing window — open a new one
       return self.clients.openWindow(url);
     }),
   );

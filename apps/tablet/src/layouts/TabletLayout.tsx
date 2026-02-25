@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@algreen/auth';
 import {
   createConnection,
@@ -18,8 +18,20 @@ import { useWakeLock } from '../hooks/useWakeLock';
 export function TabletLayout() {
   const tenantId = useAuthStore((s) => s.tenantId);
   const processId = useAuthStore((s) => s.user?.processId);
+  const navigate = useNavigate();
   useSignalRQueryInvalidation();
   useWakeLock();
+
+  // Listen for SW postMessage navigation (iOS fallback)
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'navigate' && event.data?.url) {
+        navigate(event.data.url);
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handler);
+    return () => navigator.serviceWorker?.removeEventListener('message', handler);
+  }, [navigate]);
 
   useEffect(() => {
     const jwt = tokenManager.getToken();
