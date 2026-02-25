@@ -12,6 +12,18 @@ import { AttachmentIndicator } from '../../components/AttachmentIndicator';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import { useWorkSessionStore } from '../../stores/work-session-store';
 
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes}min`;
+  if (minutes < 1440) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h ${m}min` : `${h}h`;
+  }
+  const d = Math.floor(minutes / 1440);
+  const remainH = Math.floor((minutes % 1440) / 60);
+  return remainH > 0 ? `${d}d ${remainH}h` : `${d}d`;
+}
+
 function getApiErrorCode(error: unknown): string | undefined {
   return (error as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
 }
@@ -343,6 +355,7 @@ function WorkPanel({
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockReason, setBlockReason] = useState('');
   const [activeMutationId, setActiveMutationId] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState(false);
 
   const isWorking = activeWork?.status === ProcessStatus.InProgress;
 
@@ -364,37 +377,46 @@ function WorkPanel({
     return () => clearInterval(interval);
   }, [isWorking]);
 
-  const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
-    queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
-  };
-
   const handleError = (err: unknown, fallbackKey: string) => {
     setError(getTranslatedError(err, t as (key: string, opts?: Record<string, string>) => string, t(fallbackKey)));
   };
 
+  const invalidateAndWait = async (keys: string[]) => {
+    setPendingAction(true);
+    await Promise.all(
+      keys.map((k) => queryClient.invalidateQueries({ queryKey: [k] })),
+    );
+    // Wait for refetch to complete
+    await Promise.all(
+      keys.map((k) => queryClient.refetchQueries({ queryKey: [k] })),
+    );
+    setPendingAction(false);
+  };
+
   const startMutation = useMutation({
     mutationFn: () => processWorkflowApi.start(orderItemProcessId, { userId }),
-    onSuccess: () => {
+    onSuccess: async () => {
       setError(null);
-      // Only refresh active work — keep item visible in queue
-      queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
+      await invalidateAndWait(['tablet-active']);
     },
     onError: (err) => handleError(err, 'work.startFailed'),
   });
 
   const stopMutation = useMutation({
     mutationFn: () => processWorkflowApi.stop(orderItemProcessId, { userId }),
-    onSuccess: () => { setError(null); invalidateAll(); },
+    onSuccess: async () => {
+      setError(null);
+      await invalidateAndWait(['tablet-active', 'tablet-queue']);
+    },
     onError: (err) => handleError(err, 'work.stopFailed'),
   });
 
   const completeMutation = useMutation({
     mutationFn: () => processWorkflowApi.complete(orderItemProcessId),
-    onSuccess: () => {
+    onSuccess: async () => {
       setError(null);
       setShowCompleteConfirm(false);
-      invalidateAll();
+      await invalidateAndWait(['tablet-active', 'tablet-queue']);
     },
     onError: (err) => {
       setShowCompleteConfirm(false);
@@ -404,13 +426,13 @@ function WorkPanel({
 
   const startSubMutation = useMutation({
     mutationFn: (id: string) => subProcessWorkflowApi.start(id, { userId }),
-    onSuccess: () => { setError(null); setActiveMutationId(null); invalidateAll(); },
+    onSuccess: async () => { setError(null); setActiveMutationId(null); await invalidateAndWait(['tablet-active']); },
     onError: (err) => { setActiveMutationId(null); handleError(err, 'work.startFailed'); },
   });
 
   const completeSubMutation = useMutation({
     mutationFn: (id: string) => subProcessWorkflowApi.complete(id, { userId }),
-    onSuccess: () => { setError(null); setActiveMutationId(null); invalidateAll(); },
+    onSuccess: async () => { setError(null); setActiveMutationId(null); await invalidateAndWait(['tablet-active']); },
     onError: (err) => { setActiveMutationId(null); handleError(err, 'work.completeFailed'); },
   });
 
@@ -422,11 +444,11 @@ function WorkPanel({
         requestedByUserId: userId,
         requestNote: blockReason,
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
       setError(null);
       setShowBlockModal(false);
       setBlockReason('');
-      invalidateAll();
+      await invalidateAndWait(['tablet-active', 'tablet-queue']);
     },
     onError: (err) => {
       setShowBlockModal(false);
@@ -538,7 +560,7 @@ function WorkPanel({
         {!isWorking ? (
           <BigButton
             onClick={() => { setError(null); startMutation.mutate(); }}
-            loading={startMutation.isPending}
+            loading={startMutation.isPending || pendingAction}
           >
             {t('work.start')}
           </BigButton>
@@ -547,13 +569,13 @@ function WorkPanel({
             <BigButton
               variant="danger"
               onClick={() => { setError(null); stopMutation.mutate(); }}
-              loading={stopMutation.isPending}
+              loading={stopMutation.isPending || pendingAction}
             >
               {t('work.stop')}
             </BigButton>
             <BigButton
               onClick={() => { setError(null); setShowCompleteConfirm(true); }}
-              loading={completeMutation.isPending}
+              loading={completeMutation.isPending || pendingAction}
             >
               {t('work.complete')}
             </BigButton>
@@ -672,7 +694,7 @@ function SubProcessRow({
         )}
         {subProcess.totalDurationMinutes > 0 && (
           <span className="text-tablet-xs text-gray-500 ml-2">
-            {subProcess.totalDurationMinutes} {t('work.min')}
+            {formatDuration(subProcess.totalDurationMinutes)}
           </span>
         )}
       </div>
