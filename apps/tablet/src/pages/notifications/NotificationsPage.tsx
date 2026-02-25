@@ -1,3 +1,4 @@
+import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@algreen/auth';
@@ -65,6 +66,14 @@ export function NotificationsPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => notificationsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+    },
+  });
+
   const notifications = data?.items ?? [];
   const hasUnread = notifications.some((n) => !n.isRead);
 
@@ -72,19 +81,18 @@ export function NotificationsPage() {
     if (!n.isRead) {
       markReadMutation.mutate(n.id);
     }
+    const state = n.referenceId ? { highlightId: n.referenceId } : undefined;
     // Navigate based on notification type
     switch (n.type) {
       case 'OrderActivated':
-        navigate('/incoming');
+        navigate('/incoming', { state });
         break;
       case 'ProcessCompleted':
       case 'ProcessBlocked':
       case 'BlockRequestApproved':
-        navigate('/queue');
-        break;
       case 'DeadlineWarning':
       case 'DeadlineCritical':
-        navigate('/queue');
+        navigate('/queue', { state });
         break;
     }
   };
@@ -122,38 +130,116 @@ export function NotificationsPage() {
       ) : (
         <div className="space-y-2">
           {notifications.map((n) => (
-            <button
+            <SwipeableNotification
               key={n.id}
-              onClick={() => handleTap(n)}
-              className={`w-full text-left rounded-xl p-4 transition-colors active:bg-gray-100 ${
-                n.isRead ? 'bg-white' : 'bg-primary-50 border-l-4 border-primary-500'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-2xl flex-shrink-0 mt-0.5">
-                  {notificationIcon(n.type)}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`text-tablet-base truncate ${n.isRead ? 'text-gray-700' : 'text-gray-900 font-semibold'}`}>
-                      {n.title}
-                    </span>
-                    <span className="text-tablet-xs text-gray-400 flex-shrink-0">
-                      {timeAgo(n.createdAt)}
-                    </span>
-                  </div>
-                  <p className="text-tablet-sm text-gray-500 mt-1 line-clamp-2">
-                    {n.message}
-                  </p>
-                </div>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-gray-300 ml-1">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </div>
-            </button>
+              notification={n}
+              onTap={handleTap}
+              onDelete={(id) => deleteMutation.mutate(id)}
+            />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function SwipeableNotification({
+  notification: n,
+  onTap,
+  onDelete,
+}: {
+  notification: NotificationDto;
+  onTap: (n: NotificationDto) => void;
+  onDelete: (id: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const startX = useRef(0);
+  const currentX = useRef(0);
+  const [offsetX, setOffsetX] = useState(0);
+  const [swiped, setSwiped] = useState(false);
+  const threshold = 80;
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    currentX.current = 0;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const diff = e.touches[0].clientX - startX.current;
+    // Only allow swipe left
+    if (diff < 0) {
+      currentX.current = diff;
+      setOffsetX(diff);
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (currentX.current < -threshold) {
+      setSwiped(true);
+      setOffsetX(-threshold);
+    } else {
+      setSwiped(false);
+      setOffsetX(0);
+    }
+  }, []);
+
+  const handleTapInner = useCallback(() => {
+    if (swiped) {
+      setSwiped(false);
+      setOffsetX(0);
+    } else {
+      onTap(n);
+    }
+  }, [swiped, onTap, n]);
+
+  return (
+    <div ref={containerRef} className="relative overflow-hidden rounded-xl">
+      {/* Delete button behind */}
+      <div className="absolute inset-y-0 right-0 flex items-center justify-center bg-red-500 w-20">
+        <button
+          onClick={() => onDelete(n.id)}
+          className="flex flex-col items-center justify-center w-full h-full text-white"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Foreground notification */}
+      <button
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={handleTapInner}
+        style={{ transform: `translateX(${offsetX}px)`, transition: currentX.current === 0 ? 'transform 0.2s ease' : 'none' }}
+        className={`relative w-full text-left rounded-xl p-4 active:bg-gray-100 ${
+          n.isRead ? 'bg-white' : 'bg-primary-50 border-l-4 border-primary-500'
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <span className="text-2xl flex-shrink-0 mt-0.5">
+            {notificationIcon(n.type)}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className={`text-tablet-base truncate ${n.isRead ? 'text-gray-700' : 'text-gray-900 font-semibold'}`}>
+                {n.title}
+              </span>
+              <span className="text-tablet-xs text-gray-400 flex-shrink-0">
+                {timeAgo(n.createdAt)}
+              </span>
+            </div>
+            <p className="text-tablet-sm text-gray-500 mt-1 line-clamp-2">
+              {n.message}
+            </p>
+          </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-gray-300 ml-1">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </div>
+      </button>
     </div>
   );
 }

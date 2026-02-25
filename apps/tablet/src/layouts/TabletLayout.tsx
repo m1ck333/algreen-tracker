@@ -31,9 +31,12 @@ export function TabletLayout() {
         navigate(event.data.url);
       }
       if (event.data?.type === 'push-received') {
-        // Sync badge + notification list immediately when push arrives
-        queryClient.invalidateQueries({ queryKey: ['unread-count'] });
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        // Sync badge + notification list when push arrives
+        // Small delay to let backend persist the notification to DB first
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }, 2000);
       }
     };
     navigator.serviceWorker?.addEventListener('message', handler);

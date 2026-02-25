@@ -38,3 +38,12 @@
     @apply bg-white rounded-xl p-4 shadow-sm;
   }
 }
+
+@keyframes highlight-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  25%, 75% { box-shadow: 0 0 12px 4px rgba(59, 130, 246, 0.4); }
+}
+
+.animate-highlight-glow {
+  animation: highlight-glow 1.5s ease-in-out 2;
+}

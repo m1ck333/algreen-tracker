@@ -616,9 +616,6 @@ export function OrderListPage() {
           current: page,
           pageSize,
           total: masterResult?.totalCount ?? 0,
-          showSizeChanger: true,
-          pageSizeOptions: ['10', '20', '50'],
-          showTotal: (total) => `${total} total`,
         }}
         scroll={{ x: 'max-content' }}
         size="small"

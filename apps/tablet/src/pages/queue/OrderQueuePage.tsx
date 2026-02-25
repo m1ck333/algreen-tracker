@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { tabletApi, processWorkflowApi, subProcessWorkflowApi, processesApi, blockRequestsApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
 import { ProcessStatus, SubProcessStatus } from '@algreen/shared-types';
@@ -30,6 +31,9 @@ export function OrderQueuePage() {
   const processId = useWorkSessionStore((s) => s.processId);
   const { t } = useTranslation('tablet');
   const { tEnum } = useEnumTranslation();
+  const location = useLocation();
+  const highlightId = (location.state as { highlightId?: string } | null)?.highlightId;
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
@@ -75,6 +79,21 @@ export function OrderQueuePage() {
   }, [activeWork]);
 
   const sortedQueue = [...(queue ?? [])].sort((a, b) => a.priority - b.priority);
+
+  // Auto-expand and highlight item from notification
+  useEffect(() => {
+    if (highlightId && queue) {
+      const match = queue.find(
+        (i) => i.orderId === highlightId || i.orderItemProcessId === highlightId,
+      );
+      if (match) {
+        setExpandedItemId(match.orderItemProcessId);
+        setHighlightedId(match.orderItemProcessId);
+        const timer = setTimeout(() => setHighlightedId(null), 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [highlightId, queue]);
 
   if (isLoading) {
     return (
@@ -136,6 +155,7 @@ export function OrderQueuePage() {
               key={item.orderItemProcessId}
               item={item}
               isExpanded={expandedItemId === item.orderItemProcessId}
+              isHighlighted={highlightedId === item.orderItemProcessId}
               onToggle={() =>
                 setExpandedItemId(
                   expandedItemId === item.orderItemProcessId ? null : item.orderItemProcessId,
@@ -158,6 +178,7 @@ export function OrderQueuePage() {
 function QueueCard({
   item,
   isExpanded,
+  isHighlighted,
   onToggle,
   activeWork,
   subProcessNameMap,
@@ -168,6 +189,7 @@ function QueueCard({
 }: {
   item: TabletQueueItemDto;
   isExpanded: boolean;
+  isHighlighted: boolean;
   onToggle: () => void;
   activeWork?: TabletActiveWorkDto;
   subProcessNameMap: Map<string, string>;
@@ -176,6 +198,7 @@ function QueueCard({
   t: (key: string, opts?: Record<string, unknown>) => string;
   tEnum: (enumName: string, value: string) => string;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const daysUntilDelivery = Math.ceil(
     (new Date(item.deliveryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
   );
@@ -190,8 +213,14 @@ function QueueCard({
   const isBlocked = item.status === ProcessStatus.Blocked;
   const isStopped = item.status === ProcessStatus.Stopped;
 
+  useEffect(() => {
+    if (isHighlighted && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isHighlighted]);
+
   return (
-    <div className={`card border-2 ${urgencyColor} ${isExpanded ? 'ring-2 ring-primary-300' : ''}`}>
+    <div ref={cardRef} className={`card border-2 ${urgencyColor} ${isExpanded ? 'ring-2 ring-primary-300' : ''} ${isHighlighted ? 'animate-highlight-glow' : ''}`}>
       <button onClick={onToggle} className="w-full text-left">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
