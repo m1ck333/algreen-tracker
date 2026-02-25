@@ -7,7 +7,6 @@ import { useAuthStore } from '@algreen/auth';
 import type { OrderAttachmentDto } from '@algreen/shared-types';
 import { UserRole } from '@algreen/shared-types';
 import { compressFile } from '../utils/compressImage';
-import type { UploadFile } from 'antd/es/upload/interface';
 
 const { Text } = Typography;
 
@@ -70,15 +69,13 @@ export function OrderAttachments({ orderId }: OrderAttachmentsProps) {
     },
   });
 
-  const handleUpload = async (file: UploadFile) => {
-    const rawFile = file as unknown as File;
+  const handleUpload = async (file: File) => {
     setUploading(true);
     try {
-      await uploadMutation.mutateAsync(rawFile);
+      await uploadMutation.mutateAsync(file);
     } finally {
       setUploading(false);
     }
-    return false;
   };
 
   const getDownloadUrl = (attachment: OrderAttachmentDto) =>
@@ -93,7 +90,7 @@ export function OrderAttachments({ orderId }: OrderAttachmentsProps) {
       {canManage && (
         <Upload
           beforeUpload={(file) => {
-            handleUpload(file as UploadFile);
+            handleUpload(file);
             return false;
           }}
           showUploadList={false}
