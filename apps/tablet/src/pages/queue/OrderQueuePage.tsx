@@ -337,7 +337,7 @@ function WorkPanel({
   tEnum: (enumName: string, value: string) => string;
 }) {
   const queryClient = useQueryClient();
-  const [elapsed, setElapsed] = useState(0);
+  const [tick, setTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
@@ -346,15 +346,21 @@ function WorkPanel({
 
   const isWorking = activeWork?.status === ProcessStatus.InProgress;
 
-  useEffect(() => {
-    if (activeWork?.totalDurationMinutes) {
-      setElapsed(activeWork.totalDurationMinutes * 60);
+  // Compute elapsed from startedAt + totalDurationMinutes (prior accumulated time)
+  const elapsed = useMemo(() => {
+    if (!activeWork) return 0;
+    const prior = (activeWork.totalDurationMinutes ?? 0) * 60;
+    if (isWorking && activeWork.startedAt) {
+      const sinceStart = Math.floor((Date.now() - new Date(activeWork.startedAt).getTime()) / 1000);
+      return prior + Math.max(sinceStart, 0);
     }
-  }, [activeWork?.totalDurationMinutes]);
+    return prior;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWork?.totalDurationMinutes, activeWork?.startedAt, isWorking, tick]);
 
   useEffect(() => {
     if (!isWorking) return;
-    const interval = setInterval(() => setElapsed((e) => e + 1), 1000);
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, [isWorking]);
 
