@@ -78,12 +78,37 @@ export function OrderQueuePage() {
     return map;
   }, [activeWork]);
 
-  const sortedQueue = [...(queue ?? [])].sort((a, b) => a.priority - b.priority);
+  // Merge: show queue items + any active work items not already in queue
+  const mergedItems = useMemo(() => {
+    const items: TabletQueueItemDto[] = [...(queue ?? [])];
+    const queueIds = new Set(items.map((i) => i.orderItemProcessId));
+    if (activeWork) {
+      for (const w of activeWork) {
+        if (!queueIds.has(w.orderItemProcessId)) {
+          items.push({
+            orderItemProcessId: w.orderItemProcessId,
+            orderId: w.orderId,
+            orderNumber: w.orderNumber,
+            priority: w.priority,
+            deliveryDate: w.deliveryDate,
+            productName: w.productName,
+            quantity: w.quantity,
+            complexity: w.complexity,
+            status: w.status,
+            specialRequestNames: w.specialRequestNames,
+            completedProcessCount: w.completedProcessCount,
+            totalProcessCount: w.totalProcessCount,
+          });
+        }
+      }
+    }
+    return items.sort((a, b) => a.priority - b.priority);
+  }, [queue, activeWork]);
 
   // Auto-expand and highlight item from notification
   useEffect(() => {
-    if (highlightId && queue) {
-      const match = queue.find(
+    if (highlightId && mergedItems.length) {
+      const match = mergedItems.find(
         (i) => i.orderId === highlightId || i.orderItemProcessId === highlightId,
       );
       if (match) {
@@ -93,7 +118,7 @@ export function OrderQueuePage() {
         return () => clearTimeout(timer);
       }
     }
-  }, [highlightId, queue]);
+  }, [highlightId, mergedItems]);
 
   if (isLoading) {
     return (
@@ -139,18 +164,18 @@ export function OrderQueuePage() {
         </button>
       </div>
       <p className="text-gray-500 text-tablet-sm">
-        {sortedQueue.length === 1
-          ? t('queue.activeOrder', { count: sortedQueue.length })
-          : t('queue.activeOrders', { count: sortedQueue.length })}
+        {mergedItems.length === 1
+          ? t('queue.activeOrder', { count: mergedItems.length })
+          : t('queue.activeOrders', { count: mergedItems.length })}
       </p>
 
-      {sortedQueue.length === 0 ? (
+      {mergedItems.length === 0 ? (
         <div className="text-center text-gray-400 py-12 text-tablet-base">
           {t('queue.noOrders')}
         </div>
       ) : (
         <div className="space-y-3">
-          {sortedQueue.map((item) => (
+          {mergedItems.map((item) => (
             <QueueCard
               key={item.orderItemProcessId}
               item={item}
