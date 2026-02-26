@@ -88,7 +88,14 @@
     "title": "Notifications",
     "loading": "Loading...",
     "empty": "No notifications",
-    "markAllRead": "Mark all read"
+    "noUnread": "No unread notifications",
+    "markAllRead": "Mark all read",
+    "tabAll": "All",
+    "tabUnread": "Unread"
+  },
+  "common": {
+    "loadMore": "Load more ({{remaining}} remaining)",
+    "showingOf": "Showing {{shown}} of {{total}}"
   },
   "language": {
     "sr": "SR",

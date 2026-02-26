@@ -48,6 +48,7 @@ export function OrderQueuePage() {
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(10);
 
   const { data: queue, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['tablet-queue', processId, tenantId],
@@ -187,7 +188,7 @@ export function OrderQueuePage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {mergedItems.map((item) => (
+          {mergedItems.slice(0, visibleCount).map((item) => (
             <QueueCard
               key={item.orderItemProcessId}
               item={item}
@@ -206,6 +207,14 @@ export function OrderQueuePage() {
               tEnum={tEnum}
             />
           ))}
+          {mergedItems.length > visibleCount && (
+            <button
+              onClick={() => setVisibleCount((c) => c + 10)}
+              className="w-full py-3 text-center text-tablet-sm font-semibold text-primary-500 bg-white rounded-xl border border-gray-200 active:bg-gray-50"
+            >
+              {t('tablet:common.loadMore', { remaining: mergedItems.length - visibleCount })}
+            </button>
+          )}
         </div>
       )}
     </div>

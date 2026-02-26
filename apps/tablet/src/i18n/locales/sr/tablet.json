@@ -88,7 +88,14 @@
     "title": "Obaveštenja",
     "loading": "Učitavanje...",
     "empty": "Nema obaveštenja",
-    "markAllRead": "Označi sve kao pročitano"
+    "noUnread": "Nema nepročitanih obaveštenja",
+    "markAllRead": "Označi sve kao pročitano",
+    "tabAll": "Sve",
+    "tabUnread": "Nepročitano"
+  },
+  "common": {
+    "loadMore": "Prikaži još ({{remaining}} preostalo)",
+    "showingOf": "Prikazano {{shown}} od {{total}}"
   },
   "language": {
     "sr": "SR",

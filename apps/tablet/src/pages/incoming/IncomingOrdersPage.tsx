@@ -19,6 +19,7 @@ export function IncomingOrdersPage() {
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(10);
 
   const { data: incoming, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['tablet-incoming', processId, tenantId],
@@ -112,7 +113,7 @@ export function IncomingOrdersPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {incoming.map((item) => (
+          {incoming.slice(0, visibleCount).map((item) => (
             <IncomingCard
               key={item.orderItemProcessId}
               item={item}
@@ -128,6 +129,14 @@ export function IncomingOrdersPage() {
               tEnum={tEnum}
             />
           ))}
+          {incoming.length > visibleCount && (
+            <button
+              onClick={() => setVisibleCount((c) => c + 10)}
+              className="w-full py-3 text-center text-tablet-sm font-semibold text-primary-500 bg-white rounded-xl border border-gray-200 active:bg-gray-50"
+            >
+              {t('tablet:common.loadMore', { remaining: incoming.length - visibleCount })}
+            </button>
+          )}
         </div>
       )}
     </div>
