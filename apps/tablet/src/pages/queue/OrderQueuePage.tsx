@@ -248,7 +248,8 @@ function QueueCard({
         : 'bg-white border-gray-200';
 
   const isBlocked = item.status === ProcessStatus.Blocked;
-  const isStopped = item.status === ProcessStatus.Stopped;
+  const isInProgress = item.status === ProcessStatus.InProgress;
+  const isPaused = isInProgress && activeWork != null && !activeWork.isTimerRunning;
 
   useEffect(() => {
     if (isHighlighted && cardRef.current) {
@@ -267,7 +268,12 @@ function QueueCard({
                 {tEnum('ProcessStatus', ProcessStatus.Blocked)}
               </span>
             )}
-            {isStopped && (
+            {isInProgress && activeWork?.isTimerRunning && (
+              <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-tablet-xs font-medium">
+                {t('work.working')}
+              </span>
+            )}
+            {isPaused && (
               <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-tablet-xs font-medium">
                 {t('work.paused')}
               </span>
@@ -358,25 +364,31 @@ function WorkPanel({
   const [pendingAction, setPendingAction] = useState(false);
 
   const isWorking = activeWork?.status === ProcessStatus.InProgress;
-  const isPaused = activeWork?.status === ProcessStatus.Stopped;
+  const isTimerRunning = activeWork?.isTimerRunning ?? false;
+  const isPaused = isWorking && !isTimerRunning;
+
+  // Check if all sub-processes are completed/withdrawn (ready for process completion)
+  const allSubsDone = activeWork?.subProcesses?.every(
+    (sp) => sp.status === SubProcessStatus.Completed || sp.isWithdrawn,
+  ) ?? false;
 
   // Compute elapsed from startedAt + totalDurationMinutes (prior accumulated time)
   const elapsed = useMemo(() => {
     if (!activeWork) return 0;
     const prior = (activeWork.totalDurationMinutes ?? 0) * 60;
-    if (isWorking && activeWork.startedAt) {
+    if (isTimerRunning && activeWork.startedAt) {
       const sinceStart = Math.floor((Date.now() - new Date(activeWork.startedAt).getTime()) / 1000);
       return prior + Math.max(sinceStart, 0);
     }
     return prior;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeWork?.totalDurationMinutes, activeWork?.startedAt, isWorking, tick]);
+  }, [activeWork?.totalDurationMinutes, activeWork?.startedAt, isTimerRunning, tick]);
 
   useEffect(() => {
-    if (!isWorking) return;
+    if (!isTimerRunning) return;
     const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
-  }, [isWorking]);
+  }, [isTimerRunning]);
 
   const handleError = (err: unknown, fallbackKey: string) => {
     setError(getTranslatedError(err, t as (key: string, opts?: Record<string, string>) => string, t(fallbackKey)));
@@ -403,13 +415,22 @@ function WorkPanel({
     onError: (err) => handleError(err, 'work.startFailed'),
   });
 
-  const stopMutation = useMutation({
+  const pauseMutation = useMutation({
     mutationFn: () => processWorkflowApi.stop(orderItemProcessId, { userId }),
     onSuccess: async () => {
       setError(null);
-      await invalidateAndWait(['tablet-active', 'tablet-queue']);
+      await invalidateAndWait(['tablet-active']);
     },
-    onError: (err) => handleError(err, 'work.stopFailed'),
+    onError: (err) => handleError(err, 'work.pauseFailed'),
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: () => processWorkflowApi.resume(orderItemProcessId, { userId }),
+    onSuccess: async () => {
+      setError(null);
+      await invalidateAndWait(['tablet-active']);
+    },
+    onError: (err) => handleError(err, 'work.startFailed'),
   });
 
   const completeMutation = useMutation({
@@ -516,7 +537,7 @@ function WorkPanel({
           {formatTime(elapsed)}
         </div>
         <p className="text-gray-500 mt-1 text-tablet-xs">
-          {isWorking ? t('work.working') : isPaused ? t('work.paused') : t('work.readyToStart')}
+          {isTimerRunning ? t('work.working') : isPaused ? t('work.paused') : t('work.readyToStart')}
         </p>
       </div>
 
@@ -567,19 +588,30 @@ function WorkPanel({
           </BigButton>
         ) : (
           <>
-            <BigButton
-              variant="danger"
-              onClick={() => { setError(null); stopMutation.mutate(); }}
-              loading={stopMutation.isPending || pendingAction}
-            >
-              {t('work.stop')}
-            </BigButton>
-            <BigButton
-              onClick={() => { setError(null); setShowCompleteConfirm(true); }}
-              loading={completeMutation.isPending || pendingAction}
-            >
-              {t('work.complete')}
-            </BigButton>
+            {isTimerRunning ? (
+              <BigButton
+                variant="danger"
+                onClick={() => { setError(null); pauseMutation.mutate(); }}
+                loading={pauseMutation.isPending || pendingAction}
+              >
+                {t('work.pause')}
+              </BigButton>
+            ) : (
+              <BigButton
+                onClick={() => { setError(null); resumeMutation.mutate(); }}
+                loading={resumeMutation.isPending || pendingAction}
+              >
+                {t('work.resume')}
+              </BigButton>
+            )}
+            {allSubsDone && (
+              <BigButton
+                onClick={() => { setError(null); setShowCompleteConfirm(true); }}
+                loading={completeMutation.isPending || pendingAction}
+              >
+                {t('work.complete')}
+              </BigButton>
+            )}
           </>
         )}
 

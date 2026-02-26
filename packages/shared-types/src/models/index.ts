@@ -390,6 +390,7 @@ export interface TabletActiveWorkDto {
   totalProcessCount: number;
   startedAt: string | null;
   totalDurationMinutes: number;
+  isTimerRunning: boolean;
   subProcesses: TabletSubProcessDto[];
 }
 
@@ -399,6 +400,7 @@ export interface TabletSubProcessDto {
   status: SubProcessStatus;
   totalDurationMinutes: number;
   isWithdrawn: boolean;
+  isTimerRunning: boolean;
 }
 
 export interface TabletIncomingDto {
