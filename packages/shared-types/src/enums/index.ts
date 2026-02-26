@@ -50,6 +50,7 @@ export enum NotificationType {
   DeadlineCritical = 'DeadlineCritical',
   BlockRequest = 'BlockRequest',
   BlockRequestApproved = 'BlockRequestApproved',
+  BlockRequestRejected = 'BlockRequestRejected',
   ProcessCompleted = 'ProcessCompleted',
   ProcessBlocked = 'ProcessBlocked',
   OrderActivated = 'OrderActivated',

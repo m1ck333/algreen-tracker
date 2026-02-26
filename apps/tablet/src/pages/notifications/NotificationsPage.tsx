@@ -30,6 +30,8 @@ function notificationIcon(type: string): string {
       return '\uD83D\uDEAB';
     case 'BlockRequestApproved':
       return '\u2705';
+    case 'BlockRequestRejected':
+      return '\u274C';
     case 'ProcessCompleted':
       return '\u2714\uFE0F';
     default:

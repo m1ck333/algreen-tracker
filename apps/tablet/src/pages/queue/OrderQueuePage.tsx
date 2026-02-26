@@ -366,6 +366,7 @@ function WorkPanel({
   const queryClient = useQueryClient();
   const [tick, setTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockReason, setBlockReason] = useState('');
@@ -479,6 +480,8 @@ function WorkPanel({
       setError(null);
       setShowBlockModal(false);
       setBlockReason('');
+      setSuccess(t('work.blockSent'));
+      setTimeout(() => setSuccess(null), 4000);
       await invalidateAndWait(['tablet-active', 'tablet-queue']);
     },
     onError: (err) => {
@@ -554,6 +557,12 @@ function WorkPanel({
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-tablet-sm">
           {error}
+        </div>
+      )}
+      {/* Success message */}
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-tablet-sm">
+          {success}
         </div>
       )}
 

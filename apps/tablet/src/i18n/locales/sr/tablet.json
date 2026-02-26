@@ -54,6 +54,7 @@
     "blockReasonPlaceholder": "Opišite problem...",
     "submitBlock": "Pošalji prijavu",
     "blockFailed": "Slanje prijave nije uspelo",
+    "blockSent": "Prijava je uspešno poslata. Čeka se odobrenje.",
     "progress": "Napredak narudžbine"
   },
   "incoming": {

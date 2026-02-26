@@ -54,6 +54,7 @@
     "blockReasonPlaceholder": "Describe the issue...",
     "submitBlock": "Submit Report",
     "blockFailed": "Failed to submit report",
+    "blockSent": "Report submitted successfully. Waiting for approval.",
     "progress": "Order progress"
   },
   "incoming": {
