@@ -41,6 +41,7 @@
     "min": "min",
     "startFailed": "Failed to start process",
     "pauseFailed": "Failed to pause process",
+    "resumeFailed": "Failed to resume process",
     "completeFailed": "Failed to complete process",
     "priority": "Priority",
     "deliveryDate": "Delivery",

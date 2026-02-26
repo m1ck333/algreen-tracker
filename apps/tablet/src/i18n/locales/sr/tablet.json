@@ -41,6 +41,7 @@
     "min": "min",
     "startFailed": "Pokretanje procesa nije uspelo",
     "pauseFailed": "Pauziranje procesa nije uspelo",
+    "resumeFailed": "Nastavljanje procesa nije uspelo",
     "completeFailed": "Završavanje procesa nije uspelo",
     "priority": "Prioritet",
     "deliveryDate": "Isporuka",
