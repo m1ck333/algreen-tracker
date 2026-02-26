@@ -382,17 +382,17 @@ function WorkPanel({
     (sp) => sp.status === SubProcessStatus.Completed || sp.isWithdrawn,
   ) ?? false;
 
-  // Compute elapsed from startedAt + totalDurationMinutes (prior accumulated time)
+  // Compute elapsed = accumulated sub-process duration + current session time
   const elapsed = useMemo(() => {
     if (!activeWork) return 0;
     const prior = (activeWork.totalDurationMinutes ?? 0) * 60;
-    if (isTimerRunning && activeWork.startedAt) {
-      const sinceStart = Math.floor((Date.now() - new Date(activeWork.startedAt).getTime()) / 1000);
-      return prior + Math.max(sinceStart, 0);
+    if (isTimerRunning && activeWork.currentLogStartedAt) {
+      const sinceLogStart = Math.floor((Date.now() - new Date(activeWork.currentLogStartedAt).getTime()) / 1000);
+      return prior + Math.max(sinceLogStart, 0);
     }
     return prior;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeWork?.totalDurationMinutes, activeWork?.startedAt, isTimerRunning, tick]);
+  }, [activeWork?.totalDurationMinutes, activeWork?.currentLogStartedAt, isTimerRunning, tick]);
 
   useEffect(() => {
     if (!isTimerRunning) return;

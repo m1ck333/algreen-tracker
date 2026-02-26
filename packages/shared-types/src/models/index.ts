@@ -391,6 +391,7 @@ export interface TabletActiveWorkDto {
   startedAt: string | null;
   totalDurationMinutes: number;
   isTimerRunning: boolean;
+  currentLogStartedAt: string | null;
   subProcesses: TabletSubProcessDto[];
 }
 
