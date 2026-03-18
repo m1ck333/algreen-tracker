@@ -18,6 +18,7 @@
     "add": "Add",
     "done": "Done",
     "edit": "Edit",
+    "delete": "Delete",
     "search": "Search...",
     "discardChanges": "Discard changes",
     "keepEditing": "Keep editing"

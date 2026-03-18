@@ -183,7 +183,10 @@
       "process": "Processes",
       "selectProcess": "Select processes",
       "newPassword": "New Password",
-      "newPasswordPlaceholder": "Leave empty to keep current password"
+      "newPasswordPlaceholder": "Leave empty to keep current password",
+      "deleted": "User deleted",
+      "deleteFailed": "Failed to delete user",
+      "deleteConfirm": "Are you sure you want to delete this user?"
     },
     "processes": {
       "title": "Processes",

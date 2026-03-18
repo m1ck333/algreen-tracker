@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
-import { Typography, Table, Button, Drawer, Form, Input, Select, Tag, App, Switch, DatePicker } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Typography, Table, Button, Drawer, Form, Input, Select, Tag, App, Switch, DatePicker, Popconfirm } from 'antd';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -133,6 +133,17 @@ export function UsersPage() {
       message.success(t('admin.users.updated'));
     },
     onError: (err) => message.error(getTranslatedError(err, t, t('admin.users.updateFailed'))),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => usersApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setEditUser(null);
+      editForm.resetFields();
+      message.success(t('admin.users.deleted'));
+    },
+    onError: (err) => message.error(getTranslatedError(err, t, t('admin.users.deleteFailed'))),
   });
 
   const openEdit = (user: UserDto) => {
@@ -320,7 +331,18 @@ export function UsersPage() {
         onClose={(e) => guardedEditClose(() => { editForm.resetFields(); setEditUser(null); }, e)}
         width={400}
         extra={
-          <Button type="primary" onClick={() => editForm.submit()} loading={updateMutation.isPending}>{t('common:actions.save')}</Button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Popconfirm
+              title={t('admin.users.deleteConfirm')}
+              onConfirm={() => deleteMutation.mutate(editUser!.id)}
+              okText={t('common:actions.confirm')}
+              cancelText={t('common:actions.cancel')}
+              okButtonProps={{ danger: true }}
+            >
+              <Button danger icon={<DeleteOutlined />} loading={deleteMutation.isPending}>{t('common:actions.delete')}</Button>
+            </Popconfirm>
+            <Button type="primary" onClick={() => editForm.submit()} loading={updateMutation.isPending}>{t('common:actions.save')}</Button>
+          </div>
         }
       >
         <Form

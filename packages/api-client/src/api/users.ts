@@ -26,4 +26,8 @@ export const usersApi = {
   resetPassword(id: string, newPassword: string) {
     return apiClient.post(`/users/${id}/reset-password`, { newPassword });
   },
+
+  delete(id: string) {
+    return apiClient.delete(`/users/${id}`);
+  },
 };

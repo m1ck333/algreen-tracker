@@ -183,7 +183,10 @@
       "process": "Procesi",
       "selectProcess": "Izaberite procese",
       "newPassword": "Nova lozinka",
-      "newPasswordPlaceholder": "Ostavite prazno da zadržite trenutnu lozinku"
+      "newPasswordPlaceholder": "Ostavite prazno da zadržite trenutnu lozinku",
+      "deleted": "Korisnik obrisan",
+      "deleteFailed": "Brisanje korisnika nije uspelo",
+      "deleteConfirm": "Da li ste sigurni da želite da obrišete ovog korisnika?"
     },
     "processes": {
       "title": "Procesi",
