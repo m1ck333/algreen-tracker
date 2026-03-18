@@ -387,7 +387,7 @@ export function ProcessesPage() {
       <Drawer
         title={t('admin.processes.createProcess')}
         open={createOpen}
-        onClose={() => guardedCreateClose(() => { createForm.resetFields(); setPendingSubProcesses([]); setAddSubName(''); setAddSubOrder(1); setCreateOpen(false); })}
+        onClose={(e) => guardedCreateClose(() => { createForm.resetFields(); setPendingSubProcesses([]); setAddSubName(''); setAddSubOrder(1); setCreateOpen(false); }, e)}
         width={Math.min(520, window.innerWidth)}
         extra={
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>{t('common:actions.save')}</Button>
@@ -472,7 +472,7 @@ export function ProcessesPage() {
       <Drawer
         title={currentDetail ? `${currentDetail.code} — ${currentDetail.name}` : ''}
         open={!!detailProcess}
-        onClose={() => guardedEditClose(() => { setDetailProcess(null); setPendingSubAdds([]); setPendingSubRemovals(new Set()); editForm.resetFields(); subProcessForm.resetFields(); })}
+        onClose={(e) => guardedEditClose(() => { setDetailProcess(null); setPendingSubAdds([]); setPendingSubRemovals(new Set()); editForm.resetFields(); subProcessForm.resetFields(); }, e)}
         width={Math.min(520, window.innerWidth)}
         extra={
           <div style={{ display: 'flex', gap: 8 }}>

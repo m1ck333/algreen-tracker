@@ -171,7 +171,7 @@ export function TenantsPage() {
     form.resetFields();
   };
 
-  const closeDrawer = () => guardedDrawerClose(doCloseDrawer);
+  const closeDrawer = (e?: React.MouseEvent | React.KeyboardEvent) => guardedDrawerClose(doCloseDrawer, e);
 
   const handleFinish = (values: Record<string, unknown>) => {
     if (isCreating) {

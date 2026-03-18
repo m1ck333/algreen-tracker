@@ -365,7 +365,7 @@ export function ProductCategoriesPage() {
     else setDetailId(null);
   };
 
-  const closeDrawer = () => guardedDrawerClose(doCloseDrawer);
+  const closeDrawer = (e?: React.MouseEvent | React.KeyboardEvent) => guardedDrawerClose(doCloseDrawer, e);
 
   const processesSection = (
     <>

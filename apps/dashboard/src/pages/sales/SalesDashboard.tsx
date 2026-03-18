@@ -248,7 +248,7 @@ export function SalesDashboard() {
       <Drawer
         title={t('orders.createOrder')}
         open={createOrderOpen}
-        onClose={() => guardedOrderClose(() => { orderForm.resetFields(); setCreateOrderOpen(false); })}
+        onClose={(e) => guardedOrderClose(() => { orderForm.resetFields(); setCreateOrderOpen(false); }, e)}
         width={Math.min(480, window.innerWidth)}
         extra={
           <Button type="primary" onClick={() => orderForm.submit()} loading={createOrderMutation.isPending}>{t('common:actions.save')}</Button>
@@ -304,7 +304,7 @@ export function SalesDashboard() {
       <Modal
         title={t('sales.createChangeRequest')}
         open={createCROpen}
-        onCancel={() => guardedCRClose(() => { crForm.resetFields(); setCreateCROpen(false); setCrTargetOrder(null); })}
+        onCancel={(e) => guardedCRClose(() => { crForm.resetFields(); setCreateCROpen(false); setCrTargetOrder(null); }, e)}
         onOk={() => crForm.submit()}
         okText={t('common:actions.save')}
         cancelText={t('common:actions.cancel')}

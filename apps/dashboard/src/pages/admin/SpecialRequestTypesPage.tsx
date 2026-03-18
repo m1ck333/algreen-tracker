@@ -292,7 +292,7 @@ export function SpecialRequestTypesPage() {
       <Drawer
         title={t('admin.specialRequestTypes.createType')}
         open={createOpen}
-        onClose={() => guardedCreateClose(() => { createForm.resetFields(); setCreateOpen(false); })}
+        onClose={(e) => guardedCreateClose(() => { createForm.resetFields(); setCreateOpen(false); }, e)}
         width={Math.min(480, window.innerWidth)}
         extra={
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>{t('common:actions.save')}</Button>
@@ -316,7 +316,7 @@ export function SpecialRequestTypesPage() {
       <Drawer
         title={currentDetail ? `${currentDetail.code} — ${currentDetail.name}` : ''}
         open={!!detailItem}
-        onClose={() => guardedEditClose(() => { setDetailItem(null); editForm.resetFields(); })}
+        onClose={(e) => guardedEditClose(() => { setDetailItem(null); editForm.resetFields(); }, e)}
         width={Math.min(480, window.innerWidth)}
         extra={
           <div style={{ display: 'flex', gap: 8 }}>

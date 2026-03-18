@@ -260,7 +260,7 @@ export function UsersPage() {
       <Drawer
         title={t('admin.users.createUser')}
         open={createOpen}
-        onClose={() => guardedCreateClose(() => { createForm.resetFields(); setCreateOpen(false); })}
+        onClose={(e) => guardedCreateClose(() => { createForm.resetFields(); setCreateOpen(false); }, e)}
         width={400}
         extra={
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>{t('common:actions.save')}</Button>
@@ -304,7 +304,7 @@ export function UsersPage() {
       <Drawer
         title={t('admin.users.editUser')}
         open={!!editUser}
-        onClose={() => guardedEditClose(() => { editForm.resetFields(); setEditUser(null); })}
+        onClose={(e) => guardedEditClose(() => { editForm.resetFields(); setEditUser(null); }, e)}
         width={400}
         extra={
           <Button type="primary" onClick={() => editForm.submit()} loading={updateMutation.isPending}>{t('common:actions.save')}</Button>

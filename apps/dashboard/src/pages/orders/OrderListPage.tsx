@@ -800,13 +800,13 @@ export function OrderListPage() {
       <Drawer
         title={isCreating ? t('orders.createOrder') : detailOrder ? t('orders.order', { number: detailOrder.orderNumber }) : ''}
         open={isCreating || !!detailOrderId}
-        onClose={() => {
+        onClose={(e) => {
           const doClose = () => {
             if (isCreating) { form.resetFields(); setCreatePendingItems([]); setPendingFiles(new Map()); setAddingItem(false); setIsCreating(false); }
             else { setDetailOrderId(null); clearPendingState(); setAddingItem(false); }
           };
-          if (isCreating) guardedDrawerClose(doClose);
-          else guardedEditClose(doClose);
+          if (isCreating) guardedDrawerClose(doClose, e);
+          else guardedEditClose(doClose, e);
         }}
         width={Math.min(640, window.innerWidth)}
         extra={
