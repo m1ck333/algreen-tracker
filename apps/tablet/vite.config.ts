@@ -13,9 +13,9 @@ export default defineConfig({
       injectRegister: false,
       includeAssets: ['favicon.png', 'algreen-logo.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'AlGreen MES - Tablet',
-        short_name: 'AlGreen',
-        description: 'Factory floor tablet app for AlGreen MES',
+        name: 'Algreen MES - Tablet',
+        short_name: 'Algreen',
+        description: 'Factory floor tablet app for Algreen MES',
         theme_color: '#2e7d32',
         background_color: '#f5f5f5',
         display: 'standalone',
