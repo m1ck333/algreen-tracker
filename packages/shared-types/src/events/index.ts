@@ -57,14 +57,12 @@ export interface BlockRequestApprovedEvent {
 
 export interface WorkerCheckedInEvent {
   userId: string;
-  processId: string;
   sessionId: string;
   tenantId: string;
 }
 
 export interface WorkerCheckedOutEvent {
   userId: string;
-  processId: string;
   sessionId: string;
   durationMinutes: number | null;
   tenantId: string;

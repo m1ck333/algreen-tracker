@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@algreen/auth';
-import { processesApi, processWorkflowApi } from '@algreen/api-client';
+import { workSessionsApi } from '@algreen/api-client';
 import { useTranslation } from '@algreen/i18n';
 import { useWorkSessionStore } from '../../stores/work-session-store';
 import { subscribeToPush } from '../../services/push';
@@ -9,7 +9,7 @@ import { subscribeToPush } from '../../services/push';
 export function TabletLoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
-  const setSessionInfo = useWorkSessionStore((s) => s.setSessionInfo);
+  const setCheckInTime = useWorkSessionStore((s) => s.setCheckInTime);
   const [tenantCode, setTenantCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,34 +22,21 @@ export function TabletLoginPage() {
       await login(email, password, tenantCode);
 
       const { user, tenantId } = useAuthStore.getState();
-      if (!user?.processId || !tenantId) {
+      if (!user || !tenantId) {
         navigate('/queue', { replace: true });
         return;
       }
 
       setSettingUp(true);
 
-      // Fetch process name for display
-      let processName = '';
+      // Check in (no processId needed anymore)
       try {
-        const { data: process } = await processesApi.getById(user.processId);
-        processName = process.name;
+        await workSessionsApi.checkIn({ tenantId, userId: user.id });
       } catch {
-        // Non-critical — proceed without process name
+        // Non-critical — proceed even if check-in fails
       }
 
-      setSessionInfo({
-        processId: user.processId,
-        processName,
-        checkInTime: new Date().toISOString(),
-      });
-
-      // Resume paused timers for this station (non-blocking)
-      processWorkflowApi.resumeStation({
-        processId: user.processId,
-        tenantId,
-        userId: user.id,
-      }).catch(() => {});
+      setCheckInTime(new Date().toISOString());
 
       // Subscribe to push notifications (non-blocking)
       subscribeToPush().then(

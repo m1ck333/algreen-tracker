@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@algreen/auth';
-import { processWorkflowApi } from '@algreen/api-client';
+import { tabletApi, workSessionsApi } from '@algreen/api-client';
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
@@ -11,11 +11,8 @@ import { unsubscribeFromPush } from '../../services/push';
 export function CheckOutPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const tenantId = useAuthStore((s) => s.tenantId);
   const logout = useAuthStore((s) => s.logout);
   const clearWorkSession = useWorkSessionStore((s) => s.clear);
-  const processId = useWorkSessionStore((s) => s.processId);
-  const processName = useWorkSessionStore((s) => s.processName);
   const checkInTime = useWorkSessionStore((s) => s.checkInTime);
   const { t } = useTranslation('tablet');
   const { tEnum } = useEnumTranslation();
@@ -25,11 +22,14 @@ export function CheckOutPage() {
   const handleLogout = async () => {
     setIsLoading(true);
     try {
-      if (user?.id && processId && tenantId) {
-        await processWorkflowApi.pauseStation({ processId, tenantId, userId: user.id });
+      if (user?.id) {
+        // Pause all active work for this user
+        await tabletApi.pause(user.id).catch(() => {});
+        // Check out the work session
+        await workSessionsApi.checkOut({ userId: user.id }).catch(() => {});
       }
     } catch {
-      // Still proceed with logout even if pause fails
+      // Still proceed with logout even if pause/checkout fails
     }
     unsubscribeFromPush().catch(() => {});
     clearWorkSession();
@@ -51,22 +51,14 @@ export function CheckOutPage() {
       </div>
 
       {/* Shift summary */}
-      {(processName || checkInTime) && (
+      {checkInTime && (
         <div className="card space-y-2">
-          {processName && (
-            <div className="flex justify-between text-tablet-sm">
-              <span className="text-gray-500">{t('checkout.process')}</span>
-              <span className="font-semibold">{processName}</span>
-            </div>
-          )}
-          {checkInTime && (
-            <div className="flex justify-between text-tablet-sm">
-              <span className="text-gray-500">{t('checkout.checkedInAt')}</span>
-              <span className="font-semibold">
-                {new Date(checkInTime).toLocaleTimeString('sr-Latn-RS', { hour: '2-digit', minute: '2-digit', hour12: false })}
-              </span>
-            </div>
-          )}
+          <div className="flex justify-between text-tablet-sm">
+            <span className="text-gray-500">{t('checkout.checkedInAt')}</span>
+            <span className="font-semibold">
+              {new Date(checkInTime).toLocaleTimeString('sr-Latn-RS', { hour: '2-digit', minute: '2-digit', hour12: false })}
+            </span>
+          </div>
         </div>
       )}
 

@@ -4,13 +4,12 @@ import { useLocation } from 'react-router-dom';
 import { tabletApi, processWorkflowApi, subProcessWorkflowApi, processesApi, blockRequestsApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
 import { ProcessStatus, SubProcessStatus } from '@algreen/shared-types';
-import type { TabletQueueItemDto, TabletActiveWorkDto, TabletSubProcessDto } from '@algreen/shared-types';
+import type { TabletQueueItemDto, TabletActiveWorkDto, TabletSubProcessDto, ProcessGroupDto } from '@algreen/shared-types';
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { AttachmentIndicator } from '../../components/AttachmentIndicator';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
-import { useWorkSessionStore } from '../../stores/work-session-store';
 
 function formatDuration(totalSeconds: number): string {
   if (totalSeconds < 60) return `${totalSeconds}s`;
@@ -38,34 +37,58 @@ function getTranslatedError(error: unknown, t: (key: string, opts?: Record<strin
 export function OrderQueuePage() {
   const userId = useAuthStore((s) => s.user?.id);
   const tenantId = useAuthStore((s) => s.tenantId);
-  const processId = useWorkSessionStore((s) => s.processId);
   const { t } = useTranslation('tablet');
   const { tEnum } = useEnumTranslation();
   const location = useLocation();
   const highlightId = (location.state as { highlightId?: string } | null)?.highlightId;
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
 
-  const { data: queue, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['tablet-queue', processId, tenantId],
-    queryFn: () => tabletApi.getQueue(processId!, tenantId!).then((r) => r.data),
-    enabled: !!tenantId && !!processId,
+  const { data: queueGroups, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ['tablet-queue', userId, tenantId],
+    queryFn: () => tabletApi.getQueue(userId!, tenantId!).then((r) => r.data),
+    enabled: !!tenantId && !!userId,
     refetchInterval: 60_000,
   });
 
-  const { data: activeWork } = useQuery({
-    queryKey: ['tablet-active', processId, tenantId],
-    queryFn: () => tabletApi.getActive(processId!, tenantId!).then((r) => r.data),
-    enabled: !!processId && !!tenantId,
+  const { data: activeGroups } = useQuery({
+    queryKey: ['tablet-active', userId, tenantId],
+    queryFn: () => tabletApi.getActive(userId!, tenantId!).then((r) => r.data),
+    enabled: !!userId && !!tenantId,
     refetchInterval: 120_000,
   });
 
+  // Build sorted tabs from all groups (queue + active)
+  const processTabs = useMemo(() => {
+    const tabMap = new Map<string, { processId: string; processCode: string; processName: string; sequenceOrder: number }>();
+    for (const g of queueGroups ?? []) {
+      tabMap.set(g.processId, { processId: g.processId, processCode: g.processCode, processName: g.processName, sequenceOrder: g.sequenceOrder });
+    }
+    for (const g of activeGroups ?? []) {
+      if (!tabMap.has(g.processId)) {
+        tabMap.set(g.processId, { processId: g.processId, processCode: g.processCode, processName: g.processName, sequenceOrder: g.sequenceOrder });
+      }
+    }
+    return Array.from(tabMap.values()).sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+  }, [queueGroups, activeGroups]);
+
+  // Auto-select first tab
+  useEffect(() => {
+    if (processTabs.length > 0 && (!activeTab || !processTabs.find((t) => t.processId === activeTab))) {
+      setActiveTab(processTabs[0].processId);
+    }
+  }, [processTabs, activeTab]);
+
+  // Get current process data
+  const currentProcessId = activeTab;
+
   const { data: processDefinition } = useQuery({
-    queryKey: ['process', processId],
-    queryFn: () => processesApi.getById(processId!).then((r) => r.data),
-    enabled: !!processId,
+    queryKey: ['process', currentProcessId],
+    queryFn: () => processesApi.getById(currentProcessId!).then((r) => r.data),
+    enabled: !!currentProcessId,
     staleTime: 5 * 60_000,
   });
 
@@ -79,50 +102,57 @@ export function OrderQueuePage() {
     return map;
   }, [processDefinition]);
 
+  // Get queue items for current tab
+  const currentQueue = useMemo(() => {
+    if (!currentProcessId) return [];
+    return queueGroups?.find((g) => g.processId === currentProcessId)?.items ?? [];
+  }, [queueGroups, currentProcessId]);
+
+  // Get active items for current tab
+  const currentActive = useMemo(() => {
+    if (!currentProcessId) return [];
+    return activeGroups?.find((g) => g.processId === currentProcessId)?.items ?? [];
+  }, [activeGroups, currentProcessId]);
+
   const activeWorkMap = useMemo(() => {
     const map = new Map<string, TabletActiveWorkDto>();
-    if (activeWork) {
-      for (const w of activeWork) {
-        map.set(w.orderItemProcessId, w);
-      }
+    for (const w of currentActive) {
+      map.set(w.orderItemProcessId, w);
     }
     return map;
-  }, [activeWork]);
+  }, [currentActive]);
 
   // Merge: show queue items + any active work items not already in queue
   const mergedItems = useMemo(() => {
-    const items: TabletQueueItemDto[] = [...(queue ?? [])];
+    const items: TabletQueueItemDto[] = [...currentQueue];
     const queueIds = new Set(items.map((i) => i.orderItemProcessId));
-    if (activeWork) {
-      for (const w of activeWork) {
-        if (!queueIds.has(w.orderItemProcessId)) {
-          items.push({
-            orderItemProcessId: w.orderItemProcessId,
-            orderId: w.orderId,
-            orderItemId: w.orderItemId,
-            orderNumber: w.orderNumber,
-            priority: w.priority,
-            deliveryDate: w.deliveryDate,
-            productName: w.productName,
-            productCategoryName: w.productCategoryName,
-            quantity: w.quantity,
-            complexity: w.complexity,
-            status: w.status,
-            specialRequestNames: w.specialRequestNames,
-            completedProcessCount: w.completedProcessCount,
-            totalProcessCount: w.totalProcessCount,
-          });
-        }
+    for (const w of currentActive) {
+      if (!queueIds.has(w.orderItemProcessId)) {
+        items.push({
+          orderItemProcessId: w.orderItemProcessId,
+          orderId: w.orderId,
+          orderItemId: w.orderItemId,
+          orderNumber: w.orderNumber,
+          priority: w.priority,
+          deliveryDate: w.deliveryDate,
+          productName: w.productName,
+          productCategoryName: w.productCategoryName,
+          quantity: w.quantity,
+          complexity: w.complexity,
+          status: w.status,
+          specialRequestNames: w.specialRequestNames,
+          completedProcessCount: w.completedProcessCount,
+          totalProcessCount: w.totalProcessCount,
+        });
       }
     }
     return items.sort((a, b) => {
-      // In Progress first, then by priority
       const aInProgress = a.status === ProcessStatus.InProgress ? 0 : 1;
       const bInProgress = b.status === ProcessStatus.InProgress ? 0 : 1;
       if (aInProgress !== bInProgress) return aInProgress - bInProgress;
       return a.priority - b.priority;
     });
-  }, [queue, activeWork]);
+  }, [currentQueue, currentActive]);
 
   // Auto-expand and highlight item from notification (expand visibleCount if needed)
   useEffect(() => {
@@ -141,6 +171,12 @@ export function OrderQueuePage() {
       }
     }
   }, [highlightId, mergedItems]);
+
+  // Reset visible count when switching tabs
+  useEffect(() => {
+    setVisibleCount(10);
+    setExpandedItemId(null);
+  }, [activeTab]);
 
   if (isLoading) {
     return (
@@ -185,6 +221,26 @@ export function OrderQueuePage() {
           </svg>
         </button>
       </div>
+
+      {/* Process Tabs */}
+      {processTabs.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {processTabs.map((tab) => (
+            <button
+              key={tab.processId}
+              onClick={() => setActiveTab(tab.processId)}
+              className={`px-4 py-2 rounded-xl text-tablet-sm font-semibold whitespace-nowrap transition-colors ${
+                activeTab === tab.processId
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-white text-gray-600 border border-gray-200 active:bg-gray-50'
+              }`}
+            >
+              {tab.processCode} - {tab.processName}
+            </button>
+          ))}
+        </div>
+      )}
+
       <p className="text-gray-500 text-tablet-sm">
         {mergedItems.length === 1
           ? t('queue.activeOrder', { count: mergedItems.length })
@@ -403,7 +459,6 @@ function WorkPanel({
   // Compute elapsed = accumulated duration + current session time
   const elapsed = useMemo(() => {
     if (!activeWork) return 0;
-    // Both paths now store accumulated seconds in totalDurationMinutes
     const prior = activeWork.totalDurationMinutes ?? 0;
     if (isTimerRunning && activeWork.currentLogStartedAt) {
       const sinceLogStart = Math.floor((Date.now() - new Date(activeWork.currentLogStartedAt).getTime()) / 1000);
@@ -428,7 +483,6 @@ function WorkPanel({
     await Promise.all(
       keys.map((k) => queryClient.invalidateQueries({ queryKey: [k] })),
     );
-    // Wait for refetch to complete
     await Promise.all(
       keys.map((k) => queryClient.refetchQueries({ queryKey: [k] })),
     );
@@ -600,7 +654,6 @@ function WorkPanel({
           <h3 className="text-tablet-sm font-semibold mb-2">{t('work.subProcesses')}</h3>
           <div className="space-y-2">
             {activeWork.subProcesses.map((sp) => {
-              // Only allow starting the next pending sub-process (no in-progress one exists, and all before it are completed)
               const hasInProgress = activeWork.subProcesses.some(
                 (s) => s.status === SubProcessStatus.InProgress,
               );

@@ -6,7 +6,6 @@ import {
   createConnection,
   startConnection,
   joinTenantGroup,
-  joinProcessGroup,
 } from '@algreen/signalr-client';
 import { tokenManager } from '@algreen/api-client';
 import { BottomNav } from '../components/BottomNav';
@@ -19,7 +18,6 @@ import { useWakeLock } from '../hooks/useWakeLock';
 
 export function TabletLayout() {
   const tenantId = useAuthStore((s) => s.tenantId);
-  const processId = useAuthStore((s) => s.user?.processId);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   useSignalRQueryInvalidation();
@@ -85,15 +83,14 @@ export function TabletLayout() {
         if (cancelled) return;
         console.log('[SignalR] Connected. Joining groups...');
         await joinTenantGroup(tenantId);
-        if (processId) await joinProcessGroup(processId);
-        console.log('[SignalR] Joined tenant:', tenantId, 'process:', processId);
+        console.log('[SignalR] Joined tenant:', tenantId);
       })
       .catch((err) => console.error('[SignalR] Connection failed:', err));
 
     return () => {
       cancelled = true;
     };
-  }, [tenantId, processId]);
+  }, [tenantId]);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">

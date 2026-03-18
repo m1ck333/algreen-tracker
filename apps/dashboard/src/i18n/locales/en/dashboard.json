@@ -180,8 +180,8 @@
       "updated": "User updated",
       "updateFailed": "Failed to update user",
       "canIncludeWithdrawn": "Can Include Withdrawn in Analysis",
-      "process": "Process",
-      "selectProcess": "Select process"
+      "process": "Processes",
+      "selectProcess": "Select processes"
     },
     "processes": {
       "title": "Processes",

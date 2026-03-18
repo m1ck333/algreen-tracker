@@ -32,7 +32,7 @@ export interface UserDto {
   lastName: string;
   fullName: string;
   role: UserRole;
-  processId: string | null;
+  processes: { processId: string }[];
   canIncludeWithdrawnInAnalysis: boolean;
   isActive: boolean;
   createdAt: string;
@@ -196,7 +196,6 @@ export interface NotificationDto {
 
 export interface WorkSessionDto {
   id: string;
-  processId: string;
   userId: string;
   checkInTime: string;
   checkOutTime: string | null;
@@ -330,13 +329,11 @@ export interface LiveViewOrderDto {
 }
 
 export interface WorkerStatusDto {
-  processId: string;
-  isWorkerCheckedIn: boolean;
-  worker: {
-    id: string;
-    name: string;
-    checkInTime: string | null;
-  } | null;
+  userId: string;
+  name: string;
+  isCheckedIn: boolean;
+  checkedInAt: string | null;
+  assignedProcessCodes: string[];
 }
 
 export interface PendingBlockRequestDto {
@@ -454,4 +451,12 @@ export interface BlockingProcessDto {
   orderItemProcessId: string;
   processId: string;
   status: ProcessStatus;
+}
+
+export interface ProcessGroupDto<T> {
+  processId: string;
+  processCode: string;
+  processName: string;
+  sequenceOrder: number;
+  items: T[];
 }

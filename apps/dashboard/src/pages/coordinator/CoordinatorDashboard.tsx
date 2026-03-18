@@ -167,27 +167,28 @@ export function CoordinatorDashboard() {
                   {
                     title: t('coordinator.liveWorkers'),
                     key: 'workers',
-                    width: 180,
+                    width: 220,
                     render: (_, r) => {
                       const workersList = Array.isArray(workers.data) ? workers.data as WorkerStatusDto[] : [];
-                      const match = workersList.find((w) => w.processId === r.processId);
-                      const isOnline = !!match?.isWorkerCheckedIn;
-                      const worker = match?.worker;
+                      const processWorkers = workersList.filter((w) => w.assignedProcessCodes?.includes(r.processCode));
+                      if (processWorkers.length === 0) {
+                        return <Text type="secondary" style={{ fontSize: 13 }}>{t('coordinator.workerOffline')}</Text>;
+                      }
                       return (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: isOnline ? '#52c41a' : '#ff4d4f', flexShrink: 0 }} />
-                          {isOnline && worker ? (
-                            <Text style={{ fontSize: 13 }}>
-                              {worker.name}
-                              {worker.checkInTime && (
-                                <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
-                                  ({formatTime(worker.checkInTime)})
-                                </Text>
-                              )}
-                            </Text>
-                          ) : (
-                            <Text type="secondary" style={{ fontSize: 13 }}>{t('coordinator.workerOffline')}</Text>
-                          )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {processWorkers.map((w) => (
+                            <div key={w.userId} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: w.isCheckedIn ? '#52c41a' : '#ff4d4f', flexShrink: 0 }} />
+                              <Text style={{ fontSize: 13 }}>
+                                {w.name}
+                                {w.isCheckedIn && w.checkedInAt && (
+                                  <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
+                                    ({formatTime(w.checkedInAt)})
+                                  </Text>
+                                )}
+                              </Text>
+                            </div>
+                          ))}
                         </div>
                       );
                     },

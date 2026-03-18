@@ -4,7 +4,7 @@ export interface JwtPayload {
   sub: string;
   email: string;
   tenant_id: string;
-  process_id?: string;
+
   role: UserRole;
   first_name: string;
   last_name: string;

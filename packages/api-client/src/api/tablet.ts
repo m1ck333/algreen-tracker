@@ -2,25 +2,32 @@ import type {
   TabletQueueItemDto,
   TabletActiveWorkDto,
   TabletIncomingDto,
+  ProcessGroupDto,
 } from '@algreen/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const tabletApi = {
-  getQueue(processId: string, tenantId: string) {
-    return apiClient.get<TabletQueueItemDto[]>('/tablet/queue', {
-      params: { processId, tenantId },
+  getQueue(userId: string, tenantId: string) {
+    return apiClient.get<ProcessGroupDto<TabletQueueItemDto>[]>('/tablet/queue', {
+      params: { userId, tenantId },
     });
   },
 
-  getActive(processId: string, tenantId: string) {
-    return apiClient.get<TabletActiveWorkDto[]>('/tablet/active', {
-      params: { processId, tenantId },
+  getActive(userId: string, tenantId: string) {
+    return apiClient.get<ProcessGroupDto<TabletActiveWorkDto>[]>('/tablet/active', {
+      params: { userId, tenantId },
     });
   },
 
-  getIncoming(processId: string, tenantId: string) {
-    return apiClient.get<TabletIncomingDto[]>('/tablet/incoming', {
-      params: { processId, tenantId },
+  getIncoming(userId: string, tenantId: string) {
+    return apiClient.get<ProcessGroupDto<TabletIncomingDto>[]>('/tablet/incoming', {
+      params: { userId, tenantId },
+    });
+  },
+
+  pause(userId: string) {
+    return apiClient.post('/tablet/pause', null, {
+      params: { userId },
     });
   },
 };

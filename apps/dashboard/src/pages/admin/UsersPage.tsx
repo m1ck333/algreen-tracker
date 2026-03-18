@@ -91,15 +91,15 @@ export function UsersPage() {
   }, [processes]);
 
   const createMutation = useMutation({
-    mutationFn: (values: Record<string, string>) =>
+    mutationFn: (values: Record<string, unknown>) =>
       usersApi.create({
         tenantId: tenantId!,
-        email: values.email,
-        password: values.password,
-        firstName: values.firstName,
-        lastName: values.lastName,
+        email: values.email as string,
+        password: values.password as string,
+        firstName: values.firstName as string,
+        lastName: values.lastName as string,
         role: values.role as UserRole,
-        processId: values.role === UserRole.Department ? values.processId : null,
+        processIds: values.role === UserRole.Department && (values.processIds as string[])?.length ? values.processIds as string[] : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -113,12 +113,13 @@ export function UsersPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, values }: { id: string; values: Record<string, unknown> }) =>
       usersApi.update(id, {
+        tenantId: tenantId!,
         firstName: values.firstName as string,
         lastName: values.lastName as string,
         role: values.role as UserRole,
         isActive: values.isActive as boolean,
         canIncludeWithdrawnInAnalysis: values.canIncludeWithdrawnInAnalysis as boolean,
-        processId: values.role === UserRole.Department ? (values.processId as string) : null,
+        processIds: values.role === UserRole.Department && (values.processIds as string[])?.length ? values.processIds as string[] : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -135,7 +136,7 @@ export function UsersPage() {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
-      processId: user.processId,
+      processIds: user.processes?.map((p) => p.processId) ?? [],
       isActive: user.isActive,
       canIncludeWithdrawnInAnalysis: user.canIncludeWithdrawnInAnalysis,
     });
@@ -161,9 +162,15 @@ export function UsersPage() {
       title: t('admin.users.process'),
       key: 'process',
       render: (_: unknown, record: UserDto) => {
-        if (!record.processId) return '—';
-        const proc = processMap.get(record.processId);
-        return proc ? <Tag color="blue">{proc.code} — {proc.name}</Tag> : '—';
+        if (!record.processes?.length) return '—';
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {record.processes.map((p) => {
+              const proc = processMap.get(p.processId);
+              return proc ? <Tag key={p.processId} color="blue">{proc.code} — {proc.name}</Tag> : null;
+            })}
+          </div>
+        );
       },
     },
     {
@@ -282,14 +289,15 @@ export function UsersPage() {
           <Form.Item name="role" label={t('common:labels.role')} rules={[{ required: true }]}>
             <Select
               options={Object.values(UserRole).map((r) => ({ label: tEnum('UserRole', r), value: r }))}
-              onChange={() => createForm.setFieldValue('processId', undefined)}
+              onChange={() => createForm.setFieldValue('processIds', undefined)}
             />
           </Form.Item>
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.role !== cur.role}>
             {({ getFieldValue }) =>
               getFieldValue('role') === UserRole.Department ? (
-                <Form.Item name="processId" label={t('admin.users.process')} rules={[{ required: true }]}>
+                <Form.Item name="processIds" label={t('admin.users.process')} rules={[{ required: true }]}>
                   <Select
+                    mode="multiple"
                     options={(processes ?? []).map((p) => ({ label: `${p.code} — ${p.name}`, value: p.id }))}
                     placeholder={t('admin.users.selectProcess')}
                   />
@@ -325,14 +333,15 @@ export function UsersPage() {
           <Form.Item name="role" label={t('common:labels.role')} rules={[{ required: true }]}>
             <Select
               options={Object.values(UserRole).map((r) => ({ label: tEnum('UserRole', r), value: r }))}
-              onChange={() => editForm.setFieldValue('processId', undefined)}
+              onChange={() => editForm.setFieldValue('processIds', undefined)}
             />
           </Form.Item>
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.role !== cur.role}>
             {({ getFieldValue }) =>
               getFieldValue('role') === UserRole.Department ? (
-                <Form.Item name="processId" label={t('admin.users.process')} rules={[{ required: true }]}>
+                <Form.Item name="processIds" label={t('admin.users.process')} rules={[{ required: true }]}>
                   <Select
+                    mode="multiple"
                     options={(processes ?? []).map((p) => ({ label: `${p.code} — ${p.name}`, value: p.id }))}
                     placeholder={t('admin.users.selectProcess')}
                   />

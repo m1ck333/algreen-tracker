@@ -7,28 +7,49 @@ import type { TabletIncomingDto } from '@algreen/shared-types';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import { AttachmentIndicator } from '../../components/AttachmentIndicator';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
-import { useWorkSessionStore } from '../../stores/work-session-store';
 
 export function IncomingOrdersPage() {
   const tenantId = useAuthStore((s) => s.tenantId);
-  const processId = useWorkSessionStore((s) => s.processId);
+  const userId = useAuthStore((s) => s.user?.id);
   const { t } = useTranslation('tablet');
   const { tEnum } = useEnumTranslation();
   const location = useLocation();
   const highlightId = (location.state as { highlightId?: string } | null)?.highlightId;
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
 
-  const { data: incoming, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['tablet-incoming', processId, tenantId],
-    queryFn: () => tabletApi.getIncoming(processId!, tenantId!).then((r) => r.data),
-    enabled: !!tenantId && !!processId,
+  const { data: incomingGroups, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ['tablet-incoming', userId, tenantId],
+    queryFn: () => tabletApi.getIncoming(userId!, tenantId!).then((r) => r.data),
+    enabled: !!tenantId && !!userId,
     refetchInterval: 60_000,
   });
 
-  // Auto-expand and highlight item from notification (expand visibleCount if needed)
+  // Build sorted tabs
+  const processTabs = useMemo(() => {
+    if (!incomingGroups) return [];
+    return [...incomingGroups]
+      .sort((a, b) => a.sequenceOrder - b.sequenceOrder)
+      .map((g) => ({ processId: g.processId, processCode: g.processCode, processName: g.processName, sequenceOrder: g.sequenceOrder }));
+  }, [incomingGroups]);
+
+  // Auto-select first tab
+  useEffect(() => {
+    if (processTabs.length > 0 && (!activeTab || !processTabs.find((t) => t.processId === activeTab))) {
+      setActiveTab(processTabs[0].processId);
+    }
+  }, [processTabs, activeTab]);
+
+  // Get items for current tab
+  const incoming = useMemo(() => {
+    if (!activeTab || !incomingGroups) return [];
+    return incomingGroups.find((g) => g.processId === activeTab)?.items ?? [];
+  }, [incomingGroups, activeTab]);
+
+  // Auto-expand and highlight item from notification
   useEffect(() => {
     if (highlightId && incoming) {
       const idx = incoming.findIndex(
@@ -45,6 +66,12 @@ export function IncomingOrdersPage() {
       }
     }
   }, [highlightId, incoming]);
+
+  // Reset visible count when switching tabs
+  useEffect(() => {
+    setVisibleCount(10);
+    setExpandedItemId(null);
+  }, [activeTab]);
 
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
@@ -109,6 +136,25 @@ export function IncomingOrdersPage() {
       <p className="text-gray-500 text-tablet-sm">
         {t('incoming.subtitle')}
       </p>
+
+      {/* Process Tabs */}
+      {processTabs.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {processTabs.map((tab) => (
+            <button
+              key={tab.processId}
+              onClick={() => setActiveTab(tab.processId)}
+              className={`px-4 py-2 rounded-xl text-tablet-sm font-semibold whitespace-nowrap transition-colors ${
+                activeTab === tab.processId
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-white text-gray-600 border border-gray-200 active:bg-gray-50'
+              }`}
+            >
+              {tab.processCode} - {tab.processName}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!incoming?.length ? (
         <div className="text-center text-gray-400 py-12 text-tablet-base">

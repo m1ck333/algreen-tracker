@@ -21,16 +21,17 @@ export interface CreateUserRequest {
   firstName: string;
   lastName: string;
   role: UserRole;
-  processId?: string | null;
+  processIds?: string[];
 }
 
 export interface UpdateUserRequest {
+  tenantId: string;
   firstName: string;
   lastName: string;
   role: UserRole;
   isActive: boolean;
   canIncludeWithdrawnInAnalysis: boolean;
-  processId?: string | null;
+  processIds?: string[];
 }
 
 export interface ChangePasswordRequest {
@@ -141,7 +142,6 @@ export interface HandleChangeRequestRequest {
 
 export interface CheckInRequest {
   tenantId: string;
-  processId: string;
   userId: string;
 }
 

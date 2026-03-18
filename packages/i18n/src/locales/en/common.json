@@ -128,6 +128,7 @@
     "TENANT_CODE_REQUIRED": "Tenant code is required",
     "TENANT_CODE_TOO_LONG": "Tenant code must be 50 characters or less",
     "SHIFT_NAME_EXISTS": "A shift with this name already exists",
+    "DEPENDENCY_NOT_MET": "A previous process must be completed first",
     "INTERNAL_ERROR": "An unexpected error occurred",
     "connectionFailed": "Unable to connect to the server",
     "connectionFailedDescription": "The server is not responding. Please check your connection or try again later."
