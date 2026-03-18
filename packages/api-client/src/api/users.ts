@@ -22,4 +22,8 @@ export const usersApi = {
   changePassword(id: string, data: ChangePasswordRequest) {
     return apiClient.post(`/users/${id}/change-password`, data);
   },
+
+  resetPassword(id: string, newPassword: string) {
+    return apiClient.post(`/users/${id}/reset-password`, { newPassword });
+  },
 };

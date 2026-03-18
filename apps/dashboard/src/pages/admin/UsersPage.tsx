@@ -111,8 +111,8 @@ export function UsersPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, values }: { id: string; values: Record<string, unknown> }) =>
-      usersApi.update(id, {
+    mutationFn: async ({ id, values }: { id: string; values: Record<string, unknown> }) => {
+      await usersApi.update(id, {
         tenantId: tenantId!,
         firstName: values.firstName as string,
         lastName: values.lastName as string,
@@ -120,7 +120,12 @@ export function UsersPage() {
         isActive: values.isActive as boolean,
         canIncludeWithdrawnInAnalysis: values.canIncludeWithdrawnInAnalysis as boolean,
         processIds: values.role === UserRole.Department && (values.processIds as string[])?.length ? values.processIds as string[] : undefined,
-      }),
+      });
+      const newPassword = (values.newPassword as string)?.trim();
+      if (newPassword) {
+        await usersApi.resetPassword(id, newPassword);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setEditUser(null);
@@ -348,6 +353,9 @@ export function UsersPage() {
                 </Form.Item>
               ) : null
             }
+          </Form.Item>
+          <Form.Item name="newPassword" label={t('admin.users.newPassword')} rules={[{ min: 6 }]}>
+            <Input.Password placeholder={t('admin.users.newPasswordPlaceholder')} />
           </Form.Item>
           <Form.Item name="isActive" label={t('common:labels.status')} valuePropName="checked">
             <Switch checkedChildren={t('common:status.active')} unCheckedChildren={t('common:status.inactive')} />

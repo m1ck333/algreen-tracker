@@ -181,7 +181,9 @@
       "updateFailed": "Failed to update user",
       "canIncludeWithdrawn": "Can Include Withdrawn in Analysis",
       "process": "Processes",
-      "selectProcess": "Select processes"
+      "selectProcess": "Select processes",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Leave empty to keep current password"
     },
     "processes": {
       "title": "Processes",

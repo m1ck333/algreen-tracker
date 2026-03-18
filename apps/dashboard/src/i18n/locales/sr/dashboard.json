@@ -181,7 +181,9 @@
       "updateFailed": "Ažuriranje korisnika nije uspelo",
       "canIncludeWithdrawn": "Može uključiti povučene u analizu",
       "process": "Procesi",
-      "selectProcess": "Izaberite procese"
+      "selectProcess": "Izaberite procese",
+      "newPassword": "Nova lozinka",
+      "newPasswordPlaceholder": "Ostavite prazno da zadržite trenutnu lozinku"
     },
     "processes": {
       "title": "Procesi",
