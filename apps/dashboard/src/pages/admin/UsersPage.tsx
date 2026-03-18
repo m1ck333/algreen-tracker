@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTableHeight } from '../../hooks/useTableHeight';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { Typography, Table, Button, Drawer, Form, Input, Select, Tag, App, Switch, DatePicker } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
@@ -46,6 +47,8 @@ export function UsersPage() {
   const { tEnum } = useEnumTranslation();
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
+  const { guardedClose: guardedCreateClose } = useUnsavedChanges(createForm, createOpen);
+  const { guardedClose: guardedEditClose } = useUnsavedChanges(editForm, !!editUser);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
@@ -257,7 +260,7 @@ export function UsersPage() {
       <Drawer
         title={t('admin.users.createUser')}
         open={createOpen}
-        onClose={() => { createForm.resetFields(); setCreateOpen(false); }}
+        onClose={() => guardedCreateClose(() => { createForm.resetFields(); setCreateOpen(false); })}
         width={400}
         extra={
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>{t('common:actions.save')}</Button>
@@ -301,7 +304,7 @@ export function UsersPage() {
       <Drawer
         title={t('admin.users.editUser')}
         open={!!editUser}
-        onClose={() => { editForm.resetFields(); setEditUser(null); }}
+        onClose={() => guardedEditClose(() => { editForm.resetFields(); setEditUser(null); })}
         width={400}
         extra={
           <Button type="primary" onClick={() => editForm.submit()} loading={updateMutation.isPending}>{t('common:actions.save')}</Button>

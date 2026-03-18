@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTableHeight } from '../../hooks/useTableHeight';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { Typography, Table, Button, Drawer, Form, Input, Select, Tag, Space, App, Popconfirm, Divider, DatePicker } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
@@ -44,6 +45,8 @@ export function SpecialRequestTypesPage() {
   const { t } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
+  const { guardedClose: guardedCreateClose } = useUnsavedChanges(createForm, createOpen);
+  const { guardedClose: guardedEditClose } = useUnsavedChanges(editForm, !!detailItem);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
@@ -289,7 +292,7 @@ export function SpecialRequestTypesPage() {
       <Drawer
         title={t('admin.specialRequestTypes.createType')}
         open={createOpen}
-        onClose={() => { createForm.resetFields(); setCreateOpen(false); }}
+        onClose={() => guardedCreateClose(() => { createForm.resetFields(); setCreateOpen(false); })}
         width={Math.min(480, window.innerWidth)}
         extra={
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>{t('common:actions.save')}</Button>
@@ -313,7 +316,7 @@ export function SpecialRequestTypesPage() {
       <Drawer
         title={currentDetail ? `${currentDetail.code} — ${currentDetail.name}` : ''}
         open={!!detailItem}
-        onClose={() => { setDetailItem(null); editForm.resetFields(); }}
+        onClose={() => guardedEditClose(() => { setDetailItem(null); editForm.resetFields(); })}
         width={Math.min(480, window.innerWidth)}
         extra={
           <div style={{ display: 'flex', gap: 8 }}>

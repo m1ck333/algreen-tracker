@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTableHeight } from '../../hooks/useTableHeight';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { Typography, Table, Button, Drawer, Form, Input, TimePicker, Tag, App, Select, Popconfirm, DatePicker } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
@@ -44,6 +45,8 @@ export function ShiftsPage() {
   const { t } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
+  const { guardedClose: guardedCreateClose } = useUnsavedChanges(createForm, createOpen);
+  const { guardedClose: guardedEditClose } = useUnsavedChanges(editForm, !!editShift);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
@@ -252,7 +255,7 @@ export function ShiftsPage() {
       <Drawer
         title={t('admin.shifts.createShift')}
         open={createOpen}
-        onClose={() => { createForm.resetFields(); setCreateOpen(false); }}
+        onClose={() => guardedCreateClose(() => { createForm.resetFields(); setCreateOpen(false); })}
         width={400}
         extra={
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>{t('common:actions.save')}</Button>
@@ -277,7 +280,7 @@ export function ShiftsPage() {
       <Drawer
         title={t('admin.shifts.editShift')}
         open={!!editShift}
-        onClose={() => { editForm.resetFields(); setEditShift(null); }}
+        onClose={() => guardedEditClose(() => { editForm.resetFields(); setEditShift(null); })}
         width={400}
         extra={
           <div style={{ display: 'flex', gap: 8 }}>

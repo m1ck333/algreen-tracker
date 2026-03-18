@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTableHeight } from '../../hooks/useTableHeight';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import {
   Typography, Table, Button, Drawer, Form, Input, InputNumber, Tag, App,
   Divider, ColorPicker, Popconfirm, Spin, Select, DatePicker,
@@ -50,6 +51,7 @@ export function TenantsPage() {
   const { t } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
+  const { guardedClose: guardedDrawerClose } = useUnsavedChanges(form, drawerOpen);
 
   // ─── Filter & Pagination State ──────────────────────────
   const [search, setSearch] = useState('');
@@ -163,11 +165,13 @@ export function TenantsPage() {
     setDrawerOpen(true);
   };
 
-  const closeDrawer = () => {
+  const doCloseDrawer = () => {
     setDrawerOpen(false);
     setEditTenant(null);
     form.resetFields();
   };
+
+  const closeDrawer = () => guardedDrawerClose(doCloseDrawer);
 
   const handleFinish = (values: Record<string, unknown>) => {
     if (isCreating) {

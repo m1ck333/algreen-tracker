@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTableHeight } from '../../hooks/useTableHeight';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import {
   Typography, Table, Button, Drawer, Form, Input, Tag, App,
   Select, InputNumber, Divider, Popconfirm, DatePicker,
@@ -99,6 +100,7 @@ export function ProductCategoriesPage() {
   const { t } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
+  const { guardedClose: guardedDrawerClose } = useUnsavedChanges(form, isCreating || !!detailId);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -356,12 +358,14 @@ export function ProductCategoriesPage() {
   const drawerOpen = isCreating || !!detailId;
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
-  const closeDrawer = () => {
+  const doCloseDrawer = () => {
     form.resetFields();
     clearLocal();
     if (isCreating) setIsCreating(false);
     else setDetailId(null);
   };
+
+  const closeDrawer = () => guardedDrawerClose(doCloseDrawer);
 
   const processesSection = (
     <>

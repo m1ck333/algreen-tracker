@@ -18,7 +18,8 @@
     "add": "Dodaj",
     "done": "Gotovo",
     "edit": "Izmeni",
-    "search": "Pretraži..."
+    "search": "Pretraži...",
+    "discard": "Odbaci"
   },
   "labels": {
     "email": "Email",
@@ -63,7 +64,9 @@
   "messages": {
     "noDataAvailable": "Nema dostupnih podataka",
     "notFound": "Nije pronađeno",
-    "loading": "Učitavanje..."
+    "loading": "Učitavanje...",
+    "unsavedChanges": "Nesačuvane izmene",
+    "unsavedChangesDescription": "Imate nesačuvane izmene. Da li ste sigurni da želite da zatvorite?"
   },
   "errors": {
     "NOT_CHECKED_IN": "Morate se prvo prijaviti na proces",

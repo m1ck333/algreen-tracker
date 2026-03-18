@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTableHeight } from '../../hooks/useTableHeight';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import {
   Typography, Table, Button, Drawer, Form, Input, InputNumber, Tag, App,
   Popconfirm, Divider, Select, DatePicker,
@@ -100,6 +101,8 @@ export function ProcessesPage() {
   const [pageSize, setPageSize] = useState(20);
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
+  const { guardedClose: guardedCreateClose } = useUnsavedChanges(createForm, createOpen);
+  const { guardedClose: guardedEditClose } = useUnsavedChanges(editForm, !!detailProcess);
 
   useEffect(() => { setPage(1); }, [debouncedSearch, isActiveFilter, dateFrom, dateTo]);
 
@@ -136,7 +139,7 @@ export function ProcessesPage() {
 
   useEffect(() => {
     if (currentDetail) {
-      editForm.setFieldsValue({ name: currentDetail.name, sequenceOrder: currentDetail.sequenceOrder });
+      editForm.setFieldsValue({ code: currentDetail.code, name: currentDetail.name, sequenceOrder: currentDetail.sequenceOrder });
     }
   }, [currentDetail, editForm]);
 
@@ -164,9 +167,11 @@ export function ProcessesPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, values }: { id: string; values: { name: string; sequenceOrder: number } }) =>
+    mutationFn: ({ id, values }: { id: string; values: { code: string; name: string; sequenceOrder: number } }) =>
       processesApi.update(id, {
-        ...values,
+        code: values.code,
+        name: values.name,
+        sequenceOrder: values.sequenceOrder,
         addSubProcesses: pendingSubAdds.length > 0
           ? pendingSubAdds.map(({ name, sequenceOrder }) => ({ name, sequenceOrder }))
           : undefined,
@@ -382,7 +387,7 @@ export function ProcessesPage() {
       <Drawer
         title={t('admin.processes.createProcess')}
         open={createOpen}
-        onClose={() => { createForm.resetFields(); setPendingSubProcesses([]); setAddSubName(''); setAddSubOrder(1); setCreateOpen(false); }}
+        onClose={() => guardedCreateClose(() => { createForm.resetFields(); setPendingSubProcesses([]); setAddSubName(''); setAddSubOrder(1); setCreateOpen(false); })}
         width={Math.min(520, window.innerWidth)}
         extra={
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>{t('common:actions.save')}</Button>
@@ -467,7 +472,7 @@ export function ProcessesPage() {
       <Drawer
         title={currentDetail ? `${currentDetail.code} — ${currentDetail.name}` : ''}
         open={!!detailProcess}
-        onClose={() => { setDetailProcess(null); setPendingSubAdds([]); setPendingSubRemovals(new Set()); editForm.resetFields(); subProcessForm.resetFields(); }}
+        onClose={() => guardedEditClose(() => { setDetailProcess(null); setPendingSubAdds([]); setPendingSubRemovals(new Set()); editForm.resetFields(); subProcessForm.resetFields(); })}
         width={Math.min(520, window.innerWidth)}
         extra={
           <div style={{ display: 'flex', gap: 8 }}>
@@ -501,6 +506,9 @@ export function ProcessesPage() {
               layout="vertical"
               onFinish={(v) => updateMutation.mutate({ id: currentDetail.id, values: v })}
             >
+              <Form.Item name="code" label={t('common:labels.code')} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
               <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
                 <Input />
               </Form.Item>

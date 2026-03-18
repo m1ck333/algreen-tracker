@@ -3,6 +3,7 @@ import {
   Typography, Row, Col, Card, Table, Tag, Button, Drawer, Form, Input, Select,
   DatePicker, InputNumber, App, Modal,
 } from 'antd';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { PlusOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ordersApi, changeRequestsApi } from '@algreen/api-client';
@@ -50,6 +51,8 @@ export function SalesDashboard() {
   const [crTargetOrder, setCrTargetOrder] = useState<OrderDto | null>(null);
   const [orderForm] = Form.useForm();
   const [crForm] = Form.useForm();
+  const { guardedClose: guardedOrderClose } = useUnsavedChanges(orderForm, createOrderOpen);
+  const { guardedClose: guardedCRClose } = useUnsavedChanges(crForm, createCROpen);
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ['orders', tenantId],
@@ -245,7 +248,7 @@ export function SalesDashboard() {
       <Drawer
         title={t('orders.createOrder')}
         open={createOrderOpen}
-        onClose={() => { orderForm.resetFields(); setCreateOrderOpen(false); }}
+        onClose={() => guardedOrderClose(() => { orderForm.resetFields(); setCreateOrderOpen(false); })}
         width={Math.min(480, window.innerWidth)}
         extra={
           <Button type="primary" onClick={() => orderForm.submit()} loading={createOrderMutation.isPending}>{t('common:actions.save')}</Button>
@@ -301,7 +304,7 @@ export function SalesDashboard() {
       <Modal
         title={t('sales.createChangeRequest')}
         open={createCROpen}
-        onCancel={() => { crForm.resetFields(); setCreateCROpen(false); setCrTargetOrder(null); }}
+        onCancel={() => guardedCRClose(() => { crForm.resetFields(); setCreateCROpen(false); setCrTargetOrder(null); })}
         onOk={() => crForm.submit()}
         okText={t('common:actions.save')}
         cancelText={t('common:actions.cancel')}

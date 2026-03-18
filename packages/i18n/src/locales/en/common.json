@@ -18,7 +18,8 @@
     "add": "Add",
     "done": "Done",
     "edit": "Edit",
-    "search": "Search..."
+    "search": "Search...",
+    "discard": "Discard"
   },
   "labels": {
     "email": "Email",
@@ -63,7 +64,9 @@
   "messages": {
     "noDataAvailable": "No data available",
     "notFound": "Not found",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "unsavedChanges": "Unsaved Changes",
+    "unsavedChangesDescription": "You have unsaved changes. Are you sure you want to close?"
   },
   "errors": {
     "NOT_CHECKED_IN": "You must be checked in first",

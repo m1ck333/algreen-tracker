@@ -198,6 +198,7 @@ export interface CreateProcessRequest {
 }
 
 export interface UpdateProcessRequest {
+  code: string;
   name: string;
   sequenceOrder: number;
   addSubProcesses?: { name: string; sequenceOrder: number }[];

@@ -20,6 +20,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { OrderAttachments, type OrderAttachmentsHandle } from '../../components/OrderAttachments';
 import { compressFile } from '../../utils/compressImage';
 import { useTableHeight } from '../../hooks/useTableHeight';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import dayjs from 'dayjs';
 
@@ -394,6 +395,8 @@ export function OrderListPage() {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [itemForm] = Form.useForm();
+  const { guardedClose: guardedDrawerClose } = useUnsavedChanges(form, isCreating);
+  const { guardedClose: guardedEditClose } = useUnsavedChanges(editForm, !!detailOrderId);
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
   const cancelOrder = useCancelOrder();
@@ -798,8 +801,12 @@ export function OrderListPage() {
         title={isCreating ? t('orders.createOrder') : detailOrder ? t('orders.order', { number: detailOrder.orderNumber }) : ''}
         open={isCreating || !!detailOrderId}
         onClose={() => {
-          if (isCreating) { form.resetFields(); setCreatePendingItems([]); setPendingFiles(new Map()); setAddingItem(false); setIsCreating(false); }
-          else { setDetailOrderId(null); clearPendingState(); setAddingItem(false); }
+          const doClose = () => {
+            if (isCreating) { form.resetFields(); setCreatePendingItems([]); setPendingFiles(new Map()); setAddingItem(false); setIsCreating(false); }
+            else { setDetailOrderId(null); clearPendingState(); setAddingItem(false); }
+          };
+          if (isCreating) guardedDrawerClose(doClose);
+          else guardedEditClose(doClose);
         }}
         width={Math.min(640, window.innerWidth)}
         extra={
