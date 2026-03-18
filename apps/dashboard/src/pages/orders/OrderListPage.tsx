@@ -395,8 +395,8 @@ export function OrderListPage() {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [itemForm] = Form.useForm();
-  const { guardedClose: guardedDrawerClose } = useUnsavedChanges(form, isCreating);
-  const { guardedClose: guardedEditClose } = useUnsavedChanges(editForm, !!detailOrderId);
+  const { guardedClose: guardedDrawerClose, onValuesChange: onCreateValuesChange } = useUnsavedChanges(isCreating);
+  const { guardedClose: guardedEditClose, onValuesChange: onEditValuesChange } = useUnsavedChanges(!!detailOrderId);
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
   const cancelOrder = useCancelOrder();
@@ -863,7 +863,7 @@ export function OrderListPage() {
         {isCreating ? (
           <>
             {/* ── CREATE MODE ── */}
-            <Form form={form} layout="vertical" onFinish={onCreateFinish}>
+            <Form form={form} layout="vertical" onFinish={onCreateFinish} onValuesChange={onCreateValuesChange}>
               <Row gutter={12}>
                 <Col span={14}>
                   <Form.Item
@@ -1569,7 +1569,7 @@ export function OrderListPage() {
 
             {/* D) Notes & Settings */}
             {detailOrder.status === OrderStatus.Draft ? (
-              <Form form={editForm} layout="vertical" style={{ marginTop: 20 }}>
+              <Form form={editForm} layout="vertical" style={{ marginTop: 20 }} onValuesChange={onEditValuesChange}>
                 <Form.Item name="notes" label={t('common:labels.notes')} style={{ marginBottom: 12 }}>
                   <Input.TextArea autoSize={{ minRows: 1, maxRows: 3 }} />
                 </Form.Item>

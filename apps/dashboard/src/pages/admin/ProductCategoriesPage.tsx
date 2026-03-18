@@ -100,7 +100,7 @@ export function ProductCategoriesPage() {
   const { t } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
-  const { guardedClose: guardedDrawerClose } = useUnsavedChanges(form, isCreating || !!detailId);
+  const { guardedClose: guardedDrawerClose, onValuesChange: onDrawerValuesChange } = useUnsavedChanges(isCreating || !!detailId);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -593,6 +593,7 @@ export function ProductCategoriesPage() {
               form={form}
               layout="vertical"
               onFinish={(v) => isCreating ? createMutation.mutate(v) : updateMutation.mutate(v)}
+              onValuesChange={onDrawerValuesChange}
             >
               <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
                 <Input />

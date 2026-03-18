@@ -19,7 +19,8 @@
     "done": "Done",
     "edit": "Edit",
     "search": "Search...",
-    "discard": "Discard"
+    "discardChanges": "Discard changes",
+    "keepEditing": "Keep editing"
   },
   "labels": {
     "email": "Email",
@@ -66,7 +67,7 @@
     "notFound": "Not found",
     "loading": "Loading...",
     "unsavedChanges": "Unsaved Changes",
-    "unsavedChangesDescription": "You have unsaved changes. Are you sure you want to close?"
+    "unsavedChangesDescription": "You have unsaved changes that will be lost."
   },
   "errors": {
     "NOT_CHECKED_IN": "You must be checked in first",

@@ -47,8 +47,8 @@ export function UsersPage() {
   const { tEnum } = useEnumTranslation();
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
-  const { guardedClose: guardedCreateClose } = useUnsavedChanges(createForm, createOpen);
-  const { guardedClose: guardedEditClose } = useUnsavedChanges(editForm, !!editUser);
+  const { guardedClose: guardedCreateClose, onValuesChange: onCreateValuesChange } = useUnsavedChanges(createOpen);
+  const { guardedClose: guardedEditClose, onValuesChange: onEditValuesChange } = useUnsavedChanges(!!editUser);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
@@ -266,7 +266,7 @@ export function UsersPage() {
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>{t('common:actions.save')}</Button>
         }
       >
-        <Form form={createForm} layout="vertical" onFinish={(v) => createMutation.mutate(v)}>
+        <Form form={createForm} layout="vertical" onFinish={(v) => createMutation.mutate(v)} onValuesChange={onCreateValuesChange}>
           <Form.Item name="email" label={t('common:labels.email')} rules={[{ required: true, type: 'email' }]}>
             <Input />
           </Form.Item>
@@ -314,6 +314,7 @@ export function UsersPage() {
           form={editForm}
           layout="vertical"
           onFinish={(v) => updateMutation.mutate({ id: editUser!.id, values: v })}
+          onValuesChange={onEditValuesChange}
         >
           <Form.Item name="firstName" label={t('common:labels.firstName')} rules={[{ required: true }]}>
             <Input />

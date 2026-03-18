@@ -51,8 +51,8 @@ export function SalesDashboard() {
   const [crTargetOrder, setCrTargetOrder] = useState<OrderDto | null>(null);
   const [orderForm] = Form.useForm();
   const [crForm] = Form.useForm();
-  const { guardedClose: guardedOrderClose } = useUnsavedChanges(orderForm, createOrderOpen);
-  const { guardedClose: guardedCRClose } = useUnsavedChanges(crForm, createCROpen);
+  const { guardedClose: guardedOrderClose, onValuesChange: onOrderValuesChange } = useUnsavedChanges(createOrderOpen);
+  const { guardedClose: guardedCRClose, onValuesChange: onCRValuesChange } = useUnsavedChanges(createCROpen);
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ['orders', tenantId],
@@ -254,7 +254,7 @@ export function SalesDashboard() {
           <Button type="primary" onClick={() => orderForm.submit()} loading={createOrderMutation.isPending}>{t('common:actions.save')}</Button>
         }
       >
-        <Form form={orderForm} layout="vertical" onFinish={(v) => createOrderMutation.mutate(v)}>
+        <Form form={orderForm} layout="vertical" onFinish={(v) => createOrderMutation.mutate(v)} onValuesChange={onOrderValuesChange}>
           <Row gutter={12}>
             <Col span={14}>
               <Form.Item name="orderNumber" label={t('orders.orderNumberLabel')} rules={[{ required: true }]}>
@@ -310,7 +310,7 @@ export function SalesDashboard() {
         cancelText={t('common:actions.cancel')}
         confirmLoading={createCRMutation.isPending}
       >
-        <Form form={crForm} layout="vertical" onFinish={(v) => createCRMutation.mutate(v)} style={{ marginTop: 16 }}>
+        <Form form={crForm} layout="vertical" onFinish={(v) => createCRMutation.mutate(v)} onValuesChange={onCRValuesChange} style={{ marginTop: 16 }}>
           {crTargetOrder ? (
             <div style={{ marginBottom: 16 }}>
               <Text type="secondary">{t('sales.forOrder')}:</Text>{' '}

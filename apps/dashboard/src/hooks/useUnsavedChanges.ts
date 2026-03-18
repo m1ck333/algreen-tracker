@@ -1,48 +1,59 @@
-import { useEffect, useCallback } from 'react';
-import type { FormInstance } from 'antd';
+import { useState, useEffect, useCallback } from 'react';
 import { Modal } from 'antd';
 import { useTranslation } from '@algreen/i18n';
 
 /**
- * Hook that guards drawer/modal close when an antd Form has unsaved changes.
- * Also adds a `beforeunload` listener so the browser warns on refresh/tab close.
+ * Hook that guards drawer/modal close when a user has actually edited form fields.
+ * Uses onValuesChange to track real user interaction (ignores programmatic setFieldsValue).
  *
  * Usage:
- *   const { guardedClose } = useUnsavedChanges(form, isOpen);
+ *   const { guardedClose, onValuesChange } = useUnsavedChanges(isOpen);
  *   <Drawer onClose={() => guardedClose(actualClose)} ... />
+ *   <Form onValuesChange={onValuesChange} ... />
  */
-export function useUnsavedChanges(form: FormInstance, isOpen: boolean) {
+export function useUnsavedChanges(isOpen: boolean) {
   const { t } = useTranslation();
+  const [dirty, setDirty] = useState(false);
+
+  // Reset dirty when drawer closes
+  useEffect(() => {
+    if (!isOpen) setDirty(false);
+  }, [isOpen]);
+
+  const onValuesChange = useCallback(() => {
+    setDirty(true);
+  }, []);
 
   // Browser refresh / tab close guard
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !dirty) return;
     const handler = (e: BeforeUnloadEvent) => {
-      if (form.isFieldsTouched()) {
-        e.preventDefault();
-      }
+      e.preventDefault();
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [isOpen, form]);
+  }, [isOpen, dirty]);
 
   const guardedClose = useCallback(
     (closeFn: () => void) => {
-      if (form.isFieldsTouched()) {
+      if (dirty) {
         Modal.confirm({
           title: t('common:messages.unsavedChanges'),
           content: t('common:messages.unsavedChangesDescription'),
-          okText: t('common:actions.discard'),
+          okText: t('common:actions.discardChanges'),
           okType: 'danger',
-          cancelText: t('common:actions.cancel'),
-          onOk: closeFn,
+          cancelText: t('common:actions.keepEditing'),
+          onOk: () => {
+            setDirty(false);
+            closeFn();
+          },
         });
       } else {
         closeFn();
       }
     },
-    [form, t],
+    [dirty, t],
   );
 
-  return { guardedClose };
+  return { guardedClose, onValuesChange };
 }

@@ -51,7 +51,7 @@ export function TenantsPage() {
   const { t } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
-  const { guardedClose: guardedDrawerClose } = useUnsavedChanges(form, drawerOpen);
+  const { guardedClose: guardedDrawerClose, onValuesChange: onDrawerValuesChange } = useUnsavedChanges(drawerOpen);
 
   // ─── Filter & Pagination State ──────────────────────────
   const [search, setSearch] = useState('');
@@ -304,7 +304,7 @@ export function TenantsPage() {
         {!isCreating && settingsLoading ? (
           <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
         ) : (
-          <Form form={form} layout="vertical" onFinish={handleFinish}>
+          <Form form={form} layout="vertical" onFinish={handleFinish} onValuesChange={onDrawerValuesChange}>
             <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
               <Input />
             </Form.Item>

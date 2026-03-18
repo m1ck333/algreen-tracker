@@ -19,7 +19,8 @@
     "done": "Gotovo",
     "edit": "Izmeni",
     "search": "Pretraži...",
-    "discard": "Odbaci"
+    "discardChanges": "Zatvori bez čuvanja",
+    "keepEditing": "Nastavi uređivanje"
   },
   "labels": {
     "email": "Email",
@@ -66,7 +67,7 @@
     "notFound": "Nije pronađeno",
     "loading": "Učitavanje...",
     "unsavedChanges": "Nesačuvane izmene",
-    "unsavedChangesDescription": "Imate nesačuvane izmene. Da li ste sigurni da želite da zatvorite?"
+    "unsavedChangesDescription": "Imate nesačuvane izmene koje će biti izgubljene."
   },
   "errors": {
     "NOT_CHECKED_IN": "Morate se prvo prijaviti na proces",

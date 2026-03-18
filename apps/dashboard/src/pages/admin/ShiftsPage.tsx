@@ -45,8 +45,8 @@ export function ShiftsPage() {
   const { t } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
-  const { guardedClose: guardedCreateClose } = useUnsavedChanges(createForm, createOpen);
-  const { guardedClose: guardedEditClose } = useUnsavedChanges(editForm, !!editShift);
+  const { guardedClose: guardedCreateClose, onValuesChange: onCreateValuesChange } = useUnsavedChanges(createOpen);
+  const { guardedClose: guardedEditClose, onValuesChange: onEditValuesChange } = useUnsavedChanges(!!editShift);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
@@ -261,7 +261,7 @@ export function ShiftsPage() {
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>{t('common:actions.save')}</Button>
         }
       >
-        <Form form={createForm} layout="vertical" onFinish={(v) => createMutation.mutate(v)}>
+        <Form form={createForm} layout="vertical" onFinish={(v) => createMutation.mutate(v)} onValuesChange={onCreateValuesChange}>
           <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
@@ -311,6 +311,7 @@ export function ShiftsPage() {
           form={editForm}
           layout="vertical"
           onFinish={(v) => updateMutation.mutate({ id: editShift!.id, values: v })}
+          onValuesChange={onEditValuesChange}
         >
           <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
             <Input />
