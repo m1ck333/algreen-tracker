@@ -1,6 +1,22 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useSignalREvent, SignalREvents } from '@algreen/signalr-client';
 
+function playAlertSound() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  } catch { /* ignore if audio not available */ }
+}
+
 export function useSignalRQueryInvalidation() {
   const queryClient = useQueryClient();
 
@@ -47,6 +63,7 @@ export function useSignalRQueryInvalidation() {
   });
 
   useSignalREvent(SignalREvents.BlockRequestCreated, () => {
+    playAlertSound();
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'pending-blocks'] });
     queryClient.invalidateQueries({ queryKey: ['block-requests'] });
     queryClient.invalidateQueries({ queryKey: ['block-requests-pending-count'] });
