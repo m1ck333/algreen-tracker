@@ -65,15 +65,12 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
     },
     isCoordOrAbove && {
       key: '/block-requests',
-      icon: <StopOutlined />,
-      label: (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          {t('nav.blockRequests')}
-          {(pendingBlockCount ?? 0) > 0 && (
-            <Badge count={pendingBlockCount} size="small" />
-          )}
-        </span>
+      icon: (
+        <Badge count={pendingBlockCount ?? 0} size="small" offset={[6, -4]}>
+          <StopOutlined style={{ color: 'inherit', fontSize: 'inherit' }} />
+        </Badge>
       ),
+      label: t('nav.blockRequests'),
     },
     isCoordOrAbove && {
       key: '/change-requests',
