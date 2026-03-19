@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu } from 'antd';
+import { Menu, Badge } from 'antd';
 import {
   DashboardOutlined,
   ShoppingCartOutlined,
@@ -14,8 +14,10 @@ import {
   BankOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@algreen/auth';
-import { UserRole } from '@algreen/shared-types';
+import { UserRole, RequestStatus } from '@algreen/shared-types';
+import { blockRequestsApi } from '@algreen/api-client';
 import { useTranslation } from '@algreen/i18n';
 
 interface SidebarMenuProps {
@@ -26,6 +28,7 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
+  const tenantId = useAuthStore((s) => s.tenantId);
   const role = user?.role;
   const { t } = useTranslation('dashboard');
 
@@ -33,6 +36,16 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
     role === UserRole.Coordinator || role === UserRole.Manager || role === UserRole.Admin;
   const isAdminOrManager = role === UserRole.Admin || role === UserRole.Manager;
   const isSales = role === UserRole.SalesManager;
+
+  const { data: pendingBlockCount } = useQuery({
+    queryKey: ['block-requests-pending-count', tenantId],
+    queryFn: () =>
+      blockRequestsApi
+        .getAll({ tenantId: tenantId!, status: RequestStatus.Pending, page: 1, pageSize: 1 })
+        .then((r) => r.data.totalCount),
+    enabled: !!tenantId && isCoordOrAbove,
+    refetchInterval: 30_000,
+  });
 
   const items = [
     isCoordOrAbove && {
@@ -53,7 +66,11 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
     isCoordOrAbove && {
       key: '/block-requests',
       icon: <StopOutlined />,
-      label: t('nav.blockRequests'),
+      label: (
+        <Badge count={pendingBlockCount ?? 0} size="small" offset={[8, 0]}>
+          {t('nav.blockRequests')}
+        </Badge>
+      ),
     },
     isCoordOrAbove && {
       key: '/change-requests',

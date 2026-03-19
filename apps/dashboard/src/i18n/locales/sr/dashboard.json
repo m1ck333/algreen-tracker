@@ -157,7 +157,11 @@
     "blockReasonRequired": "Razlog blokade je obavezan",
     "rejectConfirm": "Da li ste sigurni da želite da odbijete ovaj zahtev?",
     "rejectNote": "Napomena (opciono)",
-    "response": "Odgovor"
+    "response": "Odgovor",
+    "unblock": "Odblokiraj",
+    "unblocked": "Proces odblokiran",
+    "unblockFailed": "Deblokiranja procesa nije uspelo",
+    "unblockConfirm": "Da li ste sigurni da želite da odblokirate ovaj proces?"
   },
   "changeRequests": {
     "title": "Zahtevi za izmenu",

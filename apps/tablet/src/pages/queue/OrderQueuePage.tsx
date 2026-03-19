@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { tabletApi, processWorkflowApi, subProcessWorkflowApi, processesApi, blockRequestsApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
 import { ProcessStatus, SubProcessStatus } from '@algreen/shared-types';
-import type { TabletQueueItemDto, TabletActiveWorkDto, TabletSubProcessDto, ProcessGroupDto } from '@algreen/shared-types';
+import type { TabletQueueItemDto, TabletActiveWorkDto, TabletSubProcessDto } from '@algreen/shared-types';
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
@@ -43,7 +43,6 @@ export function OrderQueuePage() {
   const highlightId = (location.state as { highlightId?: string } | null)?.highlightId;
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
 
@@ -61,89 +60,97 @@ export function OrderQueuePage() {
     refetchInterval: 120_000,
   });
 
-  // Build sorted tabs from all groups (queue + active)
-  const processTabs = useMemo(() => {
-    const tabMap = new Map<string, { processId: string; processCode: string; processName: string; sequenceOrder: number }>();
-    for (const g of queueGroups ?? []) {
-      tabMap.set(g.processId, { processId: g.processId, processCode: g.processCode, processName: g.processName, sequenceOrder: g.sequenceOrder });
-    }
-    for (const g of activeGroups ?? []) {
-      if (!tabMap.has(g.processId)) {
-        tabMap.set(g.processId, { processId: g.processId, processCode: g.processCode, processName: g.processName, sequenceOrder: g.sequenceOrder });
-      }
-    }
-    return Array.from(tabMap.values()).sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+  // Fetch process definitions for all assigned processes to get sub-process names
+  const allProcessIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const g of queueGroups ?? []) ids.add(g.processId);
+    for (const g of activeGroups ?? []) ids.add(g.processId);
+    return Array.from(ids);
   }, [queueGroups, activeGroups]);
 
-  // Auto-select first tab
-  useEffect(() => {
-    if (processTabs.length > 0 && (!activeTab || !processTabs.find((t) => t.processId === activeTab))) {
-      setActiveTab(processTabs[0].processId);
-    }
-  }, [processTabs, activeTab]);
-
-  // Get current process data
-  const currentProcessId = activeTab;
-
-  const { data: processDefinition } = useQuery({
-    queryKey: ['process', currentProcessId],
-    queryFn: () => processesApi.getById(currentProcessId!).then((r) => r.data),
-    enabled: !!currentProcessId,
+  const { data: processDefinitions } = useQuery({
+    queryKey: ['processes-batch', ...allProcessIds],
+    queryFn: () => Promise.all(allProcessIds.map((id) => processesApi.getById(id).then((r) => r.data))),
+    enabled: allProcessIds.length > 0,
     staleTime: 5 * 60_000,
   });
 
   const subProcessNameMap = useMemo(() => {
     const map = new Map<string, string>();
-    if (processDefinition?.subProcesses) {
-      for (const sp of processDefinition.subProcesses) {
-        map.set(sp.id, sp.name);
+    if (processDefinitions) {
+      for (const pd of processDefinitions) {
+        if (pd?.subProcesses) {
+          for (const sp of pd.subProcesses) {
+            map.set(sp.id, sp.name);
+          }
+        }
       }
     }
     return map;
-  }, [processDefinition]);
+  }, [processDefinitions]);
 
-  // Get queue items for current tab
-  const currentQueue = useMemo(() => {
-    if (!currentProcessId) return [];
-    return queueGroups?.find((g) => g.processId === currentProcessId)?.items ?? [];
-  }, [queueGroups, currentProcessId]);
-
-  // Get active items for current tab
-  const currentActive = useMemo(() => {
-    if (!currentProcessId) return [];
-    return activeGroups?.find((g) => g.processId === currentProcessId)?.items ?? [];
-  }, [activeGroups, currentProcessId]);
-
-  const activeWorkMap = useMemo(() => {
-    const map = new Map<string, TabletActiveWorkDto>();
-    for (const w of currentActive) {
-      map.set(w.orderItemProcessId, w);
+  // Build a map from orderItemProcessId → processCode/processName
+  const processInfoMap = useMemo(() => {
+    const map = new Map<string, { processCode: string; processName: string }>();
+    for (const g of queueGroups ?? []) {
+      for (const item of g.items) {
+        map.set(item.orderItemProcessId, { processCode: g.processCode, processName: g.processName });
+      }
+    }
+    for (const g of activeGroups ?? []) {
+      for (const item of g.items) {
+        if (!map.has(item.orderItemProcessId)) {
+          map.set(item.orderItemProcessId, { processCode: g.processCode, processName: g.processName });
+        }
+      }
     }
     return map;
-  }, [currentActive]);
+  }, [queueGroups, activeGroups]);
 
-  // Merge: show queue items + any active work items not already in queue
+  // Flatten all groups into a single active work map
+  const activeWorkMap = useMemo(() => {
+    const map = new Map<string, TabletActiveWorkDto>();
+    for (const g of activeGroups ?? []) {
+      for (const w of g.items) {
+        map.set(w.orderItemProcessId, w);
+      }
+    }
+    return map;
+  }, [activeGroups]);
+
+  // Merge all queue groups + active items into a single flat list
   const mergedItems = useMemo(() => {
-    const items: TabletQueueItemDto[] = [...currentQueue];
-    const queueIds = new Set(items.map((i) => i.orderItemProcessId));
-    for (const w of currentActive) {
-      if (!queueIds.has(w.orderItemProcessId)) {
-        items.push({
-          orderItemProcessId: w.orderItemProcessId,
-          orderId: w.orderId,
-          orderItemId: w.orderItemId,
-          orderNumber: w.orderNumber,
-          priority: w.priority,
-          deliveryDate: w.deliveryDate,
-          productName: w.productName,
-          productCategoryName: w.productCategoryName,
-          quantity: w.quantity,
-          complexity: w.complexity,
-          status: w.status,
-          specialRequestNames: w.specialRequestNames,
-          completedProcessCount: w.completedProcessCount,
-          totalProcessCount: w.totalProcessCount,
-        });
+    const items: TabletQueueItemDto[] = [];
+    const seen = new Set<string>();
+    for (const g of queueGroups ?? []) {
+      for (const item of g.items) {
+        if (!seen.has(item.orderItemProcessId)) {
+          items.push(item);
+          seen.add(item.orderItemProcessId);
+        }
+      }
+    }
+    for (const g of activeGroups ?? []) {
+      for (const w of g.items) {
+        if (!seen.has(w.orderItemProcessId)) {
+          items.push({
+            orderItemProcessId: w.orderItemProcessId,
+            orderId: w.orderId,
+            orderItemId: w.orderItemId,
+            orderNumber: w.orderNumber,
+            priority: w.priority,
+            deliveryDate: w.deliveryDate,
+            productName: w.productName,
+            productCategoryName: w.productCategoryName,
+            quantity: w.quantity,
+            complexity: w.complexity,
+            status: w.status,
+            specialRequestNames: w.specialRequestNames,
+            completedProcessCount: w.completedProcessCount,
+            totalProcessCount: w.totalProcessCount,
+          });
+          seen.add(w.orderItemProcessId);
+        }
       }
     }
     return items.sort((a, b) => {
@@ -152,7 +159,7 @@ export function OrderQueuePage() {
       if (aInProgress !== bInProgress) return aInProgress - bInProgress;
       return a.priority - b.priority;
     });
-  }, [currentQueue, currentActive]);
+  }, [queueGroups, activeGroups]);
 
   // Auto-expand and highlight item from notification (expand visibleCount if needed)
   useEffect(() => {
@@ -171,12 +178,6 @@ export function OrderQueuePage() {
       }
     }
   }, [highlightId, mergedItems]);
-
-  // Reset visible count when switching tabs
-  useEffect(() => {
-    setVisibleCount(10);
-    setExpandedItemId(null);
-  }, [activeTab]);
 
   if (isLoading) {
     return (
@@ -222,25 +223,6 @@ export function OrderQueuePage() {
         </button>
       </div>
 
-      {/* Process Tabs */}
-      {processTabs.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {processTabs.map((tab) => (
-            <button
-              key={tab.processId}
-              onClick={() => setActiveTab(tab.processId)}
-              className={`px-4 py-2 rounded-xl text-tablet-sm font-semibold whitespace-nowrap transition-colors ${
-                activeTab === tab.processId
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-white text-gray-600 border border-gray-200 active:bg-gray-50'
-              }`}
-            >
-              {tab.processCode} - {tab.processName}
-            </button>
-          ))}
-        </div>
-      )}
-
       <p className="text-gray-500 text-tablet-sm">
         {mergedItems.length === 1
           ? t('queue.activeOrder', { count: mergedItems.length })
@@ -257,6 +239,7 @@ export function OrderQueuePage() {
             <QueueCard
               key={item.orderItemProcessId}
               item={item}
+              processInfo={processInfoMap.get(item.orderItemProcessId)}
               isExpanded={expandedItemId === item.orderItemProcessId}
               isHighlighted={highlightedId === item.orderItemProcessId}
               onToggle={() =>
@@ -288,6 +271,7 @@ export function OrderQueuePage() {
 
 function QueueCard({
   item,
+  processInfo,
   isExpanded,
   isHighlighted,
   onToggle,
@@ -299,6 +283,7 @@ function QueueCard({
   tEnum,
 }: {
   item: TabletQueueItemDto;
+  processInfo?: { processCode: string; processName: string };
   isExpanded: boolean;
   isHighlighted: boolean;
   onToggle: () => void;
@@ -338,8 +323,13 @@ function QueueCard({
     <div ref={cardRef} className={`card border-2 ${urgencyColor} ${isExpanded ? 'ring-2 ring-primary-300' : ''} ${isHighlighted ? 'animate-highlight-glow' : ''}`}>
       <button onClick={onToggle} className="w-full text-left">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-tablet-lg font-bold">{item.orderNumber}</span>
+            {processInfo && (
+              <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-tablet-xs font-medium">
+                {processInfo.processCode} — {processInfo.processName}
+              </span>
+            )}
             {isBlocked && (
               <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-tablet-xs font-medium">
                 {tEnum('ProcessStatus', ProcessStatus.Blocked)}

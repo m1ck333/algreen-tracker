@@ -6,23 +6,31 @@ export function useSignalRQueryInvalidation() {
 
   useSignalREvent(SignalREvents.OrderActivated, () => {
     queryClient.invalidateQueries({ queryKey: ['orders'] });
+    queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'live-view'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'statistics'] });
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
   });
 
   useSignalREvent(SignalREvents.ProcessStarted, () => {
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
+    queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'live-view'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'statistics'] });
   });
 
   useSignalREvent(SignalREvents.ProcessCompleted, () => {
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
+    queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'live-view'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'statistics'] });
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
   });
 
   useSignalREvent(SignalREvents.ProcessBlocked, () => {
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
+    queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
+    queryClient.invalidateQueries({ queryKey: ['block-requests-pending-count'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'live-view'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'pending-blocks'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'statistics'] });
@@ -30,6 +38,9 @@ export function useSignalRQueryInvalidation() {
   });
 
   useSignalREvent(SignalREvents.ProcessUnblocked, () => {
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
+    queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
+    queryClient.invalidateQueries({ queryKey: ['block-requests-pending-count'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'live-view'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'pending-blocks'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'statistics'] });
@@ -38,6 +49,7 @@ export function useSignalRQueryInvalidation() {
   useSignalREvent(SignalREvents.BlockRequestCreated, () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'pending-blocks'] });
     queryClient.invalidateQueries({ queryKey: ['block-requests'] });
+    queryClient.invalidateQueries({ queryKey: ['block-requests-pending-count'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'statistics'] });
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
   });
@@ -45,6 +57,7 @@ export function useSignalRQueryInvalidation() {
   useSignalREvent(SignalREvents.BlockRequestApproved, () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'pending-blocks'] });
     queryClient.invalidateQueries({ queryKey: ['block-requests'] });
+    queryClient.invalidateQueries({ queryKey: ['block-requests-pending-count'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'statistics'] });
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
   });

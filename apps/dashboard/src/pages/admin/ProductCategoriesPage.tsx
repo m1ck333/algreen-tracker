@@ -415,8 +415,7 @@ export function ProductCategoriesPage() {
           />
           <InputNumber
             min={1} precision={0}
-            placeholder={String(nextProcOrder)}
-            value={addProcOrder}
+            value={addProcOrder ?? nextProcOrder}
             onChange={(v) => setAddProcOrder(v ?? undefined)}
             style={{ width: 80 }}
           />
@@ -448,8 +447,8 @@ export function ProductCategoriesPage() {
         size="small"
         pagination={false}
         columns={[
-          { title: t('common:labels.process'), dataIndex: 'processCode', width: 120 },
-          { title: t('admin.productCategories.dependsOn'), dataIndex: 'dependsOnProcessCode' },
+          { title: t('common:labels.process'), render: (_, r) => { const p = processLookup.get(r.processId); return p ? `${p.code} — ${p.name}` : r.processCode; } },
+          { title: t('admin.productCategories.dependsOn'), render: (_, r) => { const p = processLookup.get(r.dependsOnProcessId); return p ? `${p.code} — ${p.name}` : r.dependsOnProcessCode; } },
           {
             title: '', width: 50,
             render: (_, _r, index) => (

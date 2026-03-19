@@ -157,7 +157,11 @@
     "blockReasonRequired": "Block reason is required",
     "rejectConfirm": "Are you sure you want to reject this request?",
     "rejectNote": "Note (optional)",
-    "response": "Response"
+    "response": "Response",
+    "unblock": "Unblock",
+    "unblocked": "Process unblocked",
+    "unblockFailed": "Failed to unblock process",
+    "unblockConfirm": "Are you sure you want to unblock this process?"
   },
   "changeRequests": {
     "title": "Change Requests",

@@ -12,7 +12,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { blockRequestsApi } from '@algreen/api-client';
+import { blockRequestsApi, processWorkflowApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
 import { RequestStatus } from '@algreen/shared-types';
 import type { BlockRequestDto } from '@algreen/shared-types';
@@ -91,6 +91,16 @@ export function BlockRequestsPage() {
       message.success(t('blockRequests.rejected'));
     },
     onError: (err) => message.error(getTranslatedError(err, t, t('blockRequests.rejectFailed'))),
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: (orderItemProcessId: string) =>
+      processWorkflowApi.unblock(orderItemProcessId, { userId: userId! }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['block-requests'] });
+      message.success(t('blockRequests.unblocked'));
+    },
+    onError: (err) => message.error(getTranslatedError(err, t, t('blockRequests.unblockFailed'))),
   });
 
   const columns = [
@@ -175,6 +185,24 @@ export function BlockRequestsPage() {
                 </Button>
               </Popconfirm>
             </Space>
+          );
+        }
+        if (record.status === RequestStatus.Approved && record.orderItemProcessId) {
+          return (
+            <Popconfirm
+              title={t('blockRequests.unblockConfirm')}
+              okText={t('common:actions.confirm')}
+              cancelText={t('common:actions.no')}
+              onConfirm={() => unblockMutation.mutate(record.orderItemProcessId!)}
+            >
+              <Button
+                type="primary"
+                size="small"
+                loading={unblockMutation.isPending}
+              >
+                {t('blockRequests.unblock')}
+              </Button>
+            </Popconfirm>
           );
         }
         return null;

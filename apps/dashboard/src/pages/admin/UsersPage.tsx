@@ -37,6 +37,7 @@ function getTranslatedError(error: unknown, t: (key: string, opts?: Record<strin
 
 export function UsersPage() {
   const tenantId = useAuthStore((s) => s.tenantId);
+  const currentUserId = useAuthStore((s) => s.user?.id);
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserDto | null>(null);
@@ -332,15 +333,17 @@ export function UsersPage() {
         width={400}
         extra={
           <div style={{ display: 'flex', gap: 8 }}>
-            <Popconfirm
-              title={t('admin.users.deleteConfirm')}
-              onConfirm={() => deleteMutation.mutate(editUser!.id)}
-              okText={t('common:actions.confirm')}
-              cancelText={t('common:actions.cancel')}
-              okButtonProps={{ danger: true }}
-            >
-              <Button danger icon={<DeleteOutlined />} loading={deleteMutation.isPending}>{t('common:actions.delete')}</Button>
-            </Popconfirm>
+            {editUser?.id !== currentUserId && (
+              <Popconfirm
+                title={t('admin.users.deleteConfirm')}
+                onConfirm={() => deleteMutation.mutate(editUser!.id)}
+                okText={t('common:actions.confirm')}
+                cancelText={t('common:actions.cancel')}
+                okButtonProps={{ danger: true }}
+              >
+                <Button danger icon={<DeleteOutlined />} loading={deleteMutation.isPending}>{t('common:actions.delete')}</Button>
+              </Popconfirm>
+            )}
             <Button type="primary" onClick={() => editForm.submit()} loading={updateMutation.isPending}>{t('common:actions.save')}</Button>
           </div>
         }

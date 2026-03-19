@@ -130,6 +130,7 @@
     "TENANT_CODE_TOO_LONG": "Šifra firme mora imati najviše 50 karaktera",
     "SHIFT_NAME_EXISTS": "Smena sa ovim imenom već postoji",
     "DEPENDENCY_NOT_MET": "Prethodni proces mora biti završen prvo",
+    "CANNOT_DELETE_SELF": "Ne možete obrisati sopstveni nalog",
     "INTERNAL_ERROR": "Došlo je do neočekivane greške",
     "connectionFailed": "Nije moguće povezati se sa serverom",
     "connectionFailedDescription": "Server ne odgovara. Proverite konekciju ili pokušajte ponovo kasnije."
