@@ -67,9 +67,12 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
       key: '/block-requests',
       icon: <StopOutlined />,
       label: (
-        <Badge count={pendingBlockCount ?? 0} size="small" offset={[8, 0]}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           {t('nav.blockRequests')}
-        </Badge>
+          {(pendingBlockCount ?? 0) > 0 && (
+            <Badge count={pendingBlockCount} size="small" />
+          )}
+        </span>
       ),
     },
     isCoordOrAbove && {
