@@ -161,6 +161,7 @@ export interface BlockRequestDto {
   rejectionNote: string | null;
   orderId: string | null;
   orderNumber: string | null;
+  currentProcessStatus: ProcessStatus | null;
 }
 
 export interface ChangeRequestDto {

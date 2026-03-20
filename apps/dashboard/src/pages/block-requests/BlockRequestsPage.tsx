@@ -14,7 +14,7 @@ function useDebounce<T>(value: T, delay: number): T {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { blockRequestsApi, processWorkflowApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
-import { RequestStatus } from '@algreen/shared-types';
+import { RequestStatus, ProcessStatus } from '@algreen/shared-types';
 import type { BlockRequestDto } from '@algreen/shared-types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
@@ -187,7 +187,7 @@ export function BlockRequestsPage() {
             </Space>
           );
         }
-        if (record.status === RequestStatus.Approved && record.orderItemProcessId) {
+        if (record.status === RequestStatus.Approved && record.orderItemProcessId && record.currentProcessStatus === ProcessStatus.Blocked) {
           return (
             <Popconfirm
               title={t('blockRequests.unblockConfirm')}

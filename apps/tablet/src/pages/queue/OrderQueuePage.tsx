@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { tabletApi, processWorkflowApi, subProcessWorkflowApi, processesApi, blockRequestsApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
 import { ProcessStatus, SubProcessStatus } from '@algreen/shared-types';
+import { useSignalREvent, SignalREvents } from '@algreen/signalr-client';
 import type { TabletQueueItemDto, TabletActiveWorkDto, TabletSubProcessDto } from '@algreen/shared-types';
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -46,11 +47,18 @@ export function OrderQueuePage() {
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
 
+  const queryClient = useQueryClient();
+
   const { data: queueGroups, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['tablet-queue', userId, tenantId],
     queryFn: () => tabletApi.getQueue(userId!, tenantId!).then((r) => r.data),
     enabled: !!tenantId && !!userId,
     refetchInterval: 60_000,
+  });
+
+  useSignalREvent(SignalREvents.ProcessUnblocked, () => {
+    queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
   });
 
   const { data: activeGroups } = useQuery({

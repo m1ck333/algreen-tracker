@@ -217,6 +217,15 @@ export function ProcessesPage() {
     onError: (err) => message.error(getTranslatedError(err, t, t('admin.processes.updateFailed'))),
   });
 
+  const reorderSubProcessesMutation = useMutation({
+    mutationFn: ({ processId, items }: { processId: string; items: { id: string; sequenceOrder: number }[] }) =>
+      processesApi.reorderSubProcesses(processId, items),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['processes'] });
+    },
+    onError: (err) => message.error(getTranslatedError(err, t, t('admin.processes.updateFailed'))),
+  });
+
   // ─── Pending sub-process changes for edit drawer ────────
   const [pendingSubAdds, setPendingSubAdds] = useState<{ key: number; name: string; sequenceOrder: number }[]>([]);
   const [pendingSubRemovals, setPendingSubRemovals] = useState<Set<string>>(new Set());
@@ -259,6 +268,31 @@ export function ProcessesPage() {
     );
 
     reorderMutation.mutate(updates);
+  };
+
+  const handleSubDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !currentDetail || !pagedResult?.items) return;
+
+    const oldIndex = activeSubs.findIndex((s) => s.id === active.id);
+    const newIndex = activeSubs.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(activeSubs, oldIndex, newIndex);
+    const updates = reordered.map((sub, idx) => ({ id: sub.id, sequenceOrder: idx + 1 }));
+
+    // Optimistic update
+    const queryKey = ['processes', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize];
+    queryClient.setQueryData(queryKey, {
+      ...pagedResult,
+      items: pagedResult.items.map((p) =>
+        p.id === currentDetail.id
+          ? { ...p, subProcesses: p.subProcesses.map((s) => { const idx = reordered.findIndex((r) => r.id === s.id); return idx !== -1 ? { ...s, sequenceOrder: idx + 1 } : s; }) }
+          : p
+      ),
+    });
+
+    reorderSubProcessesMutation.mutate({ processId: currentDetail.id, items: updates });
   };
 
   const columns = [
@@ -559,55 +593,66 @@ export function ProcessesPage() {
             )}
 
             {(activeSubs.length > 0 || pendingSubAdds.length > 0) ? (
-              <Table<{ key: string; name: string; sequenceOrder: number; isNew: boolean; id: string }>
-                dataSource={[
-                  ...activeSubs.map((s) => ({ key: s.id, name: s.name, sequenceOrder: s.sequenceOrder, isNew: false, id: s.id })),
-                  ...pendingSubAdds.map((s) => ({ key: `new-${s.key}`, name: s.name, sequenceOrder: s.sequenceOrder, isNew: true, id: `new-${s.key}` })),
-                ]}
-                rowKey="key"
-                size="small"
-                pagination={false}
-                columns={[
-                  {
-                    title: t('common:labels.name'),
-                    dataIndex: 'name',
-                    render: (name, record) => (
-                      record.isNew ? <Text type="success">{name}</Text> : name
-                    ),
-                  },
-                  {
-                    title: t('admin.processes.sequenceOrder'),
-                    dataIndex: 'sequenceOrder',
-                    width: 100,
-                  },
-                  {
-                    title: '',
-                    width: 40,
-                    render: (_, record) => (
-                      record.isNew ? (
-                        <Button
-                          type="text"
-                          danger
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          onClick={() => {
-                            const numKey = Number(record.key.replace('new-', ''));
-                            setPendingSubAdds((prev) => prev.filter((s) => s.key !== numKey));
-                          }}
-                        />
-                      ) : (
-                        <Button
-                          type="text"
-                          danger
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          onClick={() => setPendingSubRemovals((prev) => new Set([...prev, record.id]))}
-                        />
-                      )
-                    ),
-                  },
-                ]}
-              />
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSubDragEnd}>
+                <SortableContext items={activeSubs.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                  <Table<{ key: string; name: string; sequenceOrder: number; isNew: boolean; id: string }>
+                    dataSource={[
+                      ...activeSubs.map((s) => ({ key: s.id, name: s.name, sequenceOrder: s.sequenceOrder, isNew: false, id: s.id })),
+                      ...pendingSubAdds.map((s) => ({ key: `new-${s.key}`, name: s.name, sequenceOrder: s.sequenceOrder, isNew: true, id: `new-${s.key}` })),
+                    ]}
+                    rowKey="key"
+                    size="small"
+                    pagination={false}
+                    components={{ body: { row: SortableRow } }}
+                    columns={[
+                      {
+                        title: '',
+                        dataIndex: 'dragHandle',
+                        width: 32,
+                        render: (_, record) => record.isNew ? null : <DragHandle />,
+                      },
+                      {
+                        title: t('common:labels.name'),
+                        dataIndex: 'name',
+                        render: (name, record) => (
+                          record.isNew ? <Text type="success">{name}</Text> : name
+                        ),
+                      },
+                      {
+                        title: t('admin.processes.sequenceOrder'),
+                        dataIndex: 'sequenceOrder',
+                        width: 100,
+                      },
+                      {
+                        title: '',
+                        width: 40,
+                        render: (_, record) => (
+                          record.isNew ? (
+                            <Button
+                              type="text"
+                              danger
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={() => {
+                                const numKey = Number(record.key.replace('new-', ''));
+                                setPendingSubAdds((prev) => prev.filter((s) => s.key !== numKey));
+                              }}
+                            />
+                          ) : (
+                            <Button
+                              type="text"
+                              danger
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={() => setPendingSubRemovals((prev) => new Set([...prev, record.id]))}
+                            />
+                          )
+                        ),
+                      },
+                    ]}
+                  />
+                </SortableContext>
+              </DndContext>
             ) : (
               <Text type="secondary">{t('admin.processes.noSubProcesses')}</Text>
             )}

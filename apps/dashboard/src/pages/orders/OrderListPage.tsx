@@ -449,6 +449,8 @@ export function OrderListPage() {
   const [pendingSpecialRequestAdds, setPendingSpecialRequestAdds] = useState<{ itemId: string; specialRequestTypeId: string }[]>([]);
   const [pendingSpecialRequestRemovals, setPendingSpecialRequestRemovals] = useState<{ itemId: string; specialRequestId: string }[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingNewItemFiles, setPendingNewItemFiles] = useState<Map<number, File[]>>(new Map());
+  const [currentDraftItemFiles, setCurrentDraftItemFiles] = useState<File[]>([]);
 
   const clearPendingState = useCallback(() => {
     setPendingItems([]);
@@ -456,6 +458,8 @@ export function OrderListPage() {
     setPendingComplexity(new Map());
     setPendingSpecialRequestAdds([]);
     setPendingSpecialRequestRemovals([]);
+    setPendingNewItemFiles(new Map());
+    setCurrentDraftItemFiles([]);
     setAddingItem(false);
   }, []);
 
@@ -825,7 +829,8 @@ export function OrderListPage() {
                     const [itemId, processId] = key.split(':');
                     return { itemId, processId, complexity };
                   });
-                  await updateOrder.mutateAsync({
+                  const existingItemIds = new Set(detailOrder.items.map((i) => i.id));
+                  const result = await updateOrder.mutateAsync({
                     id: detailOrder.id,
                     data: {
                       notes: values.notes,
@@ -838,6 +843,17 @@ export function OrderListPage() {
                       removeSpecialRequests: pendingSpecialRequestRemovals.length > 0 ? pendingSpecialRequestRemovals : undefined,
                     },
                   });
+                  // Upload files for newly added items
+                  if (pendingNewItemFiles.size > 0 && result) {
+                    const newItems = result.items.filter((i) => !existingItemIds.has(i.id));
+                    for (let idx = 0; idx < newItems.length; idx++) {
+                      const files = pendingNewItemFiles.get(idx) ?? [];
+                      for (const file of files) {
+                        const compressed = await compressFile(file);
+                        await ordersApi.uploadAttachment(detailOrder.id, compressed, tenantId!, newItems[idx].id);
+                      }
+                    }
+                  }
                   // Save pending attachment changes (uploads + deletes)
                   for (const handle of attachmentRefsMap.current.values()) {
                     if (handle.hasPendingChanges()) await handle.savePending();
@@ -1352,6 +1368,15 @@ export function OrderListPage() {
             {addingItem && (
               <>
                 <Form form={itemForm} component={false} onFinish={(values) => {
+                  const itemIndex = pendingItems.length;
+                  if (currentDraftItemFiles.length > 0) {
+                    setPendingNewItemFiles((prev) => {
+                      const next = new Map(prev);
+                      next.set(itemIndex, currentDraftItemFiles);
+                      return next;
+                    });
+                  }
+                  setCurrentDraftItemFiles([]);
                   setPendingItems((prev) => [...prev, values as AddOrderItemRequest]);
                   itemForm.resetFields();
                   itemForm.setFieldsValue({ quantity: 1 });
@@ -1383,9 +1408,57 @@ export function OrderListPage() {
                       </Form.Item>
                     </Col>
                   </Row>
+                  <Form.Item label={`${t('attachments.title')} (${currentDraftItemFiles.length}/10)`}>
+                    <Upload
+                      beforeUpload={(file) => {
+                        if (file.size > 10 * 1024 * 1024) { message.error(t('attachments.fileTooLarge')); return false; }
+                        setCurrentDraftItemFiles((prev) => prev.length >= 10 ? prev : [...prev, file]);
+                        return false;
+                      }}
+                      showUploadList={false}
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      multiple
+                      disabled={currentDraftItemFiles.length >= 10}
+                    >
+                      <Button icon={<UploadOutlined />} size="small" disabled={currentDraftItemFiles.length >= 10}>
+                        {t('attachments.upload')}
+                      </Button>
+                    </Upload>
+                    {currentDraftItemFiles.length > 0 && (
+                      <List
+                        size="small"
+                        style={{ marginTop: 8 }}
+                        dataSource={currentDraftItemFiles}
+                        renderItem={(file: File, fi: number) => (
+                          <List.Item
+                            style={{ padding: '4px 0' }}
+                            actions={[
+                              <Button key="preview" type="text" size="small" icon={<EyeOutlined />} onClick={() => openPendingPreview(file)} />,
+                              <Button key="delete" type="text" size="small" danger icon={<CloseCircleOutlined />} onClick={() => setCurrentDraftItemFiles((prev) => prev.filter((_, idx) => idx !== fi))} />,
+                            ]}
+                          >
+                            <Space size={8}>
+                              {file.type.startsWith('image/') ? (
+                                <img src={URL.createObjectURL(file)} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }} onClick={() => openPendingPreview(file)} alt={file.name} />
+                              ) : (
+                                <FilePdfOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />
+                              )}
+                              <div>
+                                <Text ellipsis style={{ maxWidth: 200 }}>{file.name}</Text>
+                                <br />
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                  {file.size < 1024 ? `${file.size} B` : file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}
+                                </Text>
+                              </div>
+                            </Space>
+                          </List.Item>
+                        )}
+                      />
+                    )}
+                  </Form.Item>
                   <Space style={{ marginBottom: 12 }}>
                     <Button type="primary" onClick={() => itemForm.submit()}>{t('orders.addItem')}</Button>
-                    <Button onClick={() => setAddingItem(false)}>{t('common:actions.cancel')}</Button>
+                    <Button onClick={() => { setAddingItem(false); setCurrentDraftItemFiles([]); }}>{t('common:actions.cancel')}</Button>
                   </Space>
                 </Form>
                 <Divider style={{ margin: '8px 0' }} />

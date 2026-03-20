@@ -28,6 +28,10 @@ export const processesApi = {
     return apiClient.post('/processes/reorder', { items });
   },
 
+  reorderSubProcesses(processId: string, items: { id: string; sequenceOrder: number }[]) {
+    return apiClient.post(`/processes/${processId}/sub-processes/reorder`, { items });
+  },
+
   deactivate(id: string) {
     return apiClient.delete(`/processes/${id}`);
   },
