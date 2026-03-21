@@ -140,6 +140,8 @@ export interface OrderMasterViewDto {
   totalProcesses: number;
   /** Map of processId → aggregated ProcessStatus string */
   processStatuses: Record<string, string>;
+  /** Map of processId → total duration in seconds */
+  processDurations: Record<string, number>;
   attachmentCount: number;
   createdAt: string;
 }

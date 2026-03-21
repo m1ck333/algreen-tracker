@@ -112,6 +112,7 @@
     "TARGET_REQUIRED": "Morate odabrati proces ili podproces",
     "DESCRIPTION_REQUIRED": "Opis je obavezan",
     "PRODUCTION_STARTED": "Ne može se menjati prioritet nakon početka proizvodnje",
+    "PRIORITY_REQUIRED": "Prioritet mora biti postavljen pre aktivacije",
     "DUPLICATE_REQUEST": "Ovaj zahtev je već dodat",
     "FORBIDDEN": "Nemate dozvolu za ovu akciju",
     "TENANT_INACTIVE": "Firma nije aktivna",

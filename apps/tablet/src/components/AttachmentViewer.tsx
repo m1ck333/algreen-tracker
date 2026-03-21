@@ -17,6 +17,10 @@ function isPdf(contentType: string): boolean {
   return contentType === 'application/pdf';
 }
 
+function isIOS(): boolean {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 interface AttachmentViewerProps {
   orderId: string;
   orderItemId?: string;
@@ -56,6 +60,11 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
 
   const handleOpen = async (a: OrderAttachmentDto) => {
     if (isPdf(a.contentType)) {
+      // iOS Safari/PWA doesn't render PDFs in iframes — open directly
+      if (isIOS()) {
+        window.open(getUrl(a), '_blank');
+        return;
+      }
       setViewingPdf(a);
       setPdfLoading(true);
       try {

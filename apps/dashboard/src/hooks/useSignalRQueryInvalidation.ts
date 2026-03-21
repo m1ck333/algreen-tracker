@@ -93,4 +93,17 @@ export function useSignalRQueryInvalidation() {
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'warnings'] });
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
   });
+
+  useSignalREvent(SignalREvents.OrderUpdated, () => {
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
+    queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard', 'live-view'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard', 'statistics'] });
+  });
+
+  useSignalREvent(SignalREvents.ProcessDefinitionUpdated, () => {
+    queryClient.invalidateQueries({ queryKey: ['processes'] });
+    queryClient.invalidateQueries({ queryKey: ['processes-batch'] });
+    queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
+  });
 }

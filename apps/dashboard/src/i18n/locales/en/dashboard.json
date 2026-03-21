@@ -92,6 +92,9 @@
     "pausedSuccess": "Order paused",
     "resumedSuccess": "Order resumed",
     "activatedSuccess": "Order activated",
+    "saveBeforeActivate": "Save changes before activating",
+    "pending": "Unsaved",
+    "attachments": "Documents",
     "cancelOrder": "Cancel Order",
     "cancelConfirm": "Are you sure you want to cancel this order?",
     "reopenOrder": "Reopen Order",
@@ -250,7 +253,8 @@
       "removeDependencyConfirm": "Remove this dependency?",
       "sameProcessError": "Cannot depend on itself",
       "processAddFailed": "Failed to add process",
-      "dependencyAddFailed": "Failed to add dependency"
+      "dependencyAddFailed": "Failed to add dependency",
+      "duplicate": "Duplicate"
     },
     "specialRequestTypes": {
       "title": "Special Request Types",

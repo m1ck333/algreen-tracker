@@ -68,7 +68,8 @@
     "blockedBy": "Blocked by:",
     "daysLeft": "{{count}}d left",
     "loadFailed": "Failed to load incoming orders",
-    "retry": "Retry"
+    "retry": "Retry",
+    "all": "All"
   },
   "checkout": {
     "title": "End of Shift",

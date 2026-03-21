@@ -92,6 +92,9 @@
     "pausedSuccess": "Narudžbina pauzirana",
     "resumedSuccess": "Narudžbina nastavljena",
     "activatedSuccess": "Narudžbina aktivirana",
+    "saveBeforeActivate": "Sačuvajte izmene pre aktivacije",
+    "pending": "Nesačuvano",
+    "attachments": "Dokumenti",
     "cancelOrder": "Otkaži narudžbinu",
     "cancelConfirm": "Da li ste sigurni da želite da otkažete ovu narudžbinu?",
     "reopenOrder": "Ponovo otvori",
@@ -250,7 +253,8 @@
       "removeDependencyConfirm": "Ukloniti ovu zavisnost?",
       "sameProcessError": "Ne može zavisiti od samog sebe",
       "processAddFailed": "Dodavanje procesa nije uspelo",
-      "dependencyAddFailed": "Dodavanje zavisnosti nije uspelo"
+      "dependencyAddFailed": "Dodavanje zavisnosti nije uspelo",
+      "duplicate": "Dupliraj"
     },
     "specialRequestTypes": {
       "title": "Tipovi specijalnih zahteva",

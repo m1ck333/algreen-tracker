@@ -112,6 +112,7 @@
     "TARGET_REQUIRED": "You must select a process or sub-process",
     "DESCRIPTION_REQUIRED": "Description is required",
     "PRODUCTION_STARTED": "Cannot change priority after production has started",
+    "PRIORITY_REQUIRED": "Priority must be set before activation",
     "DUPLICATE_REQUEST": "This request has already been added",
     "FORBIDDEN": "You do not have permission for this action",
     "TENANT_INACTIVE": "Tenant is not active",

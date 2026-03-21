@@ -14,7 +14,7 @@ function useDebounce<T>(value: T, delay: number): T {
   }, [value, delay]);
   return debounced;
 }
-import { PlusOutlined, DeleteOutlined, HolderOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, HolderOutlined, CopyOutlined } from '@ant-design/icons';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -391,8 +391,20 @@ export function ProductCategoriesPage() {
               {
                 title: t('admin.productCategories.defaultComplexity'),
                 dataIndex: 'defaultComplexity',
-                width: 120,
-                render: (v: ComplexityType | null) => v ? <Tag>{t(`common:enums.ComplexityType.${v}`)}</Tag> : '—',
+                width: 140,
+                render: (_: ComplexityType | null, r) => (
+                  <Select
+                    size="small"
+                    allowClear
+                    value={localProcesses.find((lp) => lp.processId === r.processId)?.defaultComplexity ?? undefined}
+                    onChange={(v) => {
+                      setLocalProcesses((prev) => prev.map((lp) => lp.processId === r.processId ? { ...lp, defaultComplexity: v } : lp));
+                      onDrawerValuesChange();
+                    }}
+                    style={{ width: '100%' }}
+                    options={Object.values(ComplexityType).map((c) => ({ value: c, label: t(`common:enums.ComplexityType.${c}`) }))}
+                  />
+                ),
               },
               {
                 title: '', width: 50,
@@ -556,6 +568,19 @@ export function ProductCategoriesPage() {
         loading={!isCreating && detailLoading}
         extra={
           <div style={{ display: 'flex', gap: 8 }}>
+            {!isCreating && detail && (
+              <Button
+                icon={<CopyOutlined />}
+                onClick={() => {
+                  const values = form.getFieldsValue();
+                  form.setFieldsValue({ ...values, name: `${values.name} (kopija)` });
+                  setDetailId(null);
+                  setIsCreating(true);
+                }}
+              >
+                {t('admin.productCategories.duplicate')}
+              </Button>
+            )}
             {!isCreating && detail?.isActive && (
               <Popconfirm
                 title={t('admin.productCategories.deactivateConfirm')}

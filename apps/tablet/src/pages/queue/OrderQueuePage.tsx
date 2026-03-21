@@ -97,6 +97,20 @@ export function OrderQueuePage() {
     return map;
   }, [processDefinitions]);
 
+  const subProcessOrderMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (processDefinitions) {
+      for (const pd of processDefinitions) {
+        if (pd?.subProcesses) {
+          for (const sp of pd.subProcesses) {
+            map.set(sp.id, sp.sequenceOrder);
+          }
+        }
+      }
+    }
+    return map;
+  }, [processDefinitions]);
+
   // Build a map from orderItemProcessId → processCode/processName
   const processInfoMap = useMemo(() => {
     const map = new Map<string, { processCode: string; processName: string }>();
@@ -257,6 +271,7 @@ export function OrderQueuePage() {
               }
               activeWork={activeWorkMap.get(item.orderItemProcessId)}
               subProcessNameMap={subProcessNameMap}
+              subProcessOrderMap={subProcessOrderMap}
               userId={userId!}
               tenantId={tenantId!}
               t={t}
@@ -285,6 +300,7 @@ function QueueCard({
   onToggle,
   activeWork,
   subProcessNameMap,
+  subProcessOrderMap,
   userId,
   tenantId,
   t,
@@ -297,6 +313,7 @@ function QueueCard({
   onToggle: () => void;
   activeWork?: TabletActiveWorkDto;
   subProcessNameMap: Map<string, string>;
+  subProcessOrderMap: Map<string, number>;
   userId: string;
   tenantId: string;
   t: (key: string, opts?: Record<string, unknown>) => string;
@@ -405,6 +422,7 @@ function QueueCard({
             orderItemProcessId={item.orderItemProcessId}
             activeWork={activeWork}
             subProcessNameMap={subProcessNameMap}
+            subProcessOrderMap={subProcessOrderMap}
             userId={userId}
             tenantId={tenantId}
             t={t}
@@ -421,6 +439,7 @@ function WorkPanel({
   orderItemProcessId,
   activeWork,
   subProcessNameMap,
+  subProcessOrderMap,
   userId,
   tenantId,
   t,
@@ -429,6 +448,7 @@ function WorkPanel({
   orderItemProcessId: string;
   activeWork?: TabletActiveWorkDto;
   subProcessNameMap: Map<string, string>;
+  subProcessOrderMap: Map<string, number>;
   userId: string;
   tenantId: string;
   t: (key: string, opts?: Record<string, unknown>) => string;
@@ -491,7 +511,7 @@ function WorkPanel({
     mutationFn: () => processWorkflowApi.start(orderItemProcessId, { userId }),
     onSuccess: async () => {
       setError(null);
-      await invalidateAndWait(['tablet-active', 'tablet-queue']);
+      await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']);
     },
     onError: (err) => handleError(err, 'work.startFailed'),
   });
@@ -500,7 +520,7 @@ function WorkPanel({
     mutationFn: () => processWorkflowApi.stop(orderItemProcessId, { userId }),
     onSuccess: async () => {
       setError(null);
-      await invalidateAndWait(['tablet-active', 'tablet-queue']);
+      await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']);
     },
     onError: (err) => handleError(err, 'work.pauseFailed'),
   });
@@ -509,7 +529,7 @@ function WorkPanel({
     mutationFn: () => processWorkflowApi.resume(orderItemProcessId, { userId }),
     onSuccess: async () => {
       setError(null);
-      await invalidateAndWait(['tablet-active', 'tablet-queue']);
+      await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']);
     },
     onError: (err) => handleError(err, 'work.resumeFailed'),
   });
@@ -519,7 +539,7 @@ function WorkPanel({
     onSuccess: async () => {
       setError(null);
       setShowCompleteConfirm(false);
-      await invalidateAndWait(['tablet-active', 'tablet-queue']);
+      await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']);
     },
     onError: (err) => {
       setShowCompleteConfirm(false);
@@ -553,7 +573,7 @@ function WorkPanel({
       setBlockReason('');
       setSuccess(t('work.blockSent'));
       setTimeout(() => setSuccess(null), 4000);
-      await invalidateAndWait(['tablet-active', 'tablet-queue']);
+      await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']);
     },
     onError: (err) => {
       setShowBlockModal(false);
@@ -651,7 +671,7 @@ function WorkPanel({
         <div>
           <h3 className="text-tablet-sm font-semibold mb-2">{t('work.subProcesses')}</h3>
           <div className="space-y-2">
-            {activeWork.subProcesses.map((sp) => {
+            {[...activeWork.subProcesses].sort((a, b) => (subProcessOrderMap.get(a.subProcessId) ?? 0) - (subProcessOrderMap.get(b.subProcessId) ?? 0)).map((sp) => {
               const hasInProgress = activeWork.subProcesses.some(
                 (s) => s.status === SubProcessStatus.InProgress,
               );

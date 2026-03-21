@@ -6,10 +6,12 @@ export function useSignalRQueryInvalidation() {
 
   useSignalREvent(SignalREvents.OrderActivated, () => {
     queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-incoming'] });
   });
 
   useSignalREvent(SignalREvents.ProcessStarted, () => {
     queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-incoming'] });
   });
 
   useSignalREvent(SignalREvents.ProcessCompleted, () => {
@@ -21,6 +23,7 @@ export function useSignalRQueryInvalidation() {
   useSignalREvent(SignalREvents.ProcessBlocked, () => {
     queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
     queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-incoming'] });
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
     queryClient.invalidateQueries({ queryKey: ['unread-count'] });
   });
@@ -28,6 +31,7 @@ export function useSignalRQueryInvalidation() {
   useSignalREvent(SignalREvents.ProcessUnblocked, () => {
     queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
     queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-incoming'] });
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
     queryClient.invalidateQueries({ queryKey: ['unread-count'] });
   });
@@ -35,6 +39,7 @@ export function useSignalRQueryInvalidation() {
   useSignalREvent(SignalREvents.BlockRequestApproved, () => {
     queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
     queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-incoming'] });
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
     queryClient.invalidateQueries({ queryKey: ['unread-count'] });
   });
@@ -42,5 +47,17 @@ export function useSignalRQueryInvalidation() {
   useSignalREvent(SignalREvents.ProcessReadyForQueue, () => {
     queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
     queryClient.invalidateQueries({ queryKey: ['tablet-incoming'] });
+  });
+
+  useSignalREvent(SignalREvents.OrderUpdated, () => {
+    queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-incoming'] });
+  });
+
+  useSignalREvent(SignalREvents.ProcessDefinitionUpdated, () => {
+    queryClient.invalidateQueries({ queryKey: ['processes-batch'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
   });
 }

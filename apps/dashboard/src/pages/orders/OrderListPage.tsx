@@ -125,13 +125,24 @@ function getDeadlineLevel(
 
 // ─── Process Status Cell (master table) ──────────────────
 
+function formatDurationSec(totalSec: number): string {
+  if (totalSec <= 0) return '';
+  const mins = Math.ceil(totalSec / 60);
+  if (mins >= 60) return `${Math.floor(mins / 60)}h ${mins % 60}min`;
+  return `${mins} min`;
+}
+
 function ProcessCell({
   status,
   processName,
+  isReady,
+  duration,
   tEnum,
 }: {
   status: ProcessStatus | null;
   processName: string;
+  isReady?: boolean;
+  duration?: number;
   tEnum: (enumName: string, value: string) => string;
 }) {
   if (status === null) {
@@ -139,6 +150,7 @@ function ProcessCell({
       <div style={{
         width: 24,
         height: 24,
+        margin: '0 auto',
         borderRadius: 4,
         border: '1px dashed #E0E0E0',
       }} />
@@ -148,15 +160,18 @@ function ProcessCell({
   const color = processStatusColors[status];
   const label = tEnum('ProcessStatus', status);
 
+  const timeStr = duration ? formatDurationSec(duration) : '';
+
   return (
-    <Tooltip title={`${processName}: ${label}`}>
+    <Tooltip title={<div><div>{processName}: {label}</div>{timeStr && <div>{timeStr}</div>}</div>}>
       <div
         style={{
           width: 24,
           height: 24,
+          margin: '0 auto',
           borderRadius: 4,
           backgroundColor: color,
-          border: '1px solid rgba(0,0,0,0.1)',
+          border: isReady ? '3px solid #333' : '1px solid rgba(0,0,0,0.1)',
           cursor: 'default',
         }}
       />
@@ -225,8 +240,15 @@ function ProcessTimeline({
           const isCompleted = status === ProcessStatus.Completed;
           const x = i * STEP;
 
+          // Sum totalDurationMinutes (actually seconds) across all items for this process
+          const totalSec = order.items.reduce((sum, item) => {
+            const p = item.processes.find((ip) => ip.processId === proc.id);
+            return sum + (p?.totalDurationMinutes ?? 0);
+          }, 0);
+          const timeStr = formatDurationSec(totalSec);
+
           return (
-            <Tooltip key={proc.id} title={`${proc.name}: ${status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable')}`}>
+            <Tooltip key={proc.id} title={<div><div>{proc.name}: {status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable')}</div>{timeStr && <div>{timeStr}</div>}</div>}>
               <div style={{ position: 'absolute', left: x, top: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', width: STEP }}>
                 <div style={{
                   width: CIRCLE,
@@ -296,7 +318,7 @@ function ItemProcessBar({
                 <div><b>{process?.name ?? proc.processId}</b></div>
                 <div>{statusLabel}</div>
                 {(proc.complexity || proc.totalDurationMinutes > 0) && (
-                  <div>{proc.complexity ?? ''}{proc.totalDurationMinutes > 0 ? `${proc.complexity ? ' · ' : ''}${proc.totalDurationMinutes} min` : ''}</div>
+                  <div>{proc.complexity ?? ''}{proc.totalDurationMinutes > 0 ? `${proc.complexity ? ' · ' : ''}${formatDurationSec(proc.totalDurationMinutes)}` : ''}</div>
                 )}
               </div>
             }
@@ -390,7 +412,6 @@ export function OrderListPage() {
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
 
   const [localPriority, setLocalPriority] = useState<number | null>(null);
-  const priorityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attachmentRefsMap = useRef<Map<string, OrderAttachmentsHandle>>(new Map());
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
@@ -467,7 +488,10 @@ export function OrderListPage() {
 
   const changePriorityMutation = useMutation({
     mutationFn: ({ id, priority }: { id: string; priority: number }) => ordersApi.changePriority(id, priority),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['orders-master-view'] }); },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
+      queryClient.invalidateQueries({ queryKey: ['orders', variables.id] });
+    },
   });
 
   const withdrawMutation = useMutation({
@@ -496,19 +520,6 @@ export function OrderListPage() {
   useEffect(() => {
     clearPendingState();
   }, [detailOrderId, clearPendingState]);
-
-  const debouncedPriorityChange = useCallback((orderId: string, val: number) => {
-    if (priorityTimerRef.current) clearTimeout(priorityTimerRef.current);
-    priorityTimerRef.current = setTimeout(() => {
-      changePriorityMutation.mutate(
-        { id: orderId, priority: val },
-        {
-          onSuccess: () => message.success(t('orders.priorityChanged')),
-          onError: (err) => message.error(getTranslatedError(err, t, t('orders.priorityChangeFailed'))),
-        },
-      );
-    }, 600);
-  }, [changePriorityMutation, message, t]);
 
   const canCreate =
     user?.role === UserRole.SalesManager ||
@@ -630,7 +641,8 @@ export function OrderListPage() {
     ];
 
     // Add one column per process
-    const processColDefs: ColumnsType<OrderMasterViewDto> = (processes ?? []).map((proc) => ({
+    const processList = processes ?? [];
+    const processColDefs: ColumnsType<OrderMasterViewDto> = processList.map((proc, idx) => ({
       title: (
         <Tooltip title={`${proc.code} — ${proc.name}`}>
           <span style={{ fontSize: 11, cursor: 'default' }}>{proc.name}</span>
@@ -642,7 +654,24 @@ export function OrderListPage() {
       render: (_: unknown, record: OrderMasterViewDto) => {
         const statusStr = record.processStatuses[proc.id];
         const status = statusStr ? (statusStr as ProcessStatus) : null;
-        return <ProcessCell status={status} processName={proc.name} tEnum={tEnum} />;
+        // "Ready" = Pending + previous process in this order is Completed (or it's the first)
+        let isReady = false;
+        if (status === ProcessStatus.Pending && record.status === OrderStatus.Active) {
+          if (idx === 0) {
+            isReady = true;
+          } else {
+            // Find the previous process that exists in this order
+            for (let i = idx - 1; i >= 0; i--) {
+              const prevStatus = record.processStatuses[processList[i].id];
+              if (prevStatus) {
+                isReady = prevStatus === ProcessStatus.Completed;
+                break;
+              }
+            }
+          }
+        }
+        const duration = record.processDurations?.[proc.id] ?? 0;
+        return <ProcessCell status={status} processName={proc.name} isReady={isReady} duration={duration} tEnum={tEnum} />;
       },
     }));
 
@@ -786,6 +815,11 @@ export function OrderListPage() {
           rowClassName={(record) => {
             if (record.status === OrderStatus.Completed) return 'master-row-completed';
             if (record.status === OrderStatus.Cancelled) return 'master-row-cancelled';
+            const activeItems = (masterResult?.items ?? []).filter((o) => o.status === OrderStatus.Active && o.priority > 0);
+            if (activeItems.length > 0 && record.status === OrderStatus.Active && record.priority > 0) {
+              const maxPri = Math.max(...activeItems.map((o) => o.priority));
+              if (record.priority === maxPri) return 'master-row-last-active';
+            }
             return '';
           }}
         />
@@ -797,6 +831,10 @@ export function OrderListPage() {
         }
         .master-table .master-row-cancelled td {
           opacity: 0.5;
+        }
+        .master-table .master-row-last-active td {
+          background-color: rgba(255, 193, 7, 0.15) !important;
+          border-bottom: 2px solid rgba(255, 152, 0, 0.4) !important;
         }
       `}</style>
 
@@ -830,7 +868,7 @@ export function OrderListPage() {
                     return { itemId, processId, complexity };
                   });
                   const existingItemIds = new Set(detailOrder.items.map((i) => i.id));
-                  const result = await updateOrder.mutateAsync({
+                  await updateOrder.mutateAsync({
                     id: detailOrder.id,
                     data: {
                       notes: values.notes,
@@ -844,19 +882,25 @@ export function OrderListPage() {
                     },
                   });
                   // Upload files for newly added items
-                  if (pendingNewItemFiles.size > 0 && result) {
-                    const newItems = result.items.filter((i) => !existingItemIds.has(i.id));
-                    for (let idx = 0; idx < newItems.length; idx++) {
-                      const files = pendingNewItemFiles.get(idx) ?? [];
+                  if (pendingNewItemFiles.size > 0) {
+                    const freshOrder = await ordersApi.getById(detailOrder.id).then((r) => r.data);
+                    const newItems = freshOrder.items.filter((i) => !existingItemIds.has(i.id));
+                    for (const [pendingIdx, files] of pendingNewItemFiles.entries()) {
+                      const targetItem = newItems[pendingIdx];
+                      if (!targetItem || files.length === 0) continue;
                       for (const file of files) {
-                        const compressed = await compressFile(file);
-                        await ordersApi.uploadAttachment(detailOrder.id, compressed, tenantId!, newItems[idx].id);
+                        try {
+                          const compressed = await compressFile(file);
+                          await ordersApi.uploadAttachment(detailOrder.id, compressed, tenantId!, targetItem.id);
+                        } catch { /* skip failed uploads */ }
                       }
                     }
                   }
                   // Save pending attachment changes (uploads + deletes)
                   for (const handle of attachmentRefsMap.current.values()) {
-                    if (handle.hasPendingChanges()) await handle.savePending();
+                    try {
+                      if (handle.hasPendingChanges()) await handle.savePending();
+                    } catch { /* skip failed attachment saves */ }
                   }
                   await queryClient.invalidateQueries({ queryKey: ['orders', detailOrder.id] });
                   queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
@@ -972,7 +1016,7 @@ export function OrderListPage() {
                   <Row gutter={12}>
                     <Col span={12}>
                       <Form.Item name="productCategoryId" label={t('orders.productCategory')} rules={[{ required: true }]}>
-                        <Select options={(categories ?? []).map((c: ProductCategoryDto) => ({ label: c.name, value: c.id }))} />
+                        <Select showSearch filterOption={(input, option) => (option?.label as string ?? '').toLowerCase().includes(input.toLowerCase())} options={(categories ?? []).map((c: ProductCategoryDto) => ({ label: c.name, value: c.id }))} />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
@@ -1201,10 +1245,21 @@ export function OrderListPage() {
               {user?.role !== UserRole.SalesManager && (
                 <Space size="small" wrap style={{ justifyContent: 'flex-end' }}>
                   {detailOrder.status === OrderStatus.Draft && (
-                    <Button type="primary" size="small" loading={activateMutation.isPending}
+                    <Button type="primary" size="small" loading={activateMutation.isPending || isSaving}
                       onClick={() => {
+                        const hasPendingEdits = pendingItems.length > 0 || pendingItemRemovals.length > 0 || pendingComplexity.size > 0 || pendingSpecialRequestAdds.length > 0 || pendingSpecialRequestRemovals.length > 0;
+                        const hasPendingAttachments = Array.from(attachmentRefsMap.current.values()).some((h) => h.hasPendingChanges());
+                        const hasPendingPriority = localPriority != null && localPriority !== detailOrder.priority;
+                        if (hasPendingEdits || hasPendingAttachments || hasPendingPriority) {
+                          message.warning(t('orders.saveBeforeActivate'));
+                          return;
+                        }
                         if (detailOrder.items.length === 0) {
                           message.error(t('common:errors.NO_ITEMS'));
+                          return;
+                        }
+                        if (detailOrder.priority <= 0) {
+                          message.error(t('common:errors.PRIORITY_REQUIRED'));
                           return;
                         }
                         activateMutation.mutate(detailOrder.id, {
@@ -1229,40 +1284,6 @@ export function OrderListPage() {
                         onError: (err) => message.error(getTranslatedError(err, t, t('orders.resumeFailed'))),
                       });
                     }} loading={resumeOrder.isPending}>{t('orders.resumeOrder')}</Button>
-                  )}
-                  {detailOrder.status === OrderStatus.Active && (
-                    <Button size="small" onClick={() => {
-                      const withdrawForm = modal.confirm({
-                        title: t('orders.withdrawTitle'),
-                        icon: null,
-                        content: (
-                          <Form
-                            id="withdraw-form"
-                            layout="vertical"
-                            style={{ marginTop: 12 }}
-                            onFinish={(vals) => {
-                              withdrawMutation.mutate(
-                                { id: detailOrder.id, data: { targetProcessId: vals.targetProcessId, reason: vals.reason, userId: user!.id } },
-                                {
-                                  onSuccess: () => { message.success(t('orders.withdrawSuccess')); withdrawForm.destroy(); },
-                                  onError: (err) => message.error(getTranslatedError(err, t, t('orders.withdrawFailed'))),
-                                },
-                              );
-                            }}
-                          >
-                            <Form.Item name="targetProcessId" label={t('orders.withdrawToProcess')} rules={[{ required: true }]}>
-                              <Select options={(processes ?? []).map((p) => ({ label: `${p.code} — ${p.name}`, value: p.id }))} />
-                            </Form.Item>
-                            <Form.Item name="reason" label={t('orders.withdrawReason')} rules={[{ required: true }]}>
-                              <Input.TextArea rows={2} />
-                            </Form.Item>
-                          </Form>
-                        ),
-                        okButtonProps: { htmlType: 'submit', form: 'withdraw-form' },
-                        okText: t('common:actions.confirm'),
-                        cancelText: t('common:actions.cancel'),
-                      });
-                    }}>{t('orders.withdraw')}</Button>
                   )}
                   {detailOrder.status !== OrderStatus.Cancelled && detailOrder.status !== OrderStatus.Completed && (
                     <Popconfirm
@@ -1312,11 +1333,17 @@ export function OrderListPage() {
                       style={{ width: 80 }}
                       disabled={detailOrder.status === OrderStatus.Cancelled || detailOrder.status === OrderStatus.Completed}
                       onChange={(val) => {
-                        if (val != null) {
-                          setLocalPriority(val);
-                          if (val !== detailOrder.priority) {
-                            debouncedPriorityChange(detailOrder.id, val);
-                          }
+                        if (val != null) setLocalPriority(val);
+                      }}
+                      onPressEnter={() => {
+                        if (localPriority != null && localPriority !== detailOrder.priority) {
+                          changePriorityMutation.mutate(
+                            { id: detailOrder.id, priority: localPriority },
+                            {
+                              onSuccess: () => message.success(t('orders.priorityChanged')),
+                              onError: (err) => message.error(getTranslatedError(err, t, t('orders.priorityChangeFailed'))),
+                            },
+                          );
                         }
                       }}
                     />
@@ -1618,6 +1645,7 @@ export function OrderListPage() {
               {/* Pending new items */}
               {pendingItems.map((item, i) => {
                 const cat = (categories ?? []).find((c: ProductCategoryDto) => c.id === item.productCategoryId);
+                const files = pendingNewItemFiles.get(i) ?? [];
                 return (
                   <Card
                     key={`pending-${i}`}
@@ -1628,12 +1656,23 @@ export function OrderListPage() {
                         <Text strong>{item.productName}</Text>
                         <Tag>{t('orders.qty', { count: item.quantity })}</Tag>
                         {cat && <Tag color="blue">{cat.name}</Tag>}
+                        <Tag color="orange">{t('orders.pending')}</Tag>
                       </Space>
                     }
-                    extra={<Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => setPendingItems((prev) => prev.filter((_, idx) => idx !== i))} />}
+                    extra={<Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => { setPendingItems((prev) => prev.filter((_, idx) => idx !== i)); setPendingNewItemFiles((prev) => { const m = new Map(prev); m.delete(i); return m; }); }} />}
                   >
                     {item.notes && (
-                      <Text type="secondary" style={{ fontSize: 12 }}>{item.notes}</Text>
+                      <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: files.length > 0 ? 8 : 0 }}>{item.notes}</Text>
+                    )}
+                    {files.length > 0 && (
+                      <div>
+                        <Text type="secondary" style={{ fontSize: 11 }}>{t('orders.attachments')} ({files.length}):</Text>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                          {files.map((f, fi) => (
+                            <Tag key={fi} style={{ margin: 0 }}>{f.name}</Tag>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </Card>
                 );

@@ -68,7 +68,8 @@
     "blockedBy": "Blokirano od:",
     "daysLeft": "{{count}}d preostalo",
     "loadFailed": "Učitavanje dolaznih narudžbina nije uspelo",
-    "retry": "Pokušaj ponovo"
+    "retry": "Pokušaj ponovo",
+    "all": "Sve"
   },
   "checkout": {
     "title": "Kraj smene",

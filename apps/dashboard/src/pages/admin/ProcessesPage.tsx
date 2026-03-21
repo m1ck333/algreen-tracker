@@ -179,8 +179,22 @@ export function ProcessesPage() {
           ? [...pendingSubRemovals]
           : undefined,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['processes'] });
+    onSuccess: async (resp, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ['processes'] });
+      // If sub-processes were removed, reorder remaining ones to close gaps
+      if (pendingSubRemovals.size > 0) {
+        const updated = resp.data as ProcessDto;
+        const remaining = (updated?.subProcesses ?? [])
+          .filter((s) => s.isActive)
+          .sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+        if (remaining.length > 0) {
+          const hasGaps = remaining.some((s, idx) => s.sequenceOrder !== idx + 1);
+          if (hasGaps) {
+            const reorderItems = remaining.map((s, idx) => ({ id: s.id, sequenceOrder: idx + 1 }));
+            reorderSubProcessesMutation.mutate({ processId: variables.id, items: reorderItems });
+          }
+        }
+      }
       setPendingSubAdds([]);
       setPendingSubRemovals(new Set());
       subProcessForm.resetFields();
@@ -342,10 +356,10 @@ export function ProcessesPage() {
     },
   ];
 
-  const existingSubs = (currentDetail?.subProcesses ?? [])
+  const activeSubs = (currentDetail?.subProcesses ?? [])
     .filter((s) => s.isActive && !pendingSubRemovals.has(s.id))
-    .sort((a, b) => a.sequenceOrder - b.sequenceOrder);
-  const activeSubs = existingSubs;
+    .sort((a, b) => a.sequenceOrder - b.sequenceOrder)
+    .map((s, idx) => ({ ...s, sequenceOrder: idx + 1 }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>

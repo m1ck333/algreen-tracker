@@ -36,16 +36,40 @@ export function IncomingOrdersPage() {
       .map((g) => ({ processId: g.processId, processCode: g.processCode, processName: g.processName, sequenceOrder: g.sequenceOrder }));
   }, [incomingGroups]);
 
-  // Auto-select first tab
-  useEffect(() => {
-    if (processTabs.length > 0 && (!activeTab || !processTabs.find((t) => t.processId === activeTab))) {
-      setActiveTab(processTabs[0].processId);
+  // Map orderItemProcessId → process info for display on cards
+  const itemProcessInfoMap = useMemo(() => {
+    const map = new Map<string, { processCode: string; processName: string }>();
+    if (incomingGroups) {
+      for (const g of incomingGroups) {
+        for (const item of g.items) {
+          map.set(item.orderItemProcessId, { processCode: g.processCode, processName: g.processName });
+        }
+      }
     }
-  }, [processTabs, activeTab]);
+    return map;
+  }, [incomingGroups]);
 
-  // Get items for current tab
+  // Count per process tab
+  const processItemCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    if (incomingGroups) {
+      for (const g of incomingGroups) {
+        map.set(g.processId, g.items.length);
+      }
+    }
+    return map;
+  }, [incomingGroups]);
+
+  // Get items: null = show all, otherwise filter by tab
   const incoming = useMemo(() => {
-    if (!activeTab || !incomingGroups) return [];
+    if (!incomingGroups) return [];
+    if (!activeTab) {
+      return incomingGroups
+        .slice()
+        .sort((a, b) => a.sequenceOrder - b.sequenceOrder)
+        .flatMap((g) => g.items)
+        .sort((a, b) => a.priority - b.priority);
+    }
     return incomingGroups.find((g) => g.processId === activeTab)?.items ?? [];
   }, [incomingGroups, activeTab]);
 
@@ -67,11 +91,6 @@ export function IncomingOrdersPage() {
     }
   }, [highlightId, incoming]);
 
-  // Reset visible count when switching tabs
-  useEffect(() => {
-    setVisibleCount(10);
-    setExpandedItemId(null);
-  }, [activeTab]);
 
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
@@ -138,21 +157,36 @@ export function IncomingOrdersPage() {
       </p>
 
       {/* Process Tabs */}
-      {processTabs.length > 1 && (
+      {processTabs.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {processTabs.map((tab) => (
-            <button
-              key={tab.processId}
-              onClick={() => setActiveTab(tab.processId)}
-              className={`px-4 py-2 rounded-xl text-tablet-sm font-semibold whitespace-nowrap transition-colors ${
-                activeTab === tab.processId
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-white text-gray-600 border border-gray-200 active:bg-gray-50'
-              }`}
-            >
-              {tab.processCode} - {tab.processName}
-            </button>
-          ))}
+          <button
+            onClick={() => { setActiveTab(null); setVisibleCount(10); setExpandedItemId(null); }}
+            className={`px-4 py-2 rounded-xl text-tablet-sm font-semibold whitespace-nowrap transition-colors sticky left-0 z-10 ${
+              activeTab === null
+                ? 'bg-primary-500 text-white'
+                : 'bg-white text-gray-600 border border-gray-200 active:bg-gray-50'
+            }`}
+          >
+            {t('incoming.all')} ({incomingGroups?.reduce((sum, g) => sum + g.items.length, 0) ?? 0})
+          </button>
+          {processTabs.map((tab) => {
+            const count = processItemCounts.get(tab.processId) ?? 0;
+            return (
+              <button
+                key={tab.processId}
+                onClick={() => { setActiveTab(tab.processId); setVisibleCount(10); setExpandedItemId(null); }}
+                className={`px-4 py-2 rounded-xl text-tablet-sm font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === tab.processId
+                    ? 'bg-primary-500 text-white'
+                    : count === 0
+                      ? 'bg-gray-50 text-gray-300 border border-gray-100'
+                      : 'bg-white text-gray-600 border border-gray-200 active:bg-gray-50'
+                }`}
+              >
+                {tab.processCode} - {tab.processName} ({count})
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -166,6 +200,7 @@ export function IncomingOrdersPage() {
             <IncomingCard
               key={item.orderItemProcessId}
               item={item}
+              processInfo={itemProcessInfoMap.get(item.orderItemProcessId)}
               isExpanded={expandedItemId === item.orderItemProcessId}
               isHighlighted={highlightedId === item.orderItemProcessId}
               onToggle={() =>
@@ -194,6 +229,7 @@ export function IncomingOrdersPage() {
 
 function IncomingCard({
   item,
+  processInfo,
   isExpanded,
   isHighlighted,
   onToggle,
@@ -202,6 +238,7 @@ function IncomingCard({
   tEnum,
 }: {
   item: TabletIncomingDto;
+  processInfo?: { processCode: string; processName: string };
   isExpanded: boolean;
   isHighlighted: boolean;
   onToggle: () => void;
@@ -234,17 +271,18 @@ function IncomingCard({
     >
       <button onClick={onToggle} className="w-full text-left">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-tablet-lg font-bold">{item.orderNumber}</span>
-            <span className="text-tablet-sm text-gray-500 font-medium">— {item.productName}</span>
+            {processInfo && (
+              <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-tablet-xs font-medium">
+                {processInfo.processCode} — {processInfo.processName}
+              </span>
+            )}
             <span className="bg-primary-500 text-white px-2 py-0.5 rounded-full text-tablet-xs font-medium">
               P{item.priority}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-tablet-sm font-medium">
-              {t('incoming.incoming')}
-            </span>
             <svg
               width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
