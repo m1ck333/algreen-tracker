@@ -12,7 +12,7 @@ import type {
 import { apiClient } from '../axios-instance';
 
 export const productCategoriesApi = {
-  getAll(params: { tenantId: string; isActive?: boolean; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string }) {
+  getAll(params: { tenantId: string; isActive?: boolean; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string; sortBy?: string; sortDirection?: string }) {
     return apiClient.get<PagedResult<ProductCategoryDto>>('/product-categories', { params });
   },
 
@@ -29,7 +29,15 @@ export const productCategoriesApi = {
   },
 
   deactivate(id: string) {
+    return apiClient.delete(`/product-categories/${id}`, { params: { forceDeactivate: true } });
+  },
+
+  smartDelete(id: string) {
     return apiClient.delete(`/product-categories/${id}`);
+  },
+
+  forceDelete(id: string) {
+    return apiClient.delete(`/product-categories/${id}`, { params: { forceDelete: true } });
   },
 
   activate(id: string) {

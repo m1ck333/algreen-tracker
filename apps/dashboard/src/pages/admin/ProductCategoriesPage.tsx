@@ -96,7 +96,7 @@ export function ProductCategoriesPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [form] = Form.useForm();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { t } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
@@ -112,6 +112,8 @@ export function ProductCategoriesPage() {
   const [dateTo, setDateTo] = useState<dayjs.Dayjs | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>('name');
+  const [sortDirection, setSortDirection] = useState<string | undefined>('asc');
 
   useEffect(() => { setPage(1); }, [debouncedSearch, isActiveFilter, dateFrom, dateTo]);
 
@@ -146,7 +148,7 @@ export function ProductCategoriesPage() {
 
   // ─── Queries ──────────────────────────────────────────
   const { data: pagedResult, isLoading } = useQuery({
-    queryKey: ['product-categories', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize],
+    queryKey: ['product-categories', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => productCategoriesApi.getAll({
       tenantId: tenantId!,
       search: debouncedSearch || undefined,
@@ -155,6 +157,8 @@ export function ProductCategoriesPage() {
       createdTo: dateTo?.format('YYYY-MM-DD'),
       page,
       pageSize,
+      sortBy,
+      sortDirection,
     }).then((r) => r.data),
     enabled: !!tenantId,
   });
@@ -237,9 +241,24 @@ export function ProductCategoriesPage() {
     onError: (err) => message.error(getTranslatedError(err, t, t('admin.productCategories.updateFailed'))),
   });
 
-  const deactivateMutation = useMutation({
-    mutationFn: () => productCategoriesApi.deactivate(detailId!),
-    onSuccess: () => {
+  const deleteMutation = useMutation({
+    mutationFn: (action: 'check' | 'deactivate' | 'forceDelete') => {
+      if (action === 'deactivate') return productCategoriesApi.deactivate(detailId!);
+      if (action === 'forceDelete') return productCategoriesApi.forceDelete(detailId!);
+      return productCategoriesApi.smartDelete(detailId!);
+    },
+    onSuccess: (resp, action) => {
+      if (action === 'check' && resp.data && typeof resp.data === 'object' && 'hasReferences' in resp.data) {
+        const count = (resp.data as { referencedOrderCount: number }).referencedOrderCount;
+        modal.confirm({
+          title: t('admin.productCategories.hasReferences'),
+          content: t('admin.productCategories.hasReferencesDetail', { count }),
+          okText: t('admin.productCategories.deactivateInstead'),
+          cancelText: t('common:actions.cancel'),
+          onOk: () => deleteMutation.mutate('deactivate'),
+        });
+        return;
+      }
       invalidate();
       setDetailId(null);
       message.success(t('admin.productCategories.deactivated'));
@@ -332,7 +351,8 @@ export function ProductCategoriesPage() {
     {
       title: t('common:labels.name'),
       dataIndex: 'name',
-      sorter: (a: ProductCategoryDto, b: ProductCategoryDto) => a.name.localeCompare(b.name),
+      sorter: true,
+      sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     { title: t('common:labels.description'), dataIndex: 'description', ellipsis: true },
     {
@@ -340,7 +360,8 @@ export function ProductCategoriesPage() {
       dataIndex: 'createdAt',
       width: 150,
       render: (d: string) => d ? dayjs(d).format('DD.MM.YYYY.') : '—',
-      sorter: (a: ProductCategoryDto, b: ProductCategoryDto) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''),
+      sorter: true,
+      sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.status'),
@@ -552,8 +573,24 @@ export function ProductCategoriesPage() {
             current: page,
             pageSize,
             total: pagedResult?.totalCount,
-            onChange: (p, ps) => { setPage(p); setPageSize(ps); },
             showSizeChanger: true,
+          }}
+          onChange={(pagination, _filters, sorter) => {
+            if (pagination.pageSize !== pageSize) {
+              setPageSize(pagination.pageSize ?? 20);
+              setPage(1);
+              return;
+            }
+            const s = Array.isArray(sorter) ? sorter[0] : sorter;
+            const newField = (s?.order ? (s.field as string) : undefined) ?? 'name';
+            const newDir = (s?.order === 'descend' ? 'desc' : s?.order === 'ascend' ? 'asc' : undefined) ?? 'asc';
+            if (newField !== sortBy || newDir !== sortDirection) {
+              setSortBy(newField);
+              setSortDirection(newDir);
+              setPage(1);
+              return;
+            }
+            if (pagination.current !== page) setPage(pagination.current ?? 1);
           }}
           onRow={(record) => ({ onClick: () => setDetailId(record.id), style: { cursor: 'pointer' } })}
         />
@@ -584,11 +621,11 @@ export function ProductCategoriesPage() {
             {!isCreating && detail?.isActive && (
               <Popconfirm
                 title={t('admin.productCategories.deactivateConfirm')}
-                onConfirm={() => deactivateMutation.mutate()}
+                onConfirm={() => deleteMutation.mutate('check')}
                 okText={t('common:actions.confirm')}
                 cancelText={t('common:actions.no')}
               >
-                <Button danger loading={deactivateMutation.isPending}>
+                <Button danger loading={deleteMutation.isPending}>
                   {t('admin.productCategories.deactivate')}
                 </Button>
               </Popconfirm>

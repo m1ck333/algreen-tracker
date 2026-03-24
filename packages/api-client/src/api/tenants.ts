@@ -7,7 +7,7 @@ import type {
 import { apiClient } from '../axios-instance';
 
 export const tenantsApi = {
-  getAll(params?: { isActive?: boolean; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string }) {
+  getAll(params?: { isActive?: boolean; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string; sortBy?: string; sortDirection?: string }) {
     return apiClient.get<PagedResult<TenantDto>>('/tenants', { params });
   },
 

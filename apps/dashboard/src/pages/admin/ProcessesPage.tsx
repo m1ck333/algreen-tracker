@@ -88,7 +88,7 @@ export function ProcessesPage() {
   const [createForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [subProcessForm] = Form.useForm();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { t } = useTranslation('dashboard');
 
   // ─── Filter & Pagination State ──────────────────────────
@@ -99,6 +99,8 @@ export function ProcessesPage() {
   const [dateTo, setDateTo] = useState<dayjs.Dayjs | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>('sequenceOrder');
+  const [sortDirection, setSortDirection] = useState<string | undefined>('asc');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
   const { guardedClose: guardedCreateClose, onValuesChange: onCreateValuesChange } = useUnsavedChanges(createOpen);
@@ -113,7 +115,7 @@ export function ProcessesPage() {
   const [addSubOrder, setAddSubOrder] = useState<number | undefined>(1);
 
   const { data: pagedResult, isLoading } = useQuery({
-    queryKey: ['processes', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize],
+    queryKey: ['processes', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => processesApi.getAll({
       tenantId: tenantId!,
       search: debouncedSearch || undefined,
@@ -122,6 +124,8 @@ export function ProcessesPage() {
       createdTo: dateTo?.format('YYYY-MM-DD'),
       page,
       pageSize,
+      sortBy,
+      sortDirection,
     }).then((r) => r.data),
     enabled: !!tenantId,
   });
@@ -203,9 +207,24 @@ export function ProcessesPage() {
     onError: (err) => message.error(getTranslatedError(err, t, t('admin.processes.updateFailed'))),
   });
 
-  const deactivateMutation = useMutation({
-    mutationFn: (id: string) => processesApi.deactivate(id),
-    onSuccess: () => {
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'check' | 'deactivate' | 'forceDelete' }) => {
+      if (action === 'deactivate') return processesApi.deactivate(id);
+      if (action === 'forceDelete') return processesApi.forceDelete(id);
+      return processesApi.smartDelete(id);
+    },
+    onSuccess: (resp, { id, action }) => {
+      if (action === 'check' && resp.data && typeof resp.data === 'object' && 'hasReferences' in resp.data) {
+        const count = (resp.data as { referencedOrderCount: number }).referencedOrderCount;
+        modal.confirm({
+          title: t('admin.processes.hasReferences'),
+          content: t('admin.processes.hasReferencesDetail', { count }),
+          okText: t('admin.processes.deactivateInstead'),
+          cancelText: t('common:actions.cancel'),
+          onOk: () => deleteMutation.mutate({ id, action: 'deactivate' }),
+        });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ['processes'] });
       setDetailProcess(null);
       message.success(t('admin.processes.deactivated'));
@@ -277,7 +296,7 @@ export function ProcessesPage() {
 
     // Optimistic update
     queryClient.setQueryData(
-      ['processes', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize],
+      ['processes', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
       { ...pagedResult, items: reordered.map((item, idx) => ({ ...item, sequenceOrder: idx + 1 })) },
     );
 
@@ -296,7 +315,7 @@ export function ProcessesPage() {
     const updates = reordered.map((sub, idx) => ({ id: sub.id, sequenceOrder: idx + 1 }));
 
     // Optimistic update
-    const queryKey = ['processes', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize];
+    const queryKey = ['processes', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection];
     queryClient.setQueryData(queryKey, {
       ...pagedResult,
       items: pagedResult.items.map((p) =>
@@ -319,19 +338,21 @@ export function ProcessesPage() {
     {
       title: t('common:labels.code'),
       dataIndex: 'code',
-      sorter: (a: ProcessDto, b: ProcessDto) => a.code.localeCompare(b.code),
+      sorter: true,
+      sortOrder: sortBy === 'code' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.name'),
       dataIndex: 'name',
-      sorter: (a: ProcessDto, b: ProcessDto) => a.name.localeCompare(b.name),
+      sorter: true,
+      sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('admin.processes.sequenceOrder'),
       dataIndex: 'sequenceOrder',
       width: 100,
-      sorter: (a: ProcessDto, b: ProcessDto) => a.sequenceOrder - b.sequenceOrder,
-      defaultSortOrder: 'ascend' as const,
+      sorter: true,
+      sortOrder: sortBy === 'sequenceOrder' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('admin.processes.subProcesses'),
@@ -344,7 +365,8 @@ export function ProcessesPage() {
       dataIndex: 'createdAt',
       width: 150,
       render: (d: string) => d ? dayjs(d).format('DD.MM.YYYY.') : '—',
-      sorter: (a: ProcessDto, b: ProcessDto) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''),
+      sorter: true,
+      sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.status'),
@@ -419,8 +441,24 @@ export function ProcessesPage() {
                 current: page,
                 pageSize,
                 total: pagedResult?.totalCount,
-                onChange: (p, ps) => { setPage(p); setPageSize(ps); },
                 showSizeChanger: true,
+              }}
+              onChange={(pagination, _filters, sorter) => {
+                if (pagination.pageSize !== pageSize) {
+                  setPageSize(pagination.pageSize ?? 20);
+                  setPage(1);
+                  return;
+                }
+                const s = Array.isArray(sorter) ? sorter[0] : sorter;
+                const newField = (s?.order ? (s.field as string) : undefined) ?? 'sequenceOrder';
+                const newDir = (s?.order === 'descend' ? 'desc' : s?.order === 'ascend' ? 'asc' : undefined) ?? 'asc';
+                if (newField !== sortBy || newDir !== sortDirection) {
+                  setSortBy(newField);
+                  setSortDirection(newDir);
+                  setPage(1);
+                  return;
+                }
+                if (pagination.current !== page) setPage(pagination.current ?? 1);
               }}
               onRow={(record) => ({
                 onClick: () => openDetail(record),
@@ -529,9 +567,9 @@ export function ProcessesPage() {
                 title={t('admin.processes.deactivateConfirm')}
                 okText={t('common:actions.confirm')}
                 cancelText={t('common:actions.no')}
-                onConfirm={() => deactivateMutation.mutate(currentDetail!.id)}
+                onConfirm={() => deleteMutation.mutate({ id: currentDetail!.id, action: 'check' })}
               >
-                <Button danger loading={deactivateMutation.isPending}>{t('admin.processes.deactivate')}</Button>
+                <Button danger loading={deleteMutation.isPending}>{t('admin.processes.deactivate')}</Button>
               </Popconfirm>
             ) : currentDetail && (
               <Popconfirm

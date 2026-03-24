@@ -55,11 +55,13 @@ export function SpecialRequestTypesPage() {
   const [dateTo, setDateTo] = useState<dayjs.Dayjs | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>('code');
+  const [sortDirection, setSortDirection] = useState<string | undefined>('asc');
 
   useEffect(() => { setPage(1); }, [debouncedSearch, isActiveFilter, dateFrom, dateTo]);
 
   const { data: pagedResult, isLoading } = useQuery({
-    queryKey: ['special-request-types', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize],
+    queryKey: ['special-request-types', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => specialRequestTypesApi.getAll({
       tenantId: tenantId!,
       search: debouncedSearch || undefined,
@@ -68,6 +70,8 @@ export function SpecialRequestTypesPage() {
       createdTo: dateTo?.format('YYYY-MM-DD'),
       page,
       pageSize,
+      sortBy,
+      sortDirection,
     }).then((r) => r.data),
     enabled: !!tenantId,
   });
@@ -183,12 +187,14 @@ export function SpecialRequestTypesPage() {
     {
       title: t('common:labels.code'),
       dataIndex: 'code',
-      sorter: (a: SpecialRequestTypeDto, b: SpecialRequestTypeDto) => a.code.localeCompare(b.code),
+      sorter: true,
+      sortOrder: sortBy === 'code' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.name'),
       dataIndex: 'name',
-      sorter: (a: SpecialRequestTypeDto, b: SpecialRequestTypeDto) => a.name.localeCompare(b.name),
+      sorter: true,
+      sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     { title: t('common:labels.description'), dataIndex: 'description', ellipsis: true },
     {
@@ -196,7 +202,8 @@ export function SpecialRequestTypesPage() {
       dataIndex: 'createdAt',
       width: 150,
       render: (d: string) => d ? dayjs(d).format('DD.MM.YYYY.') : '—',
-      sorter: (a: SpecialRequestTypeDto, b: SpecialRequestTypeDto) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''),
+      sorter: true,
+      sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.status'),
@@ -278,8 +285,24 @@ export function SpecialRequestTypesPage() {
             current: page,
             pageSize,
             total: pagedResult?.totalCount,
-            onChange: (p, ps) => { setPage(p); setPageSize(ps); },
             showSizeChanger: true,
+          }}
+          onChange={(pagination, _filters, sorter) => {
+            if (pagination.pageSize !== pageSize) {
+              setPageSize(pagination.pageSize ?? 20);
+              setPage(1);
+              return;
+            }
+            const s = Array.isArray(sorter) ? sorter[0] : sorter;
+            const newField = (s?.order ? (s.field as string) : undefined) ?? 'code';
+            const newDir = (s?.order === 'descend' ? 'desc' : s?.order === 'ascend' ? 'asc' : undefined) ?? 'asc';
+            if (newField !== sortBy || newDir !== sortDirection) {
+              setSortBy(newField);
+              setSortDirection(newDir);
+              setPage(1);
+              return;
+            }
+            if (pagination.current !== page) setPage(pagination.current ?? 1);
           }}
           onRow={(record) => ({
             onClick: () => openDetail(record),

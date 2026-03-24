@@ -45,6 +45,8 @@ export function ChangeRequestsPage() {
   const [dateTo, setDateTo] = useState<dayjs.Dayjs | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>('createdAt');
+  const [sortDirection, setSortDirection] = useState<string | undefined>('desc');
   const queryClient = useQueryClient();
   const { message } = App.useApp();
   const { t } = useTranslation('dashboard');
@@ -56,7 +58,7 @@ export function ChangeRequestsPage() {
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, dateFrom, dateTo]);
 
   const { data: pagedResult, isLoading } = useQuery({
-    queryKey: ['change-requests', tenantId, statusFilter, debouncedSearch, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize],
+    queryKey: ['change-requests', tenantId, statusFilter, debouncedSearch, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => changeRequestsApi.getAll({
       tenantId: tenantId!,
       status: statusFilter,
@@ -65,6 +67,8 @@ export function ChangeRequestsPage() {
       createdTo: dateTo?.format('YYYY-MM-DD'),
       page,
       pageSize,
+      sortBy,
+      sortDirection,
     }).then((r) => r.data),
     enabled: !!tenantId,
   });
@@ -117,7 +121,8 @@ export function ChangeRequestsPage() {
       title: t('common:labels.description'),
       dataIndex: 'description',
       ellipsis: true,
-      sorter: (a: ChangeRequestDto, b: ChangeRequestDto) => (a.description ?? '').localeCompare(b.description ?? ''),
+      sorter: true,
+      sortOrder: sortBy === 'description' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('changeRequests.responseNote'),
@@ -133,8 +138,8 @@ export function ChangeRequestsPage() {
       title: t('common:labels.created'),
       dataIndex: 'createdAt',
       width: 150,
-      sorter: (a: ChangeRequestDto, b: ChangeRequestDto) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
-      defaultSortOrder: 'descend' as const,
+      sorter: true,
+      sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
       render: (d: string) => dayjs(d).format('DD.MM.YYYY.'),
     },
     {
@@ -142,7 +147,8 @@ export function ChangeRequestsPage() {
       dataIndex: 'updatedAt',
       width: 150,
       render: (d: string | null) => d ? dayjs(d).format('DD.MM.YYYY.') : '—',
-      sorter: (a: ChangeRequestDto, b: ChangeRequestDto) => (a.updatedAt ?? '').localeCompare(b.updatedAt ?? ''),
+      sorter: true,
+      sortOrder: sortBy === 'updatedAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.actions'),
@@ -234,8 +240,24 @@ export function ChangeRequestsPage() {
             current: page,
             pageSize,
             total: pagedResult?.totalCount,
-            onChange: (p, ps) => { setPage(p); setPageSize(ps); },
             showSizeChanger: true,
+          }}
+          onChange={(pagination, _filters, sorter) => {
+            if (pagination.pageSize !== pageSize) {
+              setPageSize(pagination.pageSize ?? 20);
+              setPage(1);
+              return;
+            }
+            const s = Array.isArray(sorter) ? sorter[0] : sorter;
+            const newField = (s?.order ? (s.field as string) : undefined) ?? 'createdAt';
+            const newDir = (s?.order === 'descend' ? 'desc' : s?.order === 'ascend' ? 'asc' : undefined) ?? 'desc';
+            if (newField !== sortBy || newDir !== sortDirection) {
+              setSortBy(newField);
+              setSortDirection(newDir);
+              setPage(1);
+              return;
+            }
+            if (pagination.current !== page) setPage(pagination.current ?? 1);
           }}
         />
       </div>

@@ -20,6 +20,8 @@ export interface OrdersQuery {
   dateTo?: string;
   page?: number;
   pageSize?: number;
+  sortBy?: string;
+  sortDirection?: string;
 }
 
 export const ordersApi = {

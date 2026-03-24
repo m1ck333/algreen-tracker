@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Typography, Table, Button, Space, Select, Tag, Drawer, Form, Input,
   InputNumber, DatePicker, App, Row, Col, Spin, Popconfirm, Divider,
-  Tooltip, Progress, Statistic, Upload, List, Modal, Card,
+  Tooltip, Progress, Statistic, Upload, List, Modal, Card, Dropdown,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined, UndoOutlined, UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -14,7 +14,7 @@ import {
   useCreateOrder, useOrder, useActivateOrder,
   useUpdateOrder, useCancelOrder, usePauseOrder, useResumeOrder, useReopenOrder,
 } from '../../hooks/useOrders';
-import { productCategoriesApi, processesApi, ordersApi, specialRequestTypesApi } from '@algreen/api-client';
+import { productCategoriesApi, processesApi, ordersApi, specialRequestTypesApi, processWorkflowApi } from '@algreen/api-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { StatusBadge } from '../../components/StatusBadge';
 import { OrderAttachments, type OrderAttachmentsHandle } from '../../components/OrderAttachments';
@@ -127,9 +127,11 @@ function getDeadlineLevel(
 
 function formatDurationSec(totalSec: number): string {
   if (totalSec <= 0) return '';
-  const mins = Math.ceil(totalSec / 60);
-  if (mins >= 60) return `${Math.floor(mins / 60)}h ${mins % 60}min`;
-  return `${mins} min`;
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}min ${s}s`;
+  return `${m}min ${s}s`;
 }
 
 function ProcessCell({
@@ -291,11 +293,16 @@ function ItemProcessBar({
   item,
   processMap,
   tEnum,
+  onRestart,
+  canRestart,
 }: {
   item: OrderItemDto;
   processMap: Map<string, ProcessDto>;
   tEnum: (enumName: string, value: string) => string;
+  onRestart?: (orderItemProcessId: string, resetTime: boolean) => void;
+  canRestart?: boolean;
 }) {
+  const { t } = useTranslation('dashboard');
   const sorted = [...item.processes]
     .filter((p) => p.status !== ProcessStatus.Withdrawn)
     .sort((a, b) => {
@@ -311,32 +318,50 @@ function ItemProcessBar({
         const color = processStatusColors[proc.status];
         const statusLabel = tEnum('ProcessStatus', proc.status);
         return (
-          <Tooltip
-            key={proc.id}
-            title={
-              <div>
-                <div><b>{process?.name ?? proc.processId}</b></div>
-                <div>{statusLabel}</div>
-                {(proc.complexity || proc.totalDurationMinutes > 0) && (
-                  <div>{proc.complexity ?? ''}{proc.totalDurationMinutes > 0 ? `${proc.complexity ? ' · ' : ''}${formatDurationSec(proc.totalDurationMinutes)}` : ''}</div>
-                )}
+          canRestart && proc.status === ProcessStatus.Completed && onRestart ? (
+            <Dropdown
+              key={proc.id}
+              trigger={['click']}
+              menu={{
+                items: [
+                  { key: 'keep', label: t('orders.restartKeepTime'), onClick: () => onRestart(proc.id, false) },
+                  { key: 'reset', label: t('orders.restartResetTime'), onClick: () => onRestart(proc.id, true) },
+                ],
+              }}
+            >
+              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div>{statusLabel}</div>{proc.totalDurationMinutes > 0 && <div>{formatDurationSec(proc.totalDurationMinutes)}</div>}</div>}>
+                <div style={{
+                  padding: '2px 6px', borderRadius: 4, backgroundColor: color,
+                  border: '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
+                  color: '#fff', cursor: 'pointer', lineHeight: '16px',
+                }}>
+                  {process?.code ?? '?'}{proc.complexity ? <span style={{ opacity: 0.85 }}> {proc.complexity}</span> : null}
+                </div>
+              </Tooltip>
+            </Dropdown>
+          ) : (
+            <Tooltip
+              key={proc.id}
+              title={
+                <div>
+                  <div><b>{process?.name ?? proc.processId}</b></div>
+                  <div>{statusLabel}</div>
+                  {(proc.complexity || proc.totalDurationMinutes > 0) && (
+                    <div>{proc.complexity ?? ''}{proc.totalDurationMinutes > 0 ? `${proc.complexity ? ' · ' : ''}${formatDurationSec(proc.totalDurationMinutes)}` : ''}</div>
+                  )}
+                </div>
+              }
+            >
+              <div style={{
+                padding: '2px 6px', borderRadius: 4, backgroundColor: color,
+                border: '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
+                color: proc.status === ProcessStatus.Pending || proc.status === ProcessStatus.Withdrawn ? '#666' : '#fff',
+                cursor: 'default', lineHeight: '16px',
+              }}>
+                {process?.code ?? '?'}{proc.complexity ? <span style={{ opacity: 0.85 }}> {proc.complexity}</span> : null}
               </div>
-            }
-          >
-            <div style={{
-              padding: '2px 6px',
-              borderRadius: 4,
-              backgroundColor: color,
-              border: '1px solid rgba(0,0,0,0.1)',
-              fontSize: 11,
-              fontWeight: 500,
-              color: proc.status === ProcessStatus.Pending || proc.status === ProcessStatus.Withdrawn ? '#666' : '#fff',
-              cursor: 'default',
-              lineHeight: '16px',
-            }}>
-              {process?.code ?? '?'}{proc.complexity ? <span style={{ opacity: 0.85 }}> {proc.complexity}</span> : null}
-            </div>
-          </Tooltip>
+            </Tooltip>
+          )
         );
       })}
     </div>
@@ -355,6 +380,8 @@ export function OrderListPage() {
   const [dateFrom, setDateFrom] = useState<dayjs.Dayjs | null>(null);
   const [dateTo, setDateTo] = useState<dayjs.Dayjs | null>(null);
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<string | undefined>('priority');
+  const [sortDirection, setSortDirection] = useState<string | undefined>('asc');
   const [pageSize, setPageSize] = useState(() => {
     const saved = localStorage.getItem('orders-pageSize');
     return saved ? Number(saved) : 20;
@@ -368,7 +395,7 @@ export function OrderListPage() {
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, orderTypeFilter, dateFrom, dateTo]);
 
   const { data: masterResult, isLoading } = useQuery({
-    queryKey: ['orders-master-view', tenantId, statusFilter, orderTypeFilter, debouncedSearch, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize],
+    queryKey: ['orders-master-view', tenantId, statusFilter, orderTypeFilter, debouncedSearch, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => ordersApi.getMasterView({
       tenantId: tenantId!,
       status: statusFilter,
@@ -378,6 +405,8 @@ export function OrderListPage() {
       dateTo: dateTo?.format('YYYY-MM-DD'),
       page,
       pageSize,
+      sortBy,
+      sortDirection,
     }).then((r) => r.data),
     enabled: !!tenantId,
   });
@@ -570,19 +599,15 @@ export function OrderListPage() {
         title: t('common:labels.priority'),
         dataIndex: 'priority',
         width: 70,
-        sorter: (a, b) => {
-          const aCompleted = a.status === OrderStatus.Completed || a.status === OrderStatus.Cancelled ? 1 : 0;
-          const bCompleted = b.status === OrderStatus.Completed || b.status === OrderStatus.Cancelled ? 1 : 0;
-          if (aCompleted !== bCompleted) return aCompleted - bCompleted;
-          return a.priority - b.priority;
-        },
-        defaultSortOrder: 'ascend',
+        sorter: true,
+        sortOrder: sortBy === 'priority' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
       },
       {
         title: t('orders.orderNumber'),
         dataIndex: 'orderNumber',
         width: 160,
-        sorter: (a, b) => a.orderNumber.localeCompare(b.orderNumber),
+        sorter: true,
+        sortOrder: sortBy === 'orderNumber' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
         render: (text: string, record: OrderMasterViewDto) => (
           <Space size={4}>
             <span style={{ fontWeight: 500 }}>{text}</span>
@@ -598,7 +623,8 @@ export function OrderListPage() {
         title: t('orders.orderType'),
         dataIndex: 'orderType',
         width: 90,
-        sorter: (a, b) => a.orderType.localeCompare(b.orderType),
+        sorter: true,
+        sortOrder: sortBy === 'orderType' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
         render: (type: OrderType) => (
           <Tag color={orderTypeColors[type]}>{tEnum('OrderType', type)}</Tag>
         ),
@@ -607,10 +633,8 @@ export function OrderListPage() {
         title: t('common:labels.status'),
         dataIndex: 'status',
         width: 110,
-        sorter: (a, b) => {
-          const order: Record<string, number> = { [OrderStatus.Active]: 0, [OrderStatus.Paused]: 1, [OrderStatus.Draft]: 2, [OrderStatus.Cancelled]: 3, [OrderStatus.Completed]: 4 };
-          return (order[a.status] ?? 5) - (order[b.status] ?? 5);
-        },
+        sorter: true,
+        sortOrder: sortBy === 'status' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
         render: (status) => <StatusBadge status={status} />,
       },
       {
@@ -618,13 +642,15 @@ export function OrderListPage() {
         dataIndex: 'createdAt',
         width: 150,
         render: (d: string) => d ? dayjs(d).format('DD.MM.YYYY.') : '—',
-        sorter: (a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''),
+        sorter: true,
+        sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
       },
       {
         title: t('common:labels.deliveryDate'),
         dataIndex: 'deliveryDate',
         width: 110,
-        sorter: (a, b) => dayjs(a.deliveryDate).unix() - dayjs(b.deliveryDate).unix(),
+        sorter: true,
+        sortOrder: sortBy === 'deliveryDate' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
         render: (date: string, record: OrderMasterViewDto) => {
           const level = getDeadlineLevel(date, record.customWarningDays, record.customCriticalDays);
           const isCompleted = record.status === OrderStatus.Completed;
@@ -655,17 +681,24 @@ export function OrderListPage() {
         const statusStr = record.processStatuses[proc.id];
         const status = statusStr ? (statusStr as ProcessStatus) : null;
         // "Ready" = Pending + previous process in this order is Completed (or it's the first)
+        // "Ready" = Pending + all dependencies completed (or no dependencies = ready if first or all prior done)
         let isReady = false;
         if (status === ProcessStatus.Pending && record.status === OrderStatus.Active) {
-          if (idx === 0) {
-            isReady = true;
+          const deps = record.processDependencies?.[proc.id];
+          if (deps && deps.length > 0) {
+            // Has explicit dependencies: ready when ALL dependencies are completed
+            isReady = deps.every((depId) => record.processStatuses[depId] === ProcessStatus.Completed);
           } else {
-            // Find the previous process that exists in this order
-            for (let i = idx - 1; i >= 0; i--) {
-              const prevStatus = record.processStatuses[processList[i].id];
-              if (prevStatus) {
-                isReady = prevStatus === ProcessStatus.Completed;
-                break;
+            // No explicit dependencies: ready if it's the first process in this order, or previous is completed
+            if (idx === 0) {
+              isReady = true;
+            } else {
+              for (let i = idx - 1; i >= 0; i--) {
+                const prevStatus = record.processStatuses[processList[i].id];
+                if (prevStatus) {
+                  isReady = prevStatus === ProcessStatus.Completed;
+                  break;
+                }
               }
             }
           }
@@ -699,7 +732,7 @@ export function OrderListPage() {
     ];
 
     return [...base, ...completionCol, ...processColDefs];
-  }, [processes, statusFilter, t, tEnum]);
+  }, [processes, statusFilter, sortBy, sortDirection, t, tEnum]);
 
   // ─── Drawer detail helpers ─────────────────────────────
 
@@ -803,24 +836,42 @@ export function OrderListPage() {
             onClick: () => setDetailOrderId(record.id),
             style: { cursor: 'pointer' },
           })}
-          onChange={(pagination) => {
-            if (pagination.current !== page) setPage(pagination.current ?? 1);
+          onChange={(pagination, _filters, sorter) => {
             if (pagination.pageSize !== pageSize) {
               const newSize = pagination.pageSize ?? 20;
               setPageSize(newSize);
               localStorage.setItem('orders-pageSize', String(newSize));
               setPage(1);
+              return;
             }
+            const s = Array.isArray(sorter) ? sorter[0] : sorter;
+            const newField = (s?.order ? (s.field as string) : undefined) ?? 'priority';
+            const newDir = (s?.order === 'descend' ? 'desc' : s?.order === 'ascend' ? 'asc' : undefined) ?? 'asc';
+            if (newField !== sortBy || newDir !== sortDirection) {
+              setSortBy(newField);
+              setSortDirection(newDir);
+              setPage(1);
+              return;
+            }
+            if (pagination.current !== page) setPage(pagination.current ?? 1);
           }}
-          rowClassName={(record) => {
-            if (record.status === OrderStatus.Completed) return 'master-row-completed';
-            if (record.status === OrderStatus.Cancelled) return 'master-row-cancelled';
-            const activeItems = (masterResult?.items ?? []).filter((o) => o.status === OrderStatus.Active && o.priority > 0);
-            if (activeItems.length > 0 && record.status === OrderStatus.Active && record.priority > 0) {
-              const maxPri = Math.max(...activeItems.map((o) => o.priority));
-              if (record.priority === maxPri) return 'master-row-last-active';
+          rowClassName={(record, index) => {
+            const classes: string[] = [];
+            if (record.status === OrderStatus.Completed) classes.push('master-row-completed');
+            if (record.status === OrderStatus.Cancelled) classes.push('master-row-cancelled');
+            // Separator between active/paused and other statuses (only when sorting by status)
+            if (sortBy === 'status') {
+              const items = masterResult?.items ?? [];
+              const isActive = record.status === OrderStatus.Active || record.status === OrderStatus.Paused;
+              const nextItem = items[index + 1];
+              if (nextItem) {
+                const nextIsActive = nextItem.status === OrderStatus.Active || nextItem.status === OrderStatus.Paused;
+                if (isActive !== nextIsActive) {
+                  classes.push('master-row-separator');
+                }
+              }
             }
-            return '';
+            return classes.join(' ');
           }}
         />
       </div>
@@ -832,9 +883,8 @@ export function OrderListPage() {
         .master-table .master-row-cancelled td {
           opacity: 0.5;
         }
-        .master-table .master-row-last-active td {
-          background-color: rgba(255, 193, 7, 0.15) !important;
-          border-bottom: 2px solid rgba(255, 152, 0, 0.4) !important;
+        .master-table .master-row-separator td {
+          border-bottom: 3px solid #ff9800 !important;
         }
       `}</style>
 
@@ -901,6 +951,10 @@ export function OrderListPage() {
                     try {
                       if (handle.hasPendingChanges()) await handle.savePending();
                     } catch { /* skip failed attachment saves */ }
+                  }
+                  // Save priority if changed
+                  if (localPriority != null && localPriority !== detailOrder.priority && localPriority > 0) {
+                    await changePriorityMutation.mutateAsync({ id: detailOrder.id, priority: localPriority });
                   }
                   await queryClient.invalidateQueries({ queryKey: ['orders', detailOrder.id] });
                   queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
@@ -1516,7 +1570,20 @@ export function OrderListPage() {
                       )
                     )}
                   >
-                    <ItemProcessBar item={item} processMap={processMap} tEnum={tEnum} />
+                    <ItemProcessBar
+                      item={item} processMap={processMap} tEnum={tEnum}
+                      canRestart={detailOrder.status === OrderStatus.Active && user?.role !== UserRole.SalesManager}
+                      onRestart={async (oipId, resetTime) => {
+                        try {
+                          await processWorkflowApi.restart(oipId, { resetTime });
+                          message.success(t('orders.processRestarted'));
+                          queryClient.invalidateQueries({ queryKey: ['orders', detailOrder.id] });
+                          queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
+                        } catch (err) {
+                          message.error(getTranslatedError(err, t, t('orders.processRestartFailed')));
+                        }
+                      }}
+                    />
 
                     {/* Special Requests */}
                     <div style={{ marginTop: 8 }}>

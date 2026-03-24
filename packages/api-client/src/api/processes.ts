@@ -8,7 +8,7 @@ import type {
 import { apiClient } from '../axios-instance';
 
 export const processesApi = {
-  getAll(params: { tenantId: string; isActive?: boolean; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string }) {
+  getAll(params: { tenantId: string; isActive?: boolean; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string; sortBy?: string; sortDirection?: string }) {
     return apiClient.get<PagedResult<ProcessDto>>('/processes', { params });
   },
 
@@ -33,7 +33,15 @@ export const processesApi = {
   },
 
   deactivate(id: string) {
+    return apiClient.delete(`/processes/${id}`, { params: { forceDeactivate: true } });
+  },
+
+  smartDelete(id: string) {
     return apiClient.delete(`/processes/${id}`);
+  },
+
+  forceDelete(id: string) {
+    return apiClient.delete(`/processes/${id}`, { params: { forceDelete: true } });
   },
 
   activate(id: string) {

@@ -6,7 +6,7 @@ import type {
 import { apiClient } from '../axios-instance';
 
 export const specialRequestTypesApi = {
-  getAll(params: { tenantId: string; isActive?: boolean; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string }) {
+  getAll(params: { tenantId: string; isActive?: boolean; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string; sortBy?: string; sortDirection?: string }) {
     return apiClient.get<PagedResult<SpecialRequestTypeDto>>('/special-request-types', { params });
   },
 

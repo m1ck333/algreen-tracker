@@ -251,12 +251,11 @@ function IncomingCard({
     (new Date(item.deliveryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
   );
 
-  const borderColor =
-    daysUntilDelivery <= 3
-      ? 'border-red-300'
-      : daysUntilDelivery <= 5
-        ? 'border-yellow-300'
-        : 'border-gray-200';
+  const daysColor = daysUntilDelivery <= 3
+    ? 'text-red-600 font-bold'
+    : daysUntilDelivery <= 5
+      ? 'text-yellow-600 font-semibold'
+      : '';
 
   useEffect(() => {
     if (isHighlighted && cardRef.current) {
@@ -267,7 +266,7 @@ function IncomingCard({
   return (
     <div
       ref={cardRef}
-      className={`card border-2 ${borderColor} ${isExpanded ? 'ring-2 ring-primary-300' : ''} ${isHighlighted ? 'animate-highlight-glow' : ''}`}
+      className={`card border-2 border-gray-200 ${isExpanded ? 'ring-2 ring-primary-300' : ''} ${isHighlighted ? 'animate-highlight-glow' : ''}`}
     >
       <button onClick={onToggle} className="w-full text-left">
         <div className="flex items-center justify-between mb-2">
@@ -301,7 +300,7 @@ function IncomingCard({
             {item.productName}
           </span>
           <span>{t('queue.qty', { count: item.quantity })}</span>
-          <span className={daysUntilDelivery <= 3 ? 'text-red-600 font-bold' : ''}>
+          <span className={daysColor}>
             {t('incoming.daysLeft', { count: daysUntilDelivery })}
           </span>
         </div>

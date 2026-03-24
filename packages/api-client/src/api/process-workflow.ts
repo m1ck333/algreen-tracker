@@ -26,6 +26,10 @@ export const processWorkflowApi = {
     return apiClient.post(`/order-item-processes/${id}/complete`);
   },
 
+  restart(id: string, data: { resetTime: boolean }) {
+    return apiClient.post(`/order-item-processes/${id}/restart`, data);
+  },
+
   block(id: string, data: BlockProcessRequest) {
     return apiClient.post(`/order-item-processes/${id}/block`, data);
   },

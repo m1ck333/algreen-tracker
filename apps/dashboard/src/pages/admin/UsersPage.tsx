@@ -59,11 +59,13 @@ export function UsersPage() {
   const [dateTo, setDateTo] = useState<dayjs.Dayjs | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>('lastName');
+  const [sortDirection, setSortDirection] = useState<string | undefined>('asc');
 
   useEffect(() => { setPage(1); }, [debouncedSearch, roleFilter, isActiveFilter, dateFrom, dateTo]);
 
   const { data: pagedResult, isLoading } = useQuery({
-    queryKey: ['users', tenantId, debouncedSearch, roleFilter, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize],
+    queryKey: ['users', tenantId, debouncedSearch, roleFilter, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => usersApi.getAll({
       tenantId: tenantId!,
       search: debouncedSearch || undefined,
@@ -73,6 +75,8 @@ export function UsersPage() {
       createdTo: dateTo?.format('YYYY-MM-DD'),
       page,
       pageSize,
+      sortBy,
+      sortDirection,
     }).then((r) => r.data),
     enabled: !!tenantId,
   });
@@ -163,12 +167,14 @@ export function UsersPage() {
     {
       title: t('common:labels.name'),
       dataIndex: 'fullName',
-      sorter: (a: UserDto, b: UserDto) => a.fullName.localeCompare(b.fullName),
+      sorter: true,
+      sortOrder: sortBy === 'lastName' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.email'),
       dataIndex: 'email',
-      sorter: (a: UserDto, b: UserDto) => a.email.localeCompare(b.email),
+      sorter: true,
+      sortOrder: sortBy === 'email' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.role'),
@@ -202,7 +208,8 @@ export function UsersPage() {
       title: t('common:labels.created'),
       dataIndex: 'createdAt',
       width: 150,
-      sorter: (a: UserDto, b: UserDto) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
+      sorter: true,
+      sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
       render: (d: string) => dayjs(d).format('DD.MM.YYYY.'),
     },
   ];
@@ -270,8 +277,25 @@ export function UsersPage() {
             current: page,
             pageSize,
             total: pagedResult?.totalCount,
-            onChange: (p, ps) => { setPage(p); setPageSize(ps); },
             showSizeChanger: true,
+          }}
+          onChange={(pagination, _filters, sorter) => {
+            if (pagination.pageSize !== pageSize) {
+              setPageSize(pagination.pageSize ?? 20);
+              setPage(1);
+              return;
+            }
+            const s = Array.isArray(sorter) ? sorter[0] : sorter;
+            const rawField = s?.order ? (s.field as string) : undefined;
+            const newField = (rawField === 'fullName' ? 'lastName' : rawField) ?? 'lastName';
+            const newDir = (s?.order === 'descend' ? 'desc' : s?.order === 'ascend' ? 'asc' : undefined) ?? 'asc';
+            if (newField !== sortBy || newDir !== sortDirection) {
+              setSortBy(newField);
+              setSortDirection(newDir);
+              setPage(1);
+              return;
+            }
+            if (pagination.current !== page) setPage(pagination.current ?? 1);
           }}
           onRow={(record) => ({
             onClick: () => openEdit(record),

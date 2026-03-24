@@ -6,7 +6,7 @@ import type {
 import { apiClient } from '../axios-instance';
 
 export const blockRequestsApi = {
-  getAll(params: { tenantId: string; status?: RequestStatus; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string }) {
+  getAll(params: { tenantId: string; status?: RequestStatus; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string; sortBy?: string; sortDirection?: string }) {
     return apiClient.get<PagedResult<BlockRequestDto>>('/block-requests', { params });
   },
 

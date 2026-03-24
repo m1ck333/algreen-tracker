@@ -61,13 +61,15 @@ export function TenantsPage() {
   const [dateTo, setDateTo] = useState<dayjs.Dayjs | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>('name');
+  const [sortDirection, setSortDirection] = useState<string | undefined>('asc');
 
   useEffect(() => { setPage(1); }, [debouncedSearch, isActiveFilter, dateFrom, dateTo]);
 
   const isCreating = drawerOpen && !editTenant;
 
   const { data: pagedResult, isLoading } = useQuery({
-    queryKey: ['tenants', debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize],
+    queryKey: ['tenants', debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => tenantsApi.getAll({
       search: debouncedSearch || undefined,
       isActive: isActiveFilter,
@@ -75,6 +77,8 @@ export function TenantsPage() {
       createdTo: dateTo?.format('YYYY-MM-DD'),
       page,
       pageSize,
+      sortBy,
+      sortDirection,
     }).then((r) => r.data),
   });
 
@@ -185,12 +189,14 @@ export function TenantsPage() {
     {
       title: t('common:labels.name'),
       dataIndex: 'name',
-      sorter: (a: TenantDto, b: TenantDto) => a.name.localeCompare(b.name),
+      sorter: true,
+      sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.code'),
       dataIndex: 'code',
-      sorter: (a: TenantDto, b: TenantDto) => a.code.localeCompare(b.code),
+      sorter: true,
+      sortOrder: sortBy === 'code' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.status'),
@@ -204,7 +210,8 @@ export function TenantsPage() {
       title: t('common:labels.created'),
       dataIndex: 'createdAt',
       width: 150,
-      sorter: (a: TenantDto, b: TenantDto) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
+      sorter: true,
+      sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
       render: (d: string) => dayjs(d).format('DD.MM.YYYY.'),
     },
   ];
@@ -264,8 +271,24 @@ export function TenantsPage() {
             current: page,
             pageSize,
             total: pagedResult?.totalCount,
-            onChange: (p, ps) => { setPage(p); setPageSize(ps); },
             showSizeChanger: true,
+          }}
+          onChange={(pagination, _filters, sorter) => {
+            if (pagination.pageSize !== pageSize) {
+              setPageSize(pagination.pageSize ?? 20);
+              setPage(1);
+              return;
+            }
+            const s = Array.isArray(sorter) ? sorter[0] : sorter;
+            const newField = (s?.order ? (s.field as string) : undefined) ?? 'name';
+            const newDir = (s?.order === 'descend' ? 'desc' : s?.order === 'ascend' ? 'asc' : undefined) ?? 'asc';
+            if (newField !== sortBy || newDir !== sortDirection) {
+              setSortBy(newField);
+              setSortDirection(newDir);
+              setPage(1);
+              return;
+            }
+            if (pagination.current !== page) setPage(pagination.current ?? 1);
           }}
           onRow={(record) => ({
             onClick: () => openEdit(record),

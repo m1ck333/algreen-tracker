@@ -46,6 +46,8 @@ export function SalesDashboard() {
   const { t } = useTranslation('dashboard');
   const { tEnum } = useEnumTranslation();
 
+  const [sortBy, setSortBy] = useState<string | undefined>('priority');
+  const [sortDirection, setSortDirection] = useState<string | undefined>('asc');
   const [createOrderOpen, setCreateOrderOpen] = useState(false);
   const [createCROpen, setCreateCROpen] = useState(false);
   const [crTargetOrder, setCrTargetOrder] = useState<OrderDto | null>(null);
@@ -55,8 +57,8 @@ export function SalesDashboard() {
   const { guardedClose: guardedCRClose, onValuesChange: onCRValuesChange } = useUnsavedChanges(createCROpen);
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
-    queryKey: ['orders', tenantId],
-    queryFn: () => ordersApi.getAll({ tenantId: tenantId! }).then((r) => r.data.items),
+    queryKey: ['orders', tenantId, sortBy, sortDirection],
+    queryFn: () => ordersApi.getAll({ tenantId: tenantId!, sortBy, sortDirection }).then((r) => r.data.items),
     enabled: !!tenantId,
   });
 
@@ -115,7 +117,8 @@ export function SalesDashboard() {
     {
       title: t('orders.orderNumber'),
       dataIndex: 'orderNumber',
-      sorter: (a: OrderDto, b: OrderDto) => a.orderNumber.localeCompare(b.orderNumber),
+      sorter: true,
+      sortOrder: sortBy === 'orderNumber' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('orders.orderType'),
@@ -137,7 +140,8 @@ export function SalesDashboard() {
       title: t('sales.delivery'),
       dataIndex: 'deliveryDate',
       width: 120,
-      sorter: (a: OrderDto, b: OrderDto) => dayjs(a.deliveryDate).unix() - dayjs(b.deliveryDate).unix(),
+      sorter: true,
+      sortOrder: sortBy === 'deliveryDate' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
       render: (d: string) => dayjs(d).format('DD.MM.YYYY.'),
     },
     {
@@ -219,6 +223,15 @@ export function SalesDashboard() {
               size="small"
               scroll={{ x: 'max-content' }}
               columns={orderColumns}
+              onChange={(_pagination, _filters, sorter) => {
+                const s = Array.isArray(sorter) ? sorter[0] : sorter;
+                const newField = (s?.order ? (s.field as string) : undefined) ?? 'priority';
+                const newDir = (s?.order === 'descend' ? 'desc' : s?.order === 'ascend' ? 'asc' : undefined) ?? 'asc';
+                if (newField !== sortBy || newDir !== sortDirection) {
+                  setSortBy(newField);
+                  setSortDirection(newDir);
+                }
+              }}
             />
           </Card>
         </Col>

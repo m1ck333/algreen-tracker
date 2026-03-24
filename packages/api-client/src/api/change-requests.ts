@@ -6,7 +6,7 @@ import type {
 import { apiClient } from '../axios-instance';
 
 export const changeRequestsApi = {
-  getAll(params: { tenantId: string; status?: RequestStatus; requestType?: string; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string }) {
+  getAll(params: { tenantId: string; status?: RequestStatus; requestType?: string; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string; sortBy?: string; sortDirection?: string }) {
     return apiClient.get<PagedResult<ChangeRequestDto>>('/change-requests', { params });
   },
 

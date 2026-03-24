@@ -142,6 +142,8 @@ export interface OrderMasterViewDto {
   processStatuses: Record<string, string>;
   /** Map of processId → total duration in seconds */
   processDurations: Record<string, number>;
+  /** Map of processId → list of processIds it depends on */
+  processDependencies: Record<string, string[]>;
   attachmentCount: number;
   createdAt: string;
 }
@@ -164,6 +166,8 @@ export interface BlockRequestDto {
   orderId: string | null;
   orderNumber: string | null;
   currentProcessStatus: ProcessStatus | null;
+  processId: string | null;
+  processName: string | null;
 }
 
 export interface ChangeRequestDto {

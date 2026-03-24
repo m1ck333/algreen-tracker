@@ -328,15 +328,14 @@ function QueueCard({
   const isInProgress = item.status === ProcessStatus.InProgress;
   const isPaused = isInProgress && activeWork != null && !activeWork.isTimerRunning;
 
-  // Color: urgency takes priority, then started vs non-started
-  const urgencyColor =
-    daysUntilDelivery <= 3
-      ? 'bg-red-100 border-red-300'
-      : daysUntilDelivery <= 5
-        ? 'bg-yellow-50 border-yellow-300'
-        : isInProgress
-          ? 'bg-amber-50 border-l-4 border-amber-400'
-          : 'bg-white border-gray-200';
+  const cardColor = isInProgress
+    ? 'bg-amber-50 border-l-4 border-amber-400'
+    : 'bg-white border-gray-200';
+  const daysColor = daysUntilDelivery <= 3
+    ? 'text-red-600 font-bold'
+    : daysUntilDelivery <= 5
+      ? 'text-yellow-600 font-semibold'
+      : '';
 
   useEffect(() => {
     if (isHighlighted && cardRef.current) {
@@ -345,7 +344,7 @@ function QueueCard({
   }, [isHighlighted]);
 
   return (
-    <div ref={cardRef} className={`card border-2 ${urgencyColor} ${isExpanded ? 'ring-2 ring-primary-300' : ''} ${isHighlighted ? 'animate-highlight-glow' : ''}`}>
+    <div ref={cardRef} className={`card border-2 ${cardColor} ${isExpanded ? 'ring-2 ring-primary-300' : ''} ${isHighlighted ? 'animate-highlight-glow' : ''}`}>
       <button onClick={onToggle} className="w-full text-left">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 flex-wrap">
@@ -393,7 +392,7 @@ function QueueCard({
           </span>
           <span>{t('queue.qty', { count: item.quantity })}</span>
           {item.complexity && <span>{tEnum('ComplexityType', item.complexity)}</span>}
-          <span className={daysUntilDelivery <= 3 ? 'text-red-600 font-bold' : ''}>
+          <span className={daysColor}>
             {t('queue.daysLeft', { count: daysUntilDelivery })}
           </span>
         </div>
