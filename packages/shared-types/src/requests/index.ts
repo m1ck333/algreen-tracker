@@ -170,6 +170,7 @@ export interface BlockProcessRequest {
 
 export interface UnblockProcessRequest {
   userId: string;
+  resetTime?: boolean;
 }
 
 export interface WithdrawProcessRequest {

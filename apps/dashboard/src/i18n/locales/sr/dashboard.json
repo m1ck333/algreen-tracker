@@ -90,6 +90,10 @@
     "addItemFailed": "Dodavanje stavke nije uspelo",
     "removeItemFailed": "Uklanjanje stavke nije uspelo",
     "pausedSuccess": "Narudžbina pauzirana",
+    "reactivateTimerTitle": "Procesi sa zabeleženim vremenom",
+    "reactivateTimerDescription": "Sledeći procesi imaju zabeleženo vreme iz prethodnog rada. Izaberite za svaki da li želite da zadržite ili resetujete vreme.",
+    "keepTime": "Zadrži vreme",
+    "resetTime": "Resetuj vreme",
     "processRestarted": "Proces ponovo pokrenut",
     "processRestartFailed": "Ponovno pokretanje procesa nije uspelo",
     "restartKeepTime": "Ponovo pokreni (zadrži vreme)",
@@ -105,6 +109,7 @@
     "reopenConfirm": "Da li ste sigurni da želite ponovo da otvorite ovu narudžbinu?",
     "reopenedSuccess": "Narudžbina ponovo otvorena",
     "reopenFailed": "Greška pri otvaranju narudžbine",
+    "paused": "Pauzirano",
     "pauseOrder": "Pauziraj",
     "resumeOrder": "Nastavi",
     "editOrder": "Izmeni",
@@ -169,6 +174,8 @@
     "unblocked": "Proces odblokiran",
     "unblockFailed": "Deblokiranja procesa nije uspelo",
     "unblockConfirm": "Da li ste sigurni da želite da odblokirate ovaj proces?",
+    "unblockKeepTime": "Odblokiraj (zadrži vreme)",
+    "unblockResetTime": "Odblokiraj (resetuj vreme)",
     "process": "Proces"
   },
   "changeRequests": {

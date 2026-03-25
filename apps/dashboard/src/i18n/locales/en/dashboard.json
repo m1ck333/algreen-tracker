@@ -90,6 +90,10 @@
     "addItemFailed": "Failed to add item",
     "removeItemFailed": "Failed to remove item",
     "pausedSuccess": "Order paused",
+    "reactivateTimerTitle": "Processes with recorded time",
+    "reactivateTimerDescription": "The following processes have recorded time from previous work. Choose for each whether to keep or reset the time.",
+    "keepTime": "Keep time",
+    "resetTime": "Reset time",
     "processRestarted": "Process restarted",
     "processRestartFailed": "Failed to restart process",
     "restartKeepTime": "Restart (keep time)",
@@ -105,6 +109,7 @@
     "reopenConfirm": "Are you sure you want to reopen this cancelled order?",
     "reopenedSuccess": "Order reopened",
     "reopenFailed": "Failed to reopen order",
+    "paused": "Paused",
     "pauseOrder": "Pause",
     "resumeOrder": "Resume",
     "editOrder": "Edit",
@@ -169,6 +174,8 @@
     "unblocked": "Process unblocked",
     "unblockFailed": "Failed to unblock process",
     "unblockConfirm": "Are you sure you want to unblock this process?",
+    "unblockKeepTime": "Unblock (keep time)",
+    "unblockResetTime": "Unblock (reset time)",
     "process": "Process"
   },
   "changeRequests": {

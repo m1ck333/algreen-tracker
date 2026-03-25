@@ -73,13 +73,15 @@ export function IncomingOrdersPage() {
     return incomingGroups.find((g) => g.processId === activeTab)?.items ?? [];
   }, [incomingGroups, activeTab]);
 
-  // Auto-expand and highlight item from notification
+  // Auto-expand and highlight item from notification (run once)
+  const highlightHandled = useRef(false);
   useEffect(() => {
-    if (highlightId && incoming) {
+    if (highlightId && incoming.length && !highlightHandled.current) {
       const idx = incoming.findIndex(
         (i) => i.orderId === highlightId || i.orderItemProcessId === highlightId,
       );
       if (idx >= 0) {
+        highlightHandled.current = true;
         if (idx >= visibleCount) {
           setVisibleCount(idx + 1);
         }

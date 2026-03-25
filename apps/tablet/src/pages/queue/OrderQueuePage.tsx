@@ -183,13 +183,15 @@ export function OrderQueuePage() {
     });
   }, [queueGroups, activeGroups]);
 
-  // Auto-expand and highlight item from notification (expand visibleCount if needed)
+  // Auto-expand and highlight item from notification (run once)
+  const highlightHandled = useRef(false);
   useEffect(() => {
-    if (highlightId && mergedItems.length) {
+    if (highlightId && mergedItems.length && !highlightHandled.current) {
       const idx = mergedItems.findIndex(
         (i) => i.orderId === highlightId || i.orderItemProcessId === highlightId,
       );
       if (idx >= 0) {
+        highlightHandled.current = true;
         if (idx >= visibleCount) {
           setVisibleCount(idx + 1);
         }
@@ -596,35 +598,6 @@ function WorkPanel({
       {/* Order details */}
       {activeWork && (
         <div className="grid grid-cols-2 gap-2 text-tablet-xs">
-          <div className="flex justify-between items-center bg-gray-50 rounded px-3 py-1.5 col-span-2">
-            <span className="text-gray-500">{t('work.product')}</span>
-            <span className="font-semibold flex items-center gap-1.5">
-              {activeWork.productCategoryName && (
-                <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-tablet-xs font-medium">{activeWork.productCategoryName}</span>
-              )}
-              {activeWork.productName}
-            </span>
-          </div>
-          <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5">
-            <span className="text-gray-500">{t('work.priority')}</span>
-            <span className="font-semibold">P{activeWork.priority}</span>
-          </div>
-          <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5">
-            <span className="text-gray-500">{t('work.quantity')}</span>
-            <span className="font-semibold">{activeWork.quantity}</span>
-          </div>
-          <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5">
-            <span className="text-gray-500">{t('work.deliveryDate')}</span>
-            <span className={`font-semibold ${daysUntilDelivery !== null && daysUntilDelivery <= 3 ? 'text-red-600' : ''}`}>
-              {`${daysUntilDelivery}d`}
-            </span>
-          </div>
-          {activeWork.complexity && (
-            <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5">
-              <span className="text-gray-500">{t('work.complexity')}</span>
-              <span className="font-semibold">{tEnum('ComplexityType', activeWork.complexity)}</span>
-            </div>
-          )}
           {activeWork.startedAt && (
             <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5 col-span-2">
               <span className="text-gray-500">{t('work.startedAt')}</span>
@@ -670,11 +643,13 @@ function WorkPanel({
         <div>
           <h3 className="text-tablet-sm font-semibold mb-2">{t('work.subProcesses')}</h3>
           <div className="space-y-2">
-            {[...activeWork.subProcesses].sort((a, b) => (subProcessOrderMap.get(a.subProcessId) ?? 0) - (subProcessOrderMap.get(b.subProcessId) ?? 0)).map((sp) => {
-              const hasInProgress = activeWork.subProcesses.some(
-                (s) => s.status === SubProcessStatus.InProgress,
-              );
-              const canStart = sp.status === SubProcessStatus.Pending && !hasInProgress;
+            {(() => {
+              const sorted = [...activeWork.subProcesses].sort((a, b) => (subProcessOrderMap.get(a.subProcessId) ?? 0) - (subProcessOrderMap.get(b.subProcessId) ?? 0));
+              const hasInProgress = sorted.some((s) => s.status === SubProcessStatus.InProgress);
+              return sorted.map((sp, spIdx) => {
+              // Can start only if: Pending, no other InProgress, and previous sub-process is completed (or it's the first)
+              const prevCompleted = spIdx === 0 || sorted[spIdx - 1].status === SubProcessStatus.Completed || sorted[spIdx - 1].isWithdrawn;
+              const canStart = sp.status === SubProcessStatus.Pending && !hasInProgress && prevCompleted;
               return (
                 <SubProcessRow
                   key={sp.id}
@@ -688,7 +663,7 @@ function WorkPanel({
                   t={t}
                 />
               );
-            })}
+            }); })()}
           </div>
         </div>
       )}

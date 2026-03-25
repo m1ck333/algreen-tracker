@@ -6,6 +6,7 @@ export function useSignalRQueryInvalidation() {
 
   useSignalREvent(SignalREvents.OrderActivated, () => {
     queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
+    queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
     queryClient.invalidateQueries({ queryKey: ['tablet-incoming'] });
   });
 

@@ -339,6 +339,8 @@ export function UsersPage() {
                 <Form.Item name="processIds" label={t('admin.users.process')} rules={[{ required: true }]}>
                   <Select
                     mode="multiple"
+                    showSearch
+                    filterOption={(input, option) => (option?.label as string ?? '').toLowerCase().includes(input.toLowerCase())}
                     options={(processes ?? []).map((p) => ({ label: `${p.code} — ${p.name}`, value: p.id }))}
                     placeholder={t('admin.users.selectProcess')}
                   />
@@ -396,6 +398,8 @@ export function UsersPage() {
                 <Form.Item name="processIds" label={t('admin.users.process')} rules={[{ required: true }]}>
                   <Select
                     mode="multiple"
+                    showSearch
+                    filterOption={(input, option) => (option?.label as string ?? '').toLowerCase().includes(input.toLowerCase())}
                     options={(processes ?? []).map((p) => ({ label: `${p.code} — ${p.name}`, value: p.id }))}
                     placeholder={t('admin.users.selectProcess')}
                   />

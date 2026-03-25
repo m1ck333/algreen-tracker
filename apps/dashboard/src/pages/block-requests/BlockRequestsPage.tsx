@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTableHeight } from '../../hooks/useTableHeight';
-import { Typography, Table, Space, Button, App, Popconfirm, Modal, Input, Select, DatePicker } from 'antd';
+import { Typography, Table, Space, Button, App, Popconfirm, Modal, Input, Select, DatePicker, Dropdown } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -98,10 +98,11 @@ export function BlockRequestsPage() {
   });
 
   const unblockMutation = useMutation({
-    mutationFn: (orderItemProcessId: string) =>
-      processWorkflowApi.unblock(orderItemProcessId, { userId: userId! }),
+    mutationFn: ({ orderItemProcessId, resetTime }: { orderItemProcessId: string; resetTime: boolean }) =>
+      processWorkflowApi.unblock(orderItemProcessId, { userId: userId!, resetTime }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['block-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
       message.success(t('blockRequests.unblocked'));
     },
     onError: (err) => message.error(getTranslatedError(err, t, t('blockRequests.unblockFailed'))),
@@ -158,13 +159,13 @@ export function BlockRequestsPage() {
       width: 150,
       sorter: true,
       sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
-      render: (d: string) => dayjs(d).format('DD.MM.YYYY.'),
+      render: (d: string) => (<div><div>{dayjs(d).format('DD.MM.YYYY.')}</div><div style={{ fontSize: 11, color: '#999' }}>{dayjs(d).format('HH:mm')}</div></div>),
     },
     {
       title: t('common:labels.handledAt'),
       dataIndex: 'updatedAt',
       width: 150,
-      render: (d: string | null) => d ? dayjs(d).format('DD.MM.YYYY.') : '—',
+      render: (d: string | null) => d ? (<div><div>{dayjs(d).format('DD.MM.YYYY.')}</div><div style={{ fontSize: 11, color: '#999' }}>{dayjs(d).format('HH:mm')}</div></div>) : '—',
       sorter: true,
       sortOrder: sortBy === 'updatedAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
@@ -201,20 +202,19 @@ export function BlockRequestsPage() {
         }
         if (record.status === RequestStatus.Approved && record.orderItemProcessId && record.currentProcessStatus === ProcessStatus.Blocked) {
           return (
-            <Popconfirm
-              title={t('blockRequests.unblockConfirm')}
-              okText={t('common:actions.confirm')}
-              cancelText={t('common:actions.no')}
-              onConfirm={() => unblockMutation.mutate(record.orderItemProcessId!)}
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: [
+                  { key: 'keep', label: t('blockRequests.unblockKeepTime'), onClick: () => unblockMutation.mutate({ orderItemProcessId: record.orderItemProcessId!, resetTime: false }) },
+                  { key: 'reset', label: t('blockRequests.unblockResetTime'), onClick: () => unblockMutation.mutate({ orderItemProcessId: record.orderItemProcessId!, resetTime: true }) },
+                ],
+              }}
             >
-              <Button
-                type="primary"
-                size="small"
-                loading={unblockMutation.isPending}
-              >
+              <Button type="primary" size="small" loading={unblockMutation.isPending}>
                 {t('blockRequests.unblock')}
               </Button>
-            </Popconfirm>
+            </Dropdown>
           );
         }
         return null;

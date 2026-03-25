@@ -109,6 +109,8 @@ export interface OrderItemProcessDto {
   startedAt: string | null;
   completedAt: string | null;
   totalDurationMinutes: number;
+  pausedAt: string | null;
+  resumedAt: string | null;
   isWithdrawn: boolean;
   subProcesses: OrderItemSubProcessDto[];
 }
@@ -120,6 +122,8 @@ export interface OrderItemSubProcessDto {
   status: SubProcessStatus;
   totalDurationMinutes: number;
   isWithdrawn: boolean;
+  isTimerRunning: boolean;
+  currentLogStartedAt: string | null;
 }
 
 export interface OrderItemSpecialRequestDto {
@@ -140,8 +144,10 @@ export interface OrderMasterViewDto {
   totalProcesses: number;
   /** Map of processId → aggregated ProcessStatus string */
   processStatuses: Record<string, string>;
-  /** Map of processId → total duration in seconds */
+  /** Map of processId → total duration in seconds (live-calculated) */
   processDurations: Record<string, number>;
+  /** Map of processId → whether any item's process is paused */
+  processPaused: Record<string, boolean>;
   /** Map of processId → list of processIds it depends on */
   processDependencies: Record<string, string[]>;
   attachmentCount: number;

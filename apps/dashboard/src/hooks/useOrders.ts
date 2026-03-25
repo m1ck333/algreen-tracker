@@ -72,7 +72,8 @@ export function useRemoveOrderItem(orderId: string) {
 export function useActivateOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => ordersApi.activate(id),
+    mutationFn: ({ id, resetProcessIds }: { id: string; resetProcessIds?: string[] }) =>
+      ordersApi.activate(id, resetProcessIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });

@@ -74,8 +74,8 @@ export const ordersApi = {
     return apiClient.put<OrderDetailDto>(`/orders/${id}`, data);
   },
 
-  activate(id: string) {
-    return apiClient.post(`/orders/${id}/activate`);
+  activate(id: string, resetProcessIds?: string[]) {
+    return apiClient.post(`/orders/${id}/activate`, resetProcessIds?.length ? { resetProcessIds } : {});
   },
 
   pause(id: string) {

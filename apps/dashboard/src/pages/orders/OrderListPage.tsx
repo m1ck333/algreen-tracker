@@ -134,17 +134,52 @@ function formatDurationSec(totalSec: number): string {
   return `${m}min ${s}s`;
 }
 
+function calcLiveSeconds(proc: { status: string; totalDurationMinutes: number; startedAt: string | null; pausedAt: string | null; resumedAt: string | null; subProcesses?: { totalDurationMinutes: number; status: string; isWithdrawn: boolean; isTimerRunning?: boolean; currentLogStartedAt?: string | null }[] }): number {
+  // For processes with sub-processes, sum sub-process durations + open log elapsed
+  if (proc.subProcesses && proc.subProcesses.length > 0) {
+    return proc.subProcesses
+      .filter((sp) => !sp.isWithdrawn)
+      .reduce((sum, sp) => {
+        let spTime = sp.totalDurationMinutes;
+        if (sp.isTimerRunning && sp.currentLogStartedAt) {
+          spTime += Math.max(0, Math.floor((Date.now() - new Date(sp.currentLogStartedAt).getTime()) / 1000));
+        }
+        return sum + spTime;
+      }, 0);
+  }
+  const saved = proc.totalDurationMinutes;
+  if (proc.status === 'InProgress' && !proc.pausedAt && (proc.startedAt || proc.resumedAt)) {
+    const since = proc.resumedAt ?? proc.startedAt!;
+    const elapsed = Math.floor((Date.now() - new Date(since).getTime()) / 1000);
+    return saved + Math.max(elapsed, 0);
+  }
+  return saved;
+}
+
+function isPaused(proc: { status: string; pausedAt: string | null; subProcesses?: { status: string; isWithdrawn: boolean }[] }): boolean {
+  if (proc.status !== 'InProgress') return false;
+  if (proc.subProcesses && proc.subProcesses.length > 0) {
+    const active = proc.subProcesses.filter((sp) => !sp.isWithdrawn);
+    const anyRunning = active.some((sp) => sp.status === 'InProgress');
+    const allDone = active.every((sp) => sp.status === 'Completed');
+    return !anyRunning && !allDone;
+  }
+  return !!proc.pausedAt;
+}
+
 function ProcessCell({
   status,
   processName,
   isReady,
   duration,
+  paused,
   tEnum,
 }: {
   status: ProcessStatus | null;
   processName: string;
   isReady?: boolean;
   duration?: number;
+  paused?: boolean;
   tEnum: (enumName: string, value: string) => string;
 }) {
   if (status === null) {
@@ -165,7 +200,7 @@ function ProcessCell({
   const timeStr = duration ? formatDurationSec(duration) : '';
 
   return (
-    <Tooltip title={<div><div>{processName}: {label}</div>{timeStr && <div>{timeStr}</div>}</div>}>
+    <Tooltip title={<div><div>{processName}: {paused ? 'Pauzirano' : label}</div>{timeStr && <div>{timeStr}</div>}</div>}>
       <div
         style={{
           width: 24,
@@ -242,15 +277,19 @@ function ProcessTimeline({
           const isCompleted = status === ProcessStatus.Completed;
           const x = i * STEP;
 
-          // Sum totalDurationMinutes (actually seconds) across all items for this process
+          // Calculate live time across all items for this process
           const totalSec = order.items.reduce((sum, item) => {
             const p = item.processes.find((ip) => ip.processId === proc.id);
-            return sum + (p?.totalDurationMinutes ?? 0);
+            return sum + (p ? calcLiveSeconds(p) : 0);
           }, 0);
           const timeStr = formatDurationSec(totalSec);
+          const anyPaused = order.items.some((item) => {
+            const p = item.processes.find((ip) => ip.processId === proc.id);
+            return p && isPaused(p);
+          });
 
           return (
-            <Tooltip key={proc.id} title={<div><div>{proc.name}: {status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable')}</div>{timeStr && <div>{timeStr}</div>}</div>}>
+            <Tooltip key={proc.id} title={<div><div>{proc.name}: {status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable')}{anyPaused ? ` (${t('orders.paused')})` : ''}</div>{timeStr && <div>{timeStr}</div>}</div>}>
               <div style={{ position: 'absolute', left: x, top: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', width: STEP }}>
                 <div style={{
                   width: CIRCLE,
@@ -329,7 +368,7 @@ function ItemProcessBar({
                 ],
               }}
             >
-              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div>{statusLabel}</div>{proc.totalDurationMinutes > 0 && <div>{formatDurationSec(proc.totalDurationMinutes)}</div>}</div>}>
+              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div>{statusLabel}{isPaused(proc) ? ` (${t('orders.paused')})` : ''}</div>{calcLiveSeconds(proc) > 0 && <div>{formatDurationSec(calcLiveSeconds(proc))}</div>}</div>}>
                 <div style={{
                   padding: '2px 6px', borderRadius: 4, backgroundColor: color,
                   border: '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
@@ -346,8 +385,9 @@ function ItemProcessBar({
                 <div>
                   <div><b>{process?.name ?? proc.processId}</b></div>
                   <div>{statusLabel}</div>
-                  {(proc.complexity || proc.totalDurationMinutes > 0) && (
-                    <div>{proc.complexity ?? ''}{proc.totalDurationMinutes > 0 ? `${proc.complexity ? ' · ' : ''}${formatDurationSec(proc.totalDurationMinutes)}` : ''}</div>
+                  {isPaused(proc) && <div style={{ color: '#faad14' }}>{t('orders.paused')}</div>}
+                  {(proc.complexity || calcLiveSeconds(proc) > 0) && (
+                    <div>{proc.complexity ?? ''}{calcLiveSeconds(proc) > 0 ? `${proc.complexity ? ' · ' : ''}${formatDurationSec(calcLiveSeconds(proc))}` : ''}</div>
                   )}
                 </div>
               }
@@ -680,16 +720,20 @@ export function OrderListPage() {
       render: (_: unknown, record: OrderMasterViewDto) => {
         const statusStr = record.processStatuses[proc.id];
         const status = statusStr ? (statusStr as ProcessStatus) : null;
-        // "Ready" = Pending + previous process in this order is Completed (or it's the first)
-        // "Ready" = Pending + all dependencies completed (or no dependencies = ready if first or all prior done)
+        // "Ready" = Pending + all dependencies completed
         let isReady = false;
         if (status === ProcessStatus.Pending && record.status === OrderStatus.Active) {
-          const deps = record.processDependencies?.[proc.id];
+          const allDeps = record.processDependencies ?? {};
+          const hasDependencySystem = Object.keys(allDeps).length > 0;
+          const deps = allDeps[proc.id];
           if (deps && deps.length > 0) {
-            // Has explicit dependencies: ready when ALL dependencies are completed
+            // Has explicit dependencies: ready when ALL are completed
             isReady = deps.every((depId) => record.processStatuses[depId] === ProcessStatus.Completed);
+          } else if (hasDependencySystem) {
+            // Category uses dependencies but this process has none → independent, always ready
+            isReady = true;
           } else {
-            // No explicit dependencies: ready if it's the first process in this order, or previous is completed
+            // No dependency system at all → sequential fallback
             if (idx === 0) {
               isReady = true;
             } else {
@@ -704,7 +748,8 @@ export function OrderListPage() {
           }
         }
         const duration = record.processDurations?.[proc.id] ?? 0;
-        return <ProcessCell status={status} processName={proc.name} isReady={isReady} duration={duration} tEnum={tEnum} />;
+        const processPaused = record.processPaused?.[proc.id] ?? false;
+        return <ProcessCell status={status} processName={proc.name} isReady={isReady} duration={duration} paused={processPaused} tEnum={tEnum} />;
       },
     }));
 
@@ -1316,7 +1361,53 @@ export function OrderListPage() {
                           message.error(t('common:errors.PRIORITY_REQUIRED'));
                           return;
                         }
-                        activateMutation.mutate(detailOrder.id, {
+                        // Check if any processes were previously started (reactivation scenario)
+                        const startedProcesses = detailOrder.items
+                          .flatMap((item) => item.processes)
+                          .filter((proc) => proc.startedAt || proc.totalDurationMinutes > 0);
+                        if (startedProcesses.length > 0) {
+                          // Show per-process reset/keep dialog
+                          const processChoices: Record<string, boolean> = {};
+                          startedProcesses.forEach((p) => { processChoices[p.id] = false; });
+                          modal.confirm({
+                            title: t('orders.reactivateTimerTitle'),
+                            width: 500,
+                            content: (
+                              <div style={{ marginTop: 12 }}>
+                                <p style={{ marginBottom: 12 }}>{t('orders.reactivateTimerDescription')}</p>
+                                {startedProcesses.map((proc) => {
+                                  const process = processMap.get(proc.processId);
+                                  return (
+                                    <div key={proc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
+                                      <span><b>{process?.code ?? '?'}</b> — {process?.name ?? proc.processId} ({formatDurationSec(proc.totalDurationMinutes)})</span>
+                                      <Select
+                                        size="small"
+                                        defaultValue={false}
+                                        style={{ width: 160 }}
+                                        onChange={(val: boolean) => { processChoices[proc.id] = val; }}
+                                        options={[
+                                          { label: t('orders.keepTime'), value: false },
+                                          { label: t('orders.resetTime'), value: true },
+                                        ]}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ),
+                            okText: t('orders.activateOrder'),
+                            cancelText: t('common:actions.cancel'),
+                            onOk: () => {
+                              const resetIds = Object.entries(processChoices).filter(([, v]) => v).map(([k]) => k);
+                              activateMutation.mutate({ id: detailOrder.id, resetProcessIds: resetIds.length > 0 ? resetIds : undefined }, {
+                                onSuccess: () => message.success(t('orders.activatedSuccess')),
+                                onError: (err) => message.error(getTranslatedError(err, t, t('orders.activateFailed'))),
+                              });
+                            },
+                          });
+                          return;
+                        }
+                        activateMutation.mutate({ id: detailOrder.id }, {
                           onSuccess: () => message.success(t('orders.activatedSuccess')),
                           onError: (err) => message.error(getTranslatedError(err, t, t('orders.activateFailed'))),
                         });

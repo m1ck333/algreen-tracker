@@ -93,37 +93,30 @@ export function NotificationsPage() {
     const refId = n.referenceId;
     if (refId) {
       type OrderRef = { orderId: string; orderItemProcessId: string };
-      const getFirstCached = (prefix: string) => {
-        const entries = queryClient.getQueriesData<OrderRef[]>({ queryKey: [prefix] });
-        return entries[0]?.[1];
+      type GroupDto = { items: OrderRef[] };
+      const getCachedItems = (prefix: string): OrderRef[] => {
+        const entries = queryClient.getQueriesData<GroupDto[]>({ queryKey: [prefix] });
+        const groups = entries[0]?.[1];
+        if (!groups) return [];
+        return groups.flatMap((g) => g.items ?? []);
       };
 
-      const match = (items: OrderRef[] | undefined) =>
-        items?.some((i) => i.orderId === refId || i.orderItemProcessId === refId);
+      const match = (items: OrderRef[]) =>
+        items.some((i) => i.orderId === refId || i.orderItemProcessId === refId);
 
-      if (match(getFirstCached('tablet-queue')) || match(getFirstCached('tablet-active'))) {
+      if (match(getCachedItems('tablet-queue')) || match(getCachedItems('tablet-active'))) {
         navigate('/queue', { state });
         return;
       }
-      if (match(getFirstCached('tablet-incoming'))) {
+      if (match(getCachedItems('tablet-incoming'))) {
         navigate('/incoming', { state });
         return;
       }
     }
 
     // Fallback by notification type when cached data doesn't have the item
-    switch (n.type) {
-      case 'OrderActivated':
-        navigate('/incoming', { state });
-        break;
-      case 'ProcessCompleted':
-      case 'ProcessBlocked':
-      case 'BlockRequestApproved':
-      case 'DeadlineWarning':
-      case 'DeadlineCritical':
-        navigate('/queue', { state });
-        break;
-    }
+    // Default to queue for most notification types
+    navigate('/queue', { state });
   };
 
   const handleTabChange = (newTab: 'all' | 'unread') => {
