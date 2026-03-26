@@ -170,6 +170,7 @@ export function OrderQueuePage() {
             specialRequestNames: w.specialRequestNames,
             completedProcessCount: w.completedProcessCount,
             totalProcessCount: w.totalProcessCount,
+            totalDurationMinutes: w.totalDurationMinutes ?? 0,
           });
           seen.add(w.orderItemProcessId);
         }
@@ -403,6 +404,9 @@ function QueueCard({
             <span className="text-gray-500">
               {t('queue.progress', { completed: item.completedProcessCount, total: item.totalProcessCount })}
             </span>
+            {item.totalDurationMinutes > 0 && !activeWork && (
+              <span className="text-gray-500">⏱ {formatDuration(item.totalDurationMinutes)}</span>
+            )}
             <AttachmentIndicator orderId={item.orderId} orderItemId={item.orderItemId} />
           </div>
           {item.specialRequestNames.length > 0 && (
@@ -422,6 +426,7 @@ function QueueCard({
           <WorkPanel
             orderItemProcessId={item.orderItemProcessId}
             activeWork={activeWork}
+            savedDuration={item.totalDurationMinutes}
             subProcessNameMap={subProcessNameMap}
             subProcessOrderMap={subProcessOrderMap}
             userId={userId}
@@ -439,6 +444,7 @@ function QueueCard({
 function WorkPanel({
   orderItemProcessId,
   activeWork,
+  savedDuration,
   subProcessNameMap,
   subProcessOrderMap,
   userId,
@@ -448,6 +454,7 @@ function WorkPanel({
 }: {
   orderItemProcessId: string;
   activeWork?: TabletActiveWorkDto;
+  savedDuration?: number;
   subProcessNameMap: Map<string, string>;
   subProcessOrderMap: Map<string, number>;
   userId: string;
@@ -477,7 +484,7 @@ function WorkPanel({
 
   // Compute elapsed = accumulated duration + current session time
   const elapsed = useMemo(() => {
-    if (!activeWork) return 0;
+    if (!activeWork) return savedDuration ?? 0;
     const prior = activeWork.totalDurationMinutes ?? 0;
     if (isTimerRunning && activeWork.currentLogStartedAt) {
       const sinceLogStart = Math.floor((Date.now() - new Date(activeWork.currentLogStartedAt).getTime()) / 1000);

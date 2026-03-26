@@ -80,6 +80,7 @@ export function BlockRequestsPage() {
       blockRequestsApi.approve(id, { handledByUserId: userId!, note }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['block-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['block-requests-pending-count'] });
       message.success(t('blockRequests.approved'));
       setApproveTarget(null);
       setApproveNote('');
@@ -92,6 +93,7 @@ export function BlockRequestsPage() {
       blockRequestsApi.reject(id, { handledByUserId: userId! }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['block-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['block-requests-pending-count'] });
       message.success(t('blockRequests.rejected'));
     },
     onError: (err) => message.error(getTranslatedError(err, t, t('blockRequests.rejectFailed'))),
@@ -102,6 +104,7 @@ export function BlockRequestsPage() {
       processWorkflowApi.unblock(orderItemProcessId, { userId: userId!, resetTime }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['block-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['block-requests-pending-count'] });
       queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
       message.success(t('blockRequests.unblocked'));
     },

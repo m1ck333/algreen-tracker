@@ -22,6 +22,7 @@ export function useOrder(id: string | undefined) {
     queryKey: ['orders', id],
     queryFn: () => ordersApi.getById(id!).then((r) => r.data),
     enabled: !!id,
+    refetchInterval: 30_000,
   });
 }
 

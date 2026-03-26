@@ -137,7 +137,7 @@ function formatDurationSec(totalSec: number): string {
 function calcLiveSeconds(proc: { status: string; totalDurationMinutes: number; startedAt: string | null; pausedAt: string | null; resumedAt: string | null; subProcesses?: { totalDurationMinutes: number; status: string; isWithdrawn: boolean; isTimerRunning?: boolean; currentLogStartedAt?: string | null }[] }): number {
   // For processes with sub-processes, sum sub-process durations + open log elapsed
   if (proc.subProcesses && proc.subProcesses.length > 0) {
-    return proc.subProcesses
+    const result = proc.subProcesses
       .filter((sp) => !sp.isWithdrawn)
       .reduce((sum, sp) => {
         let spTime = sp.totalDurationMinutes;
@@ -146,6 +146,7 @@ function calcLiveSeconds(proc: { status: string; totalDurationMinutes: number; s
         }
         return sum + spTime;
       }, 0);
+    return result;
   }
   const saved = proc.totalDurationMinutes;
   if (proc.status === 'InProgress' && !proc.pausedAt && (proc.startedAt || proc.resumedAt)) {
@@ -156,13 +157,13 @@ function calcLiveSeconds(proc: { status: string; totalDurationMinutes: number; s
   return saved;
 }
 
-function isPaused(proc: { status: string; pausedAt: string | null; subProcesses?: { status: string; isWithdrawn: boolean }[] }): boolean {
+function isPaused(proc: { status: string; pausedAt: string | null; subProcesses?: { status: string; isWithdrawn: boolean; isTimerRunning?: boolean }[] }): boolean {
   if (proc.status !== 'InProgress') return false;
   if (proc.subProcesses && proc.subProcesses.length > 0) {
     const active = proc.subProcesses.filter((sp) => !sp.isWithdrawn);
-    const anyRunning = active.some((sp) => sp.status === 'InProgress');
+    const anyTimerRunning = active.some((sp) => sp.isTimerRunning);
     const allDone = active.every((sp) => sp.status === 'Completed');
-    return !anyRunning && !allDone;
+    return !anyTimerRunning && !allDone;
   }
   return !!proc.pausedAt;
 }
@@ -194,7 +195,9 @@ function ProcessCell({
     );
   }
 
-  const color = processStatusColors[status];
+  // Paused sub-process gap: show as gray with bold border (ready-like) instead of blue
+  const showAsReady = paused && status === ProcessStatus.InProgress;
+  const color = showAsReady ? '#D9D9D9' : processStatusColors[status];
   const label = tEnum('ProcessStatus', status);
 
   const timeStr = duration ? formatDurationSec(duration) : '';
@@ -208,7 +211,7 @@ function ProcessCell({
           margin: '0 auto',
           borderRadius: 4,
           backgroundColor: color,
-          border: isReady ? '3px solid #333' : '1px solid rgba(0,0,0,0.1)',
+          border: (isReady || showAsReady) ? '3px solid #333' : '1px solid rgba(0,0,0,0.1)',
           cursor: 'default',
         }}
       />
@@ -273,7 +276,6 @@ function ProcessTimeline({
         {/* Circles + labels layer */}
         {processes.map((proc, i) => {
           const status = statuses[i];
-          const color = status ? processStatusColors[status] : '#F0F0F0';
           const isCompleted = status === ProcessStatus.Completed;
           const x = i * STEP;
 
@@ -287,16 +289,17 @@ function ProcessTimeline({
             const p = item.processes.find((ip) => ip.processId === proc.id);
             return p && isPaused(p);
           });
+          const color = anyPaused ? '#D9D9D9' : (status ? processStatusColors[status] : '#F0F0F0');
 
           return (
-            <Tooltip key={proc.id} title={<div><div>{proc.name}: {status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable')}{anyPaused ? ` (${t('orders.paused')})` : ''}</div>{timeStr && <div>{timeStr}</div>}</div>}>
+            <Tooltip key={proc.id} title={<div><div>{proc.name}: {anyPaused ? t('orders.paused') : (status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable'))}</div>{timeStr && <div>{timeStr}</div>}</div>}>
               <div style={{ position: 'absolute', left: x, top: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', width: STEP }}>
                 <div style={{
                   width: CIRCLE,
                   height: CIRCLE,
                   borderRadius: '50%',
                   backgroundColor: color,
-                  border: '2px solid ' + (status ? color : '#D9D9D9'),
+                  border: anyPaused ? '3px solid #333' : ('2px solid ' + (status ? color : '#D9D9D9')),
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -352,9 +355,20 @@ function ItemProcessBar({
 
   return (
     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-      {sorted.map((proc) => {
+      {sorted.map((proc, idx) => {
         const process = processMap.get(proc.processId);
-        const color = processStatusColors[proc.status];
+        const procPaused = isPaused(proc);
+        // Check if this Pending process is ready to start (previous completed or first)
+        let isReady = false;
+        if (proc.status === ProcessStatus.Pending) {
+          if (idx === 0) {
+            isReady = true;
+          } else {
+            const prev = sorted[idx - 1];
+            isReady = prev.status === ProcessStatus.Completed || prev.isWithdrawn;
+          }
+        }
+        const color = procPaused ? '#D9D9D9' : processStatusColors[proc.status];
         const statusLabel = tEnum('ProcessStatus', proc.status);
         return (
           canRestart && proc.status === ProcessStatus.Completed && onRestart ? (
@@ -368,11 +382,11 @@ function ItemProcessBar({
                 ],
               }}
             >
-              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div>{statusLabel}{isPaused(proc) ? ` (${t('orders.paused')})` : ''}</div>{calcLiveSeconds(proc) > 0 && <div>{formatDurationSec(calcLiveSeconds(proc))}</div>}</div>}>
+              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div>{procPaused ? t('orders.paused') : statusLabel}</div>{calcLiveSeconds(proc) > 0 && <div>{formatDurationSec(calcLiveSeconds(proc))}</div>}</div>}>
                 <div style={{
                   padding: '2px 6px', borderRadius: 4, backgroundColor: color,
-                  border: '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
-                  color: '#fff', cursor: 'pointer', lineHeight: '16px',
+                  border: (procPaused || isReady) ? '3px solid #333' : '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
+                  color: (procPaused || isReady) ? '#666' : '#fff', cursor: 'pointer', lineHeight: '16px',
                 }}>
                   {process?.code ?? '?'}{proc.complexity ? <span style={{ opacity: 0.85 }}> {proc.complexity}</span> : null}
                 </div>
@@ -394,8 +408,8 @@ function ItemProcessBar({
             >
               <div style={{
                 padding: '2px 6px', borderRadius: 4, backgroundColor: color,
-                border: '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
-                color: proc.status === ProcessStatus.Pending || proc.status === ProcessStatus.Withdrawn ? '#666' : '#fff',
+                border: (procPaused || isReady) ? '3px solid #333' : '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
+                color: proc.status === ProcessStatus.Pending || proc.status === ProcessStatus.Withdrawn || procPaused ? '#666' : '#fff',
                 cursor: 'default', lineHeight: '16px',
               }}>
                 {process?.code ?? '?'}{proc.complexity ? <span style={{ opacity: 0.85 }}> {proc.complexity}</span> : null}
@@ -494,6 +508,13 @@ export function OrderListPage() {
   const pauseOrder = usePauseOrder();
   const resumeOrder = useResumeOrder();
   const { data: detailOrder, isLoading: detailLoading } = useOrder(detailOrderId ?? undefined);
+  // Tick every 10s to update live timer calculations in tooltips
+  const [, setTimerTick] = useState(0);
+  useEffect(() => {
+    if (!detailOrderId) return;
+    const interval = setInterval(() => setTimerTick((t) => t + 1), 10_000);
+    return () => clearInterval(interval);
+  }, [detailOrderId]);
   const activateMutation = useActivateOrder();
   const { data: categories } = useQuery({
     queryKey: ['product-categories', tenantId],
@@ -1022,7 +1043,7 @@ export function OrderListPage() {
         {isCreating ? (
           <>
             {/* ── CREATE MODE ── */}
-            <Form form={form} layout="vertical" onFinish={onCreateFinish} onValuesChange={onCreateValuesChange}>
+            <Form form={form} layout="vertical" onFinish={onCreateFinish} onValuesChange={onCreateValuesChange} scrollToFirstError={{ behavior: "smooth", block: "center" }}>
               <Row gutter={12}>
                 <Col span={14}>
                   <Form.Item
@@ -1115,7 +1136,7 @@ export function OrderListPage() {
                   <Row gutter={12}>
                     <Col span={12}>
                       <Form.Item name="productCategoryId" label={t('orders.productCategory')} rules={[{ required: true }]}>
-                        <Select showSearch filterOption={(input, option) => (option?.label as string ?? '').toLowerCase().includes(input.toLowerCase())} options={(categories ?? []).map((c: ProductCategoryDto) => ({ label: c.name, value: c.id }))} />
+                        <Select showSearch popupMatchSelectWidth={false} filterOption={(input, option) => (option?.label as string ?? '').toLowerCase().includes(input.toLowerCase())} options={(categories ?? []).map((c: ProductCategoryDto) => ({ label: c.name, value: c.id }))} />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
@@ -1558,6 +1579,9 @@ export function OrderListPage() {
                     <Col span={12}>
                       <Form.Item name="productCategoryId" label={t('orders.productCategory')} rules={[{ required: true }]}>
                         <Select
+                          showSearch
+                          popupMatchSelectWidth={false}
+                          filterOption={(input, option) => (option?.label as string ?? '').toLowerCase().includes(input.toLowerCase())}
                           options={(categories ?? []).map((c: ProductCategoryDto) => ({ label: c.name, value: c.id }))}
                         />
                       </Form.Item>

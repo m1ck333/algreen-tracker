@@ -408,6 +408,7 @@ export interface TabletQueueItemDto {
   specialRequestNames: string[];
   completedProcessCount: number;
   totalProcessCount: number;
+  totalDurationMinutes: number;
 }
 
 export interface TabletActiveWorkDto {

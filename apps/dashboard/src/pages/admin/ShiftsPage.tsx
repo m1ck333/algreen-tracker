@@ -285,7 +285,7 @@ export function ShiftsPage() {
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>{t('common:actions.save')}</Button>
         }
       >
-        <Form form={createForm} layout="vertical" onFinish={(v) => createMutation.mutate(v)} onValuesChange={onCreateValuesChange}>
+        <Form form={createForm} layout="vertical" scrollToFirstError={{ behavior: "smooth", block: "center" }} onFinish={(v) => createMutation.mutate(v)} onValuesChange={onCreateValuesChange}>
           <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>

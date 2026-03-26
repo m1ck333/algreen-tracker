@@ -327,7 +327,7 @@ export function TenantsPage() {
         {!isCreating && settingsLoading ? (
           <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
         ) : (
-          <Form form={form} layout="vertical" onFinish={handleFinish} onValuesChange={onDrawerValuesChange}>
+          <Form form={form} layout="vertical" scrollToFirstError={{ behavior: "smooth", block: "center" }} onFinish={handleFinish} onValuesChange={onDrawerValuesChange}>
             <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
               <Input />
             </Form.Item>

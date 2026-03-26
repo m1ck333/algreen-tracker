@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@algreen/auth';
-import { tabletApi, workSessionsApi } from '@algreen/api-client';
+import { tabletApi, workSessionsApi, processWorkflowApi } from '@algreen/api-client';
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
@@ -23,8 +23,17 @@ export function CheckOutPage() {
     setIsLoading(true);
     try {
       if (user?.id) {
-        // Pause all active work for this user
+        // Pause all active work - sub-process logs
         await tabletApi.pause(user.id).catch(() => {});
+        // Pause all active work - main process timers for each user process
+        const tenantId = useAuthStore.getState().tenantId;
+        if (tenantId && user.processes?.length) {
+          await Promise.allSettled(
+            user.processes.map((p) =>
+              processWorkflowApi.pauseStation({ processId: p.processId, tenantId, userId: user.id })
+            )
+          );
+        }
         // Check out the work session
         await workSessionsApi.checkOut({ userId: user.id }).catch(() => {});
       }

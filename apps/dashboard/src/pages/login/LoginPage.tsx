@@ -34,7 +34,7 @@ export function LoginPage() {
         <Alert message={t(`common:errors.${error === 'NOT_FOUND' ? 'INVALID_CREDENTIALS' : error}`, { defaultValue: '' }) || t('login.failed')} type="error" showIcon style={{ marginBottom: 16 }} />
       )}
 
-      <Form form={form} onFinish={onFinish} layout="vertical" size="large">
+      <Form form={form} onFinish={onFinish} layout="vertical" scrollToFirstError={{ behavior: "smooth", block: "center" }} size="large">
         <Form.Item
           name="tenantCode"
           rules={[{ required: true, message: t('common:validation.enterTenantCode') }]}
