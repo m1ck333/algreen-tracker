@@ -125,6 +125,12 @@ function getDeadlineLevel(
 
 // ─── Process Status Cell (master table) ──────────────────
 
+function statusColor(status: string | null, paused: boolean): string {
+  if (paused) return '#faad14';
+  if (!status) return '#999';
+  return processStatusColors[status as ProcessStatus] ?? '#999';
+}
+
 function formatDurationSec(totalSec: number): string {
   if (totalSec <= 0) return '';
   const h = Math.floor(totalSec / 3600);
@@ -183,6 +189,7 @@ function ProcessCell({
   paused?: boolean;
   tEnum: (enumName: string, value: string) => string;
 }) {
+  const { t } = useTranslation('dashboard');
   if (status === null) {
     return (
       <div style={{
@@ -203,7 +210,7 @@ function ProcessCell({
   const timeStr = duration ? formatDurationSec(duration) : '';
 
   return (
-    <Tooltip title={<div><div>{processName}: {paused ? 'Pauzirano' : label}</div>{timeStr && <div>{timeStr}</div>}</div>}>
+    <Tooltip title={<div><div><b>{processName}</b></div><div style={{ color: statusColor(status, !!paused) }}>{paused ? t('orders.paused') : label}</div>{timeStr && <div>{timeStr}</div>}</div>}>
       <div
         style={{
           width: 24,
@@ -289,17 +296,32 @@ function ProcessTimeline({
             const p = item.processes.find((ip) => ip.processId === proc.id);
             return p && isPaused(p);
           });
-          const color = anyPaused ? '#D9D9D9' : (status ? processStatusColors[status] : '#F0F0F0');
+          // Check if any item has this process ready to start
+          const isReady = status === ProcessStatus.Pending && order.items.some((item) => {
+            const p = item.processes.find((ip) => ip.processId === proc.id);
+            if (!p || p.status !== ProcessStatus.Pending) return false;
+            const itemProcs = [...item.processes].sort((a, b) => {
+              const pa = processes.find((pp) => pp.id === a.processId);
+              const pb = processes.find((pp) => pp.id === b.processId);
+              return (pa?.sequenceOrder ?? 0) - (pb?.sequenceOrder ?? 0);
+            });
+            const idx = itemProcs.findIndex((ip) => ip.processId === proc.id);
+            if (idx === 0) return true;
+            const prev = itemProcs[idx - 1];
+            return prev.status === ProcessStatus.Completed || prev.isWithdrawn;
+          });
+          const showBold = anyPaused || isReady;
+          const color = (anyPaused || isReady) ? '#D9D9D9' : (status ? processStatusColors[status] : '#F0F0F0');
 
           return (
-            <Tooltip key={proc.id} title={<div><div>{proc.name}: {anyPaused ? t('orders.paused') : (status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable'))}</div>{timeStr && <div>{timeStr}</div>}</div>}>
+            <Tooltip key={proc.id} title={<div><div><b>{proc.name}</b></div><div style={{ color: statusColor(status, anyPaused) }}>{anyPaused ? t('orders.paused') : (status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable'))}</div>{timeStr && <div>{timeStr}</div>}</div>}>
               <div style={{ position: 'absolute', left: x, top: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', width: STEP }}>
                 <div style={{
                   width: CIRCLE,
                   height: CIRCLE,
                   borderRadius: '50%',
                   backgroundColor: color,
-                  border: anyPaused ? '3px solid #333' : ('2px solid ' + (status ? color : '#D9D9D9')),
+                  border: showBold ? '3px solid #333' : ('2px solid ' + (status ? color : '#D9D9D9')),
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -382,7 +404,7 @@ function ItemProcessBar({
                 ],
               }}
             >
-              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div>{procPaused ? t('orders.paused') : statusLabel}</div>{calcLiveSeconds(proc) > 0 && <div>{formatDurationSec(calcLiveSeconds(proc))}</div>}</div>}>
+              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div style={{ color: statusColor(proc.status, procPaused) }}>{procPaused ? t('orders.paused') : statusLabel}</div>{calcLiveSeconds(proc) > 0 && <div>{formatDurationSec(calcLiveSeconds(proc))}</div>}</div>}>
                 <div style={{
                   padding: '2px 6px', borderRadius: 4, backgroundColor: color,
                   border: (procPaused || isReady) ? '3px solid #333' : '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
@@ -398,8 +420,7 @@ function ItemProcessBar({
               title={
                 <div>
                   <div><b>{process?.name ?? proc.processId}</b></div>
-                  <div>{statusLabel}</div>
-                  {isPaused(proc) && <div style={{ color: '#faad14' }}>{t('orders.paused')}</div>}
+                  <div style={{ color: statusColor(proc.status, procPaused) }}>{procPaused ? t('orders.paused') : statusLabel}</div>
                   {(proc.complexity || calcLiveSeconds(proc) > 0) && (
                     <div>{proc.complexity ?? ''}{calcLiveSeconds(proc) > 0 ? `${proc.complexity ? ' · ' : ''}${formatDurationSec(calcLiveSeconds(proc))}` : ''}</div>
                   )}
@@ -463,6 +484,7 @@ export function OrderListPage() {
       sortDirection,
     }).then((r) => r.data),
     enabled: !!tenantId,
+    refetchInterval: 30_000,
   });
   const [searchParams, setSearchParams] = useSearchParams();
   const [isCreating, setIsCreating] = useState(false);
@@ -1687,7 +1709,7 @@ export function OrderListPage() {
                   >
                     <ItemProcessBar
                       item={item} processMap={processMap} tEnum={tEnum}
-                      canRestart={detailOrder.status === OrderStatus.Active && user?.role !== UserRole.SalesManager}
+                      canRestart={(detailOrder.status === OrderStatus.Active || detailOrder.status === OrderStatus.Completed) && user?.role !== UserRole.SalesManager}
                       onRestart={async (oipId, resetTime) => {
                         try {
                           await processWorkflowApi.restart(oipId, { resetTime });

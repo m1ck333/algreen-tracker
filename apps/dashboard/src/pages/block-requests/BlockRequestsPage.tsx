@@ -177,6 +177,15 @@ export function BlockRequestsPage() {
       width: 180,
       render: (_: unknown, record: BlockRequestDto) => {
         if (record.status === RequestStatus.Pending) {
+          // Don't show if process is already blocked
+          if (record.currentProcessStatus === ProcessStatus.Blocked) return null;
+          // Show only on the most recent pending block for this process
+          const allPendingForProcess = (pagedResult?.items ?? []).filter(
+            (br) => br.status === RequestStatus.Pending && br.orderItemProcessId === record.orderItemProcessId
+          );
+          const isLatestPending = allPendingForProcess.length === 0 ||
+            new Date(record.createdAt).getTime() >= Math.max(...allPendingForProcess.map((br) => new Date(br.createdAt).getTime()));
+          if (!isLatestPending) return null;
           return (
             <Space>
               <Button
@@ -204,6 +213,13 @@ export function BlockRequestsPage() {
           );
         }
         if (record.status === RequestStatus.Approved && record.orderItemProcessId && record.currentProcessStatus === ProcessStatus.Blocked) {
+          // Show unblock only on the most recent approved block for this process
+          const allApprovedForProcess = (pagedResult?.items ?? []).filter(
+            (br) => br.status === RequestStatus.Approved && br.orderItemProcessId === record.orderItemProcessId
+          );
+          const isLatest = allApprovedForProcess.length === 0 || allApprovedForProcess[0]?.id === record.id ||
+            new Date(record.createdAt).getTime() >= Math.max(...allApprovedForProcess.map((br) => new Date(br.createdAt).getTime()));
+          if (!isLatest) return null;
           return (
             <Dropdown
               trigger={['click']}

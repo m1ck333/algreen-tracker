@@ -168,7 +168,8 @@
     "RequestStatus": {
       "Pending": "Pending",
       "Approved": "Approved",
-      "Rejected": "Rejected"
+      "Rejected": "Rejected",
+      "Resolved": "Resolved"
     },
     "ChangeRequestType": {
       "Modify": "Modify",

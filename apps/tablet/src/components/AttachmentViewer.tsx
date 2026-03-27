@@ -60,11 +60,9 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
 
   const handleOpen = async (a: OrderAttachmentDto) => {
     if (isPdf(a.contentType)) {
-      // iOS Safari/PWA doesn't render PDFs in iframes — open directly
-      if (isIOS()) {
-        window.open(getUrl(a), '_blank');
-        return;
-      }
+      // Mobile devices (iOS/Android) — open PDF directly in new tab
+      window.open(getUrl(a), '_blank');
+      return;
       setViewingPdf(a);
       setPdfLoading(true);
       try {

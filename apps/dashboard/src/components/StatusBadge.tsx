@@ -23,6 +23,7 @@ const requestStatusColors: Record<RequestStatus, string> = {
   [RequestStatus.Pending]: 'orange',
   [RequestStatus.Approved]: 'green',
   [RequestStatus.Rejected]: 'red',
+  [RequestStatus.Resolved]: 'blue',
 };
 
 interface StatusBadgeProps {
