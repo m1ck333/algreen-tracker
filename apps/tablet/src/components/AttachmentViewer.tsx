@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ordersApi } from '@algreen/api-client';
 import type { OrderAttachmentDto } from '@algreen/shared-types';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -17,10 +21,6 @@ function isPdf(contentType: string): boolean {
   return contentType === 'application/pdf';
 }
 
-function isIOS(): boolean {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
 interface AttachmentViewerProps {
   orderId: string;
   orderItemId?: string;
@@ -30,7 +30,7 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
   const [expanded, setExpanded] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<OrderAttachmentDto | null>(null);
   const [viewingPdf, setViewingPdf] = useState<OrderAttachmentDto | null>(null);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfPages, setPdfPages] = useState<string[]>([]);
   const [pdfLoading, setPdfLoading] = useState(false);
 
   const { data: allAttachments = [], isLoading } = useQuery({
@@ -40,7 +40,6 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
     staleTime: 5 * 60_000,
   });
 
-  // Show order-level attachments + this item's attachments
   const attachments = orderItemId
     ? allAttachments.filter((a) => a.orderItemId === null || a.orderItemId === orderItemId)
     : allAttachments;
@@ -60,18 +59,27 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
 
   const handleOpen = async (a: OrderAttachmentDto) => {
     if (isPdf(a.contentType)) {
-      // Mobile devices (iOS/Android) — open PDF directly in new tab
-      window.open(getUrl(a), '_blank');
-      return;
       setViewingPdf(a);
       setPdfLoading(true);
+      setPdfPages([]);
       try {
         const resp = await fetch(getUrl(a));
-        const blob = await resp.blob();
-        const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-        setPdfBlobUrl(url + '#toolbar=0&navpanes=0');
+        const arrayBuffer = await resp.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pages: string[] = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d')!;
+          await page.render({ canvasContext: ctx as unknown as CanvasRenderingContext2D, viewport } as never).promise;
+          pages.push(canvas.toDataURL('image/png'));
+        }
+        setPdfPages(pages);
       } catch {
-        setPdfBlobUrl(null);
+        setPdfPages([]);
       } finally {
         setPdfLoading(false);
       }
@@ -81,21 +89,17 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
   };
 
   const closePdf = () => {
-    if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl.split('#')[0]);
-    setPdfBlobUrl(null);
+    setPdfPages([]);
     setViewingPdf(null);
   };
 
   return (
     <div className="mt-3">
-      {/* Toggle button — large touch target */}
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between text-tablet-base font-semibold text-gray-700 py-3 px-2 rounded-lg active:bg-gray-100"
       >
-        <span>
-          📎 Dokumenti ({attachments.length})
-        </span>
+        <span>📎 Dokumenti ({attachments.length})</span>
         <svg
           width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
@@ -114,11 +118,7 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
               className="block border-2 border-gray-200 rounded-xl overflow-hidden text-left w-full bg-white active:border-primary-400 active:bg-primary-50 transition-colors"
             >
               {isImage(a.contentType) ? (
-                <img
-                  src={getUrl(a)}
-                  alt={a.originalFileName}
-                  className="w-full h-32 object-cover"
-                />
+                <img src={getUrl(a)} alt={a.originalFileName} className="w-full h-32 object-cover" />
               ) : (
                 <div className="w-full h-32 flex flex-col items-center justify-center bg-red-50">
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.5">
@@ -139,71 +139,44 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
         </div>
       )}
 
-      {/* Fullscreen image viewer — tap anywhere to close */}
+      {/* Fullscreen image viewer */}
       {viewingAttachment && isImage(viewingAttachment.contentType) && (
-        <div
-          className="fixed inset-0 z-50 bg-black flex flex-col"
-          onClick={() => setViewingAttachment(null)}
-        >
+        <div className="fixed inset-0 z-50 bg-black flex flex-col" onClick={() => setViewingAttachment(null)}>
           <div className="flex justify-between items-center p-3 bg-black/80">
-            <span className="text-white text-tablet-sm truncate max-w-[70%]">
-              {viewingAttachment.originalFileName}
-            </span>
-            <button
-              onClick={() => setViewingAttachment(null)}
-              className="text-white bg-red-600 rounded-xl px-5 py-3 text-tablet-base font-bold active:bg-red-700 min-w-[80px]"
-            >
+            <span className="text-white text-tablet-sm truncate max-w-[70%]">{viewingAttachment.originalFileName}</span>
+            <button onClick={() => setViewingAttachment(null)} className="text-white bg-red-600 rounded-xl px-5 py-3 text-tablet-base font-bold active:bg-red-700 min-w-[80px]">
               Zatvori
             </button>
           </div>
-
           <div className="flex-1 flex items-center justify-center overflow-auto p-2">
-            <img
-              src={getUrl(viewingAttachment)}
-              alt={viewingAttachment.originalFileName}
-              className="max-w-full max-h-full object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-
-          <div className="p-3 text-center bg-black/80">
-            <span className="text-gray-400 text-tablet-sm">
-              Dodirnite bilo gde za zatvaranje
-            </span>
+            <img src={getUrl(viewingAttachment)} alt={viewingAttachment.originalFileName} className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
           </div>
         </div>
       )}
 
-      {/* Fullscreen PDF viewer */}
+      {/* Fullscreen PDF viewer - rendered as images */}
       {viewingPdf && (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
           <div className="flex justify-between items-center p-3 bg-black/80">
-            <span className="text-white text-tablet-sm truncate max-w-[70%]">
-              {viewingPdf.originalFileName}
-            </span>
-            <button
-              onClick={closePdf}
-              className="text-white bg-red-600 rounded-xl px-5 py-3 text-tablet-base font-bold active:bg-red-700 min-w-[80px]"
-            >
+            <span className="text-white text-tablet-sm truncate max-w-[70%]">{viewingPdf.originalFileName}</span>
+            <button onClick={closePdf} className="text-white bg-red-600 rounded-xl px-5 py-3 text-tablet-base font-bold active:bg-red-700 min-w-[80px]">
               Zatvori
             </button>
           </div>
-
-          <div className="flex-1 p-2">
+          <div className="flex-1 overflow-auto bg-gray-800 p-2">
             {pdfLoading ? (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-white text-tablet-base">Učitavanje...</span>
+                <span className="text-white text-tablet-base">Učitavanje PDF...</span>
               </div>
-            ) : pdfBlobUrl ? (
-              <iframe
-                src={pdfBlobUrl}
-                className="w-full h-full rounded-lg"
-                style={{ border: 'none', backgroundColor: '#fff' }}
-                title={viewingPdf.originalFileName}
-              />
+            ) : pdfPages.length > 0 ? (
+              <div className="space-y-2">
+                {pdfPages.map((dataUrl, i) => (
+                  <img key={i} src={dataUrl} alt={`Strana ${i + 1}`} className="w-full rounded" />
+                ))}
+              </div>
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-white text-tablet-base">Greška pri učitavanju</span>
+                <span className="text-white text-tablet-base">Greška pri učitavanju PDF-a</span>
               </div>
             )}
           </div>

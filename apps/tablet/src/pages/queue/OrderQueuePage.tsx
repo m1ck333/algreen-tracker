@@ -613,12 +613,6 @@ function WorkPanel({
               </span>
             </div>
           )}
-          <div className="flex justify-between bg-gray-50 rounded px-3 py-1.5 col-span-2">
-            <span className="text-gray-500">{t('work.progress')}</span>
-            <span className="font-semibold">
-              {activeWork.completedProcessCount}/{activeWork.totalProcessCount}
-            </span>
-          </div>
         </div>
       )}
 
