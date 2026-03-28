@@ -5,11 +5,11 @@ import {
   InputNumber, DatePicker, App, Row, Col, Spin, Popconfirm, Divider,
   Tooltip, Progress, Statistic, Upload, List, Modal, Card, Dropdown,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined, UndoOutlined, UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined, UndoOutlined, UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useAuthStore } from '@algreen/auth';
 import { OrderStatus, OrderType, ProcessStatus, ComplexityType, UserRole } from '@algreen/shared-types';
-import type { OrderMasterViewDto, OrderDetailDto, OrderItemDto, ProcessDto, ProductCategoryDto, SpecialRequestTypeDto, AddOrderItemRequest } from '@algreen/shared-types';
+import type { OrderMasterViewDto, OrderDetailDto, OrderItemDto, OrderItemProcessDto, OrderItemSubProcessDto, ProcessDto, ProductCategoryDto, SpecialRequestTypeDto, AddOrderItemRequest } from '@algreen/shared-types';
 import {
   useCreateOrder, useOrder, useActivateOrder,
   useUpdateOrder, useCancelOrder, usePauseOrder, useResumeOrder, useReopenOrder,
@@ -75,23 +75,55 @@ function getTranslatedError(error: unknown, t: (key: string, opts?: Record<strin
 }
 
 /** Aggregate process status across all items in an order for a given processId (used in detail drawer) */
-function getAggregateProcessStatus(
+type AggregateState = {
+  status: ProcessStatus | null;
+  isReady: boolean;  // pending-ready or paused (gray + bold border)
+  isPaused: boolean; // subset of isReady - show "Pauzirano" text
+};
+
+function getAggregateProcessState(
   order: OrderDetailDto,
   processId: string,
-): ProcessStatus | null {
-  const statuses: ProcessStatus[] = [];
-  for (const item of order.items) {
-    const proc = item.processes.find((p) => p.processId === processId);
-    if (proc) statuses.push(proc.status);
-  }
-  if (statuses.length === 0) return null;
-  if (statuses.includes(ProcessStatus.Blocked)) return ProcessStatus.Blocked;
-  if (statuses.includes(ProcessStatus.Stopped)) return ProcessStatus.Stopped;
-  if (statuses.includes(ProcessStatus.InProgress)) return ProcessStatus.InProgress;
-  if (statuses.includes(ProcessStatus.Pending)) return ProcessStatus.Pending;
-  if (statuses.every((s) => s === ProcessStatus.Completed)) return ProcessStatus.Completed;
-  if (statuses.every((s) => s === ProcessStatus.Withdrawn)) return ProcessStatus.Withdrawn;
-  return ProcessStatus.Completed;
+  processDependencies?: Record<string, string[]>,
+): AggregateState {
+  const procs = order.items
+    .map((item) => item.processes.find((p) => p.processId === processId))
+    .filter(Boolean) as OrderItemProcessDto[];
+
+  if (procs.length === 0) return { status: null, isReady: false, isPaused: false };
+
+  // Priority: Blocked > InProgress (running) > Paused/PendingReady > PendingNotReady > Completed
+  const hasBlocked = procs.some((p) => p.status === ProcessStatus.Blocked);
+  if (hasBlocked) return { status: ProcessStatus.Blocked, isReady: false, isPaused: false };
+
+  const hasRunning = procs.some((p) => p.status === ProcessStatus.InProgress && !isPaused(p));
+  if (hasRunning) return { status: ProcessStatus.InProgress, isReady: false, isPaused: false };
+
+  const hasPaused = procs.some((p) => isPaused(p));
+  const hasPendingReady = procs.some((p) => {
+    if (p.status !== ProcessStatus.Pending) return false;
+    const allDeps = processDependencies ?? {};
+    const hasDeps = Object.keys(allDeps).length > 0;
+    const deps = allDeps[processId];
+    if (deps && deps.length > 0) {
+      const item = order.items.find((it) => it.processes.some((ip) => ip.id === p.id));
+      if (!item) return false;
+      return deps.every((depId) => {
+        const depProc = item.processes.find((ip) => ip.processId === depId);
+        return depProc && (depProc.status === ProcessStatus.Completed || depProc.isWithdrawn);
+      });
+    }
+    return hasDeps; // no deps in a dependency system = independent = ready
+  });
+  if (hasPaused || hasPendingReady) return { status: ProcessStatus.Pending, isReady: true, isPaused: hasPaused };
+
+  const hasPending = procs.some((p) => p.status === ProcessStatus.Pending);
+  if (hasPending) return { status: ProcessStatus.Pending, isReady: false, isPaused: false };
+
+  if (procs.every((p) => p.status === ProcessStatus.Completed || p.isWithdrawn))
+    return { status: ProcessStatus.Completed, isReady: false, isPaused: false };
+
+  return { status: ProcessStatus.Completed, isReady: false, isPaused: false };
 }
 
 /** Count completed vs total processes across all items (used in detail drawer) */
@@ -129,6 +161,35 @@ function statusColor(status: string | null, paused: boolean): string {
   if (paused) return '#faad14';
   if (!status) return '#999';
   return processStatusColors[status as ProcessStatus] ?? '#999';
+}
+
+function SubProcessTooltip({ subProcesses, processMap }: { subProcesses: OrderItemSubProcessDto[]; processMap: Map<string, ProcessDto> }) {
+  const { tEnum } = useEnumTranslation();
+  if (!subProcesses || subProcesses.length === 0) return null;
+  const active = subProcesses.filter((sp) => !sp.isWithdrawn);
+  if (active.length === 0) return null;
+  return (
+    <div style={{ marginTop: 4, paddingTop: 4, borderTop: '2px solid rgba(255,255,255,0.5)', fontSize: 11 }}>
+      {active.map((sp) => {
+        const spTime = sp.totalDurationMinutes + (sp.isTimerRunning && sp.currentLogStartedAt ? Math.floor((Date.now() - new Date(sp.currentLogStartedAt).getTime()) / 1000) : 0);
+        // Find sub-process name from process definitions
+        let spName = sp.subProcessId.slice(0, 6);
+        for (const p of processMap.values()) {
+          const found = p.subProcesses?.find((s) => s.id === sp.subProcessId);
+          if (found) { spName = found.name; break; }
+        }
+        return (
+          <div key={sp.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, opacity: sp.status === 'Completed' ? 0.7 : 1 }}>
+            <span>↳ {spName}</span>
+            <span style={{ color: statusColor(sp.status, false) }}>
+              {tEnum('SubProcessStatus', sp.status)}
+              {spTime > 0 ? ` ${formatDurationSec(spTime)}` : ''}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function formatDurationSec(totalSec: number): string {
@@ -243,18 +304,20 @@ function ProcessTimeline({
   order,
   processes,
   tEnum,
+  processDependencies,
 }: {
   order: OrderDetailDto;
   processes: ProcessDto[];
   tEnum: (enumName: string, value: string) => string;
+  processDependencies?: Record<string, string[]>;
 }) {
   const { t } = useTranslation('dashboard');
   const STEP = 48; // px per process step
   const CIRCLE = 24;
   const totalWidth = processes.length * STEP;
 
-  // Pre-compute statuses
-  const statuses = processes.map((proc) => getAggregateProcessStatus(order, proc.id));
+  // Pre-compute aggregate states
+  const states = processes.map((proc) => getAggregateProcessState(order, proc.id, processDependencies));
 
   return (
     <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
@@ -262,7 +325,7 @@ function ProcessTimeline({
         {/* Connector lines layer */}
         {processes.map((proc, i) => {
           if (i === 0) return null;
-          const prevCompleted = statuses[i - 1] === ProcessStatus.Completed;
+          const prevCompleted = states[i - 1]?.status === ProcessStatus.Completed;
           // Line goes from center of previous circle to center of current circle
           const x1 = (i - 1) * STEP + STEP / 2;
           const x2 = i * STEP + STEP / 2;
@@ -282,39 +345,21 @@ function ProcessTimeline({
         })}
         {/* Circles + labels layer */}
         {processes.map((proc, i) => {
-          const status = statuses[i];
+          const state = states[i];
+          const { status, isReady, isPaused: aggPaused } = state;
           const isCompleted = status === ProcessStatus.Completed;
           const x = i * STEP;
 
-          // Calculate live time across all items for this process
           const totalSec = order.items.reduce((sum, item) => {
             const p = item.processes.find((ip) => ip.processId === proc.id);
             return sum + (p ? calcLiveSeconds(p) : 0);
           }, 0);
           const timeStr = formatDurationSec(totalSec);
-          const anyPaused = order.items.some((item) => {
-            const p = item.processes.find((ip) => ip.processId === proc.id);
-            return p && isPaused(p);
-          });
-          // Check if any item has this process ready to start
-          const isReady = status === ProcessStatus.Pending && order.items.some((item) => {
-            const p = item.processes.find((ip) => ip.processId === proc.id);
-            if (!p || p.status !== ProcessStatus.Pending) return false;
-            const itemProcs = [...item.processes].sort((a, b) => {
-              const pa = processes.find((pp) => pp.id === a.processId);
-              const pb = processes.find((pp) => pp.id === b.processId);
-              return (pa?.sequenceOrder ?? 0) - (pb?.sequenceOrder ?? 0);
-            });
-            const idx = itemProcs.findIndex((ip) => ip.processId === proc.id);
-            if (idx === 0) return true;
-            const prev = itemProcs[idx - 1];
-            return prev.status === ProcessStatus.Completed || prev.isWithdrawn;
-          });
-          const showBold = anyPaused || isReady;
-          const color = (anyPaused || isReady) ? '#D9D9D9' : (status ? processStatusColors[status] : '#F0F0F0');
+          const showBold = isReady;
+          const color = isReady ? '#D9D9D9' : (status ? processStatusColors[status] : '#F0F0F0');
 
           return (
-            <Tooltip key={proc.id} title={<div><div><b>{proc.name}</b></div><div style={{ color: statusColor(status, anyPaused) }}>{anyPaused ? t('orders.paused') : (status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable'))}</div>{timeStr && <div>{timeStr}</div>}</div>}>
+            <Tooltip key={proc.id} title={<div><div><b>{proc.name}</b></div><div style={{ color: statusColor(status, aggPaused) }}>{aggPaused ? t('orders.paused') : (status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable'))}</div>{timeStr && <div>{timeStr}</div>}</div>}>
               <div style={{ position: 'absolute', left: x, top: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', width: STEP }}>
                 <div style={{
                   width: CIRCLE,
@@ -359,12 +404,14 @@ function ItemProcessBar({
   tEnum,
   onRestart,
   canRestart,
+  processDependencies,
 }: {
   item: OrderItemDto;
   processMap: Map<string, ProcessDto>;
   tEnum: (enumName: string, value: string) => string;
   onRestart?: (orderItemProcessId: string, resetTime: boolean) => void;
   canRestart?: boolean;
+  processDependencies?: Record<string, string[]>;
 }) {
   const { t } = useTranslation('dashboard');
   const sorted = [...item.processes]
@@ -380,10 +427,20 @@ function ItemProcessBar({
       {sorted.map((proc, idx) => {
         const process = processMap.get(proc.processId);
         const procPaused = isPaused(proc);
-        // Check if this Pending process is ready to start (previous completed or first)
+        // Check if this Pending process is ready to start (using dependencies if available)
         let isReady = false;
         if (proc.status === ProcessStatus.Pending) {
-          if (idx === 0) {
+          const allDeps = processDependencies ?? {};
+          const hasDependencySystem = Object.keys(allDeps).length > 0;
+          const deps = allDeps[proc.processId];
+          if (deps && deps.length > 0) {
+            isReady = deps.every((depId) => {
+              const depProc = sorted.find((p) => p.processId === depId);
+              return depProc && (depProc.status === ProcessStatus.Completed || depProc.isWithdrawn);
+            });
+          } else if (hasDependencySystem) {
+            isReady = true;
+          } else if (idx === 0) {
             isReady = true;
           } else {
             const prev = sorted[idx - 1];
@@ -404,7 +461,7 @@ function ItemProcessBar({
                 ],
               }}
             >
-              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div style={{ color: statusColor(proc.status, procPaused) }}>{procPaused ? t('orders.paused') : statusLabel}</div>{calcLiveSeconds(proc) > 0 && <div>{formatDurationSec(calcLiveSeconds(proc))}</div>}</div>}>
+              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div style={{ color: statusColor(proc.status, procPaused) }}>{procPaused ? t('orders.paused') : statusLabel}</div>{calcLiveSeconds(proc) > 0 && <div>{formatDurationSec(calcLiveSeconds(proc))}</div>}{proc.subProcesses && <SubProcessTooltip subProcesses={proc.subProcesses} processMap={processMap} />}</div>}>
                 <div style={{
                   padding: '2px 6px', borderRadius: 4, backgroundColor: color,
                   border: (procPaused || isReady) ? '3px solid #333' : '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
@@ -424,6 +481,7 @@ function ItemProcessBar({
                   {(proc.complexity || calcLiveSeconds(proc) > 0) && (
                     <div>{proc.complexity ?? ''}{calcLiveSeconds(proc) > 0 ? `${proc.complexity ? ' · ' : ''}${formatDurationSec(calcLiveSeconds(proc))}` : ''}</div>
                   )}
+                  {proc.subProcesses && <SubProcessTooltip subProcesses={proc.subProcesses} processMap={processMap} />}
                 </div>
               }
             >
@@ -1503,6 +1561,23 @@ export function OrderListPage() {
                       <Button size="small" type="primary" loading={reopenOrder.isPending} icon={<UndoOutlined />}>{t('orders.reopenOrder')}</Button>
                     </Popconfirm>
                   )}
+                  <Button size="small" icon={<CopyOutlined />} onClick={() => {
+                    const maxPriority = (masterResult?.items ?? []).reduce((max, o) => Math.max(max, o.priority), 0);
+                    form.resetFields();
+                    form.setFieldsValue({
+                      orderType: detailOrder.orderType,
+                      deliveryDate: dayjs(detailOrder.deliveryDate),
+                      priority: maxPriority + 10,
+                    });
+                    setCreatePendingItems(detailOrder.items.map((item) => ({
+                      productCategoryId: item.productCategoryId,
+                      productName: item.productName,
+                      quantity: item.quantity,
+                      notes: item.notes ?? undefined,
+                    })));
+                    setDetailOrderId(null);
+                    setIsCreating(true);
+                  }}>{t('orders.duplicate')}</Button>
                 </Space>
               )}
             </div>
@@ -1561,7 +1636,7 @@ export function OrderListPage() {
                 <Text type="secondary" style={{ fontSize: 12, marginBottom: 4, display: 'block' }}>
                   {t('orders.processFlow')}
                 </Text>
-                <ProcessTimeline order={detailOrder} processes={processes} tEnum={tEnum} />
+                <ProcessTimeline order={detailOrder} processes={processes} tEnum={tEnum} processDependencies={masterResult?.items?.find((o) => o.id === detailOrder.id)?.processDependencies} />
               </div>
             )}
 
@@ -1709,6 +1784,7 @@ export function OrderListPage() {
                   >
                     <ItemProcessBar
                       item={item} processMap={processMap} tEnum={tEnum}
+                      processDependencies={masterResult?.items?.find((o) => o.id === detailOrder.id)?.processDependencies}
                       canRestart={(detailOrder.status === OrderStatus.Active || detailOrder.status === OrderStatus.Completed) && user?.role !== UserRole.SalesManager}
                       onRestart={async (oipId, resetTime) => {
                         try {

@@ -109,6 +109,7 @@
     "reopenConfirm": "Da li ste sigurni da želite ponovo da otvorite ovu narudžbinu?",
     "reopenedSuccess": "Narudžbina ponovo otvorena",
     "reopenFailed": "Greška pri otvaranju narudžbine",
+    "duplicate": "Dupliraj",
     "paused": "Pauzirano",
     "pauseOrder": "Pauziraj",
     "resumeOrder": "Nastavi",

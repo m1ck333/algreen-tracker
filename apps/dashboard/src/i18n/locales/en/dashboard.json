@@ -109,6 +109,7 @@
     "reopenConfirm": "Are you sure you want to reopen this cancelled order?",
     "reopenedSuccess": "Order reopened",
     "reopenFailed": "Failed to reopen order",
+    "duplicate": "Duplicate",
     "paused": "Paused",
     "pauseOrder": "Pause",
     "resumeOrder": "Resume",
