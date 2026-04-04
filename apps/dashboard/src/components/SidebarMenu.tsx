@@ -13,6 +13,7 @@ import {
   TagOutlined,
   BankOutlined,
   ClockCircleOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@algreen/auth';
@@ -74,6 +75,11 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
       key: '/change-requests',
       icon: <SwapOutlined />,
       label: t('nav.changeRequests'),
+    },
+    isCoordOrAbove && {
+      key: '/reports',
+      icon: <BarChartOutlined />,
+      label: t('nav.reports'),
     },
     isAdminOrManager && {
       key: 'admin',

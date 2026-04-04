@@ -15,6 +15,7 @@ import { ProductCategoriesPage } from './pages/admin/ProductCategoriesPage';
 import { SpecialRequestTypesPage } from './pages/admin/SpecialRequestTypesPage';
 import { TenantsPage } from './pages/admin/TenantsPage';
 import { ShiftsPage } from './pages/admin/ShiftsPage';
+import { ReportsPage } from './pages/reports/ReportsPage';
 import { RoleRedirect } from './components/RoleRedirect';
 
 export function AppRoutes() {
@@ -74,6 +75,17 @@ export function AppRoutes() {
               roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin]}
             >
               <ChangeRequestsPage />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <RequireRole
+              roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin]}
+            >
+              <ReportsPage />
             </RequireRole>
           }
         />

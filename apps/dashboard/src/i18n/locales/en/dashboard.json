@@ -11,7 +11,8 @@
     "categories": "Categories",
     "specialRequests": "Special Requests",
     "tenants": "Tenants",
-    "shifts": "Shifts"
+    "shifts": "Shifts",
+    "reports": "Process Times"
   },
   "login": {
     "title": "Algreen MES",
@@ -357,6 +358,36 @@
     "maxReached": "Maximum attachments reached",
     "previewFailed": "Failed to load preview",
     "fileTooLarge": "File is too large (max 10MB)"
+  },
+  "reports": {
+    "title": "Process Times",
+    "tabAverages": "Process Averages",
+    "tabTimeTracking": "Time Tracking",
+    "tabWorkerHours": "Worker Hours",
+    "processCode": "Code",
+    "processName": "Process",
+    "complexityT": "Heavy",
+    "complexityS": "Medium",
+    "complexityL": "Light",
+    "avg": "Average",
+    "count": "Count",
+    "orderNumber": "Order #",
+    "productName": "Product",
+    "complexity": "Complexity",
+    "startedAt": "Started",
+    "completedAt": "Completed",
+    "duration": "Duration",
+    "allProcesses": "All processes",
+    "allComplexities": "All complexities",
+    "allWorkers": "All workers",
+    "totalItems": "Total Items",
+    "totalTime": "Total Time",
+    "averageTime": "Average Time",
+    "workerName": "Worker",
+    "totalHours": "Total Hours",
+    "sessionCount": "Sessions",
+    "avgPerDay": "Avg/Day",
+    "date": "Date"
   },
   "language": {
     "sr": "Srpski",

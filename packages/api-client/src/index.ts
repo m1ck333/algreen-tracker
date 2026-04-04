@@ -19,3 +19,5 @@ export { specialRequestTypesApi } from './api/special-request-types';
 export { tenantsApi } from './api/tenants';
 export { tabletApi } from './api/tablet';
 export { pushApi } from './api/push';
+export { reportsApi } from './api/reports';
+export type { TimeTrackingQuery, WorkerHoursQuery } from './api/reports';

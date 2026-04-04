@@ -11,7 +11,8 @@
     "categories": "Kategorije",
     "specialRequests": "Specijalni zahtevi",
     "tenants": "Firme",
-    "shifts": "Smene"
+    "shifts": "Smene",
+    "reports": "Vremena procesa"
   },
   "login": {
     "title": "Algreen MES",
@@ -359,6 +360,36 @@
     "maxReached": "Maksimalan broj priloga dostignut",
     "previewFailed": "Učitavanje pregleda nije uspelo",
     "fileTooLarge": "Fajl je prevelik (max 10MB)"
+  },
+  "reports": {
+    "title": "Vremena procesa",
+    "tabAverages": "Proseci po procesu",
+    "tabTimeTracking": "Praćenje vremena",
+    "tabWorkerHours": "Sati radnika",
+    "processCode": "Šifra",
+    "processName": "Proces",
+    "complexityT": "Teško",
+    "complexityS": "Srednje",
+    "complexityL": "Lako",
+    "avg": "Prosek",
+    "count": "Broj",
+    "orderNumber": "Br. narudžbine",
+    "productName": "Proizvod",
+    "complexity": "Kompleksnost",
+    "startedAt": "Početak",
+    "completedAt": "Završetak",
+    "duration": "Trajanje",
+    "allProcesses": "Svi procesi",
+    "allComplexities": "Sve kompleksnosti",
+    "allWorkers": "Svi radnici",
+    "totalItems": "Ukupno stavki",
+    "totalTime": "Ukupno vreme",
+    "averageTime": "Prosečno vreme",
+    "workerName": "Radnik",
+    "totalHours": "Ukupno sati",
+    "sessionCount": "Br. sesija",
+    "avgPerDay": "Prosek/dan",
+    "date": "Datum"
   },
   "language": {
     "sr": "Srpski",

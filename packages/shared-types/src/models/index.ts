@@ -474,3 +474,51 @@ export interface ProcessGroupDto<T> {
   sequenceOrder: number;
   items: T[];
 }
+
+// ─── Reports ───────────────────────────────────────────
+
+export interface ProcessAverageDto {
+  processId: string;
+  processCode: string;
+  processName: string;
+  averages: Record<string, { avgMinutes: number; count: number }>;
+}
+
+export interface TimeTrackingItemDto {
+  orderId: string;
+  orderNumber: string;
+  orderItemId: string;
+  productName: string;
+  processId: string;
+  processCode: string;
+  processName: string;
+  complexity: ComplexityType | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  durationMinutes: number;
+}
+
+export interface TimeTrackingSummaryDto {
+  totalItems: number;
+  totalMinutes: number;
+  averageMinutes: number;
+}
+
+export interface TimeTrackingResponseDto {
+  items: TimeTrackingItemDto[];
+  summary: TimeTrackingSummaryDto;
+}
+
+export interface WorkerDailyBreakdownDto {
+  date: string;
+  totalMinutes: number;
+  sessionCount: number;
+}
+
+export interface WorkerHoursDto {
+  userId: string;
+  fullName: string;
+  totalMinutes: number;
+  sessionCount: number;
+  dailyBreakdown: WorkerDailyBreakdownDto[];
+}
