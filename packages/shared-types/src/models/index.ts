@@ -485,23 +485,25 @@ export interface ProcessAverageDto {
 }
 
 export interface TimeTrackingItemDto {
-  orderId: string;
+  orderItemProcessId: string;
   orderNumber: string;
-  orderItemId: string;
   productName: string;
   processId: string;
   processCode: string;
   processName: string;
-  complexity: ComplexityType | null;
+  complexity: string | null;
+  status: string;
   startedAt: string | null;
   completedAt: string | null;
-  durationMinutes: number;
+  totalDurationMinutes: number;
 }
 
 export interface TimeTrackingSummaryDto {
-  totalItems: number;
-  totalMinutes: number;
-  averageMinutes: number;
+  totalRecords: number;
+  avgDurationMinutes: number;
+  totalDurationMinutes: number;
+  minDurationMinutes: number;
+  maxDurationMinutes: number;
 }
 
 export interface TimeTrackingResponseDto {

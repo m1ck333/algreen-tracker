@@ -15,7 +15,6 @@ import type {
   UserDto,
 } from '@algreen/shared-types';
 import { UserRole, ComplexityType } from '@algreen/shared-types';
-import { useTableHeight } from '../../hooks/useTableHeight';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -25,8 +24,14 @@ const { RangePicker } = DatePicker;
 
 function formatMinutes(totalMinutes: number): string {
   if (totalMinutes <= 0) return '0min';
-  const h = Math.floor(totalMinutes / 60);
+  const d = Math.floor(totalMinutes / 1440);
+  const h = Math.floor((totalMinutes % 1440) / 60);
   const m = Math.round(totalMinutes % 60);
+  if (d > 0) {
+    if (h === 0 && m === 0) return `${d}d`;
+    if (m === 0) return `${d}d ${h}h`;
+    return `${d}d ${h}h ${m}min`;
+  }
   if (h === 0) return `${m}min`;
   if (m === 0) return `${h}h`;
   return `${h}h ${m}min`;
@@ -37,7 +42,6 @@ function formatMinutes(totalMinutes: number): string {
 function ProcessAveragesTab() {
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
-  const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
 
   const { data, isLoading } = useQuery({
     queryKey: ['reports-process-averages', tenantId],
@@ -57,18 +61,16 @@ function ProcessAveragesTab() {
       {
         title: t('reports.processCode'),
         dataIndex: 'processCode',
-        width: 80,
+        width: 60,
         sorter: (a, b) => a.processCode.localeCompare(b.processCode),
       },
       {
         title: t('reports.processName'),
         dataIndex: 'processName',
-        width: 160,
       },
       ...complexities.map((c) => ({
         title: `${complexityLabels[c]} — ${t('reports.avg')}`,
         key: `avg-${c}`,
-        width: 140,
         render: (_: unknown, record: ProcessAverageDto) => {
           const avg = record.averages[c];
           if (!avg) return '—';
@@ -78,7 +80,7 @@ function ProcessAveragesTab() {
       ...complexities.map((c) => ({
         title: `${complexityLabels[c]} — ${t('reports.count')}`,
         key: `count-${c}`,
-        width: 100,
+        width: 80,
         render: (_: unknown, record: ProcessAverageDto) => {
           const avg = record.averages[c];
           return avg ? avg.count : 0;
@@ -89,18 +91,15 @@ function ProcessAveragesTab() {
   );
 
   return (
-    <div ref={tableWrapperRef} style={{ flex: 1, minHeight: 0 }}>
-      <Table
-        columns={columns}
-        dataSource={data}
-        rowKey="processId"
-        loading={isLoading}
-        pagination={false}
-        scroll={{ x: 'max-content', y: tableBodyHeight }}
-        size="small"
-        bordered
-      />
-    </div>
+    <Table
+      columns={columns}
+      dataSource={data}
+      rowKey="processId"
+      loading={isLoading}
+      pagination={false}
+      size="small"
+      bordered
+    />
   );
 }
 
@@ -109,7 +108,6 @@ function ProcessAveragesTab() {
 function TimeTrackingTab() {
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
-  const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
 
   const defaultRange: [dayjs.Dayjs, dayjs.Dayjs] = [dayjs().subtract(30, 'day'), dayjs()];
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>(defaultRange);
@@ -149,17 +147,14 @@ function TimeTrackingTab() {
       {
         title: t('reports.orderNumber'),
         dataIndex: 'orderNumber',
-        width: 160,
       },
       {
         title: t('reports.productName'),
         dataIndex: 'productName',
-        width: 180,
       },
       {
         title: t('reports.processName'),
         dataIndex: 'processName',
-        width: 140,
         render: (text: string, record) => `${record.processCode} — ${text}`,
       },
       {
@@ -170,20 +165,18 @@ function TimeTrackingTab() {
       {
         title: t('reports.startedAt'),
         dataIndex: 'startedAt',
-        width: 160,
         render: (v: string | null) => (v ? dayjs(v).format('DD.MM.YYYY HH:mm') : '—'),
       },
       {
         title: t('reports.completedAt'),
         dataIndex: 'completedAt',
-        width: 160,
         render: (v: string | null) => (v ? dayjs(v).format('DD.MM.YYYY HH:mm') : '—'),
       },
       {
         title: t('reports.duration'),
-        dataIndex: 'durationMinutes',
-        width: 120,
-        sorter: (a, b) => a.durationMinutes - b.durationMinutes,
+        dataIndex: 'totalDurationMinutes',
+        width: 100,
+        sorter: (a, b) => a.totalDurationMinutes - b.totalDurationMinutes,
         render: (v: number) => formatMinutes(v),
       },
     ],
@@ -191,7 +184,7 @@ function TimeTrackingTab() {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+    <>
       {/* Filters */}
       <Space wrap style={{ marginBottom: 16 }}>
         <RangePicker
@@ -228,14 +221,14 @@ function TimeTrackingTab() {
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={8}>
             <Card size="small">
-              <Statistic title={t('reports.totalItems')} value={data.summary.totalItems} />
+              <Statistic title={t('reports.totalItems')} value={data.summary.totalRecords} />
             </Card>
           </Col>
           <Col span={8}>
             <Card size="small">
               <Statistic
                 title={t('reports.totalTime')}
-                value={formatMinutes(data.summary.totalMinutes)}
+                value={formatMinutes(data.summary.totalDurationMinutes)}
               />
             </Card>
           </Col>
@@ -243,7 +236,7 @@ function TimeTrackingTab() {
             <Card size="small">
               <Statistic
                 title={t('reports.averageTime')}
-                value={formatMinutes(data.summary.averageMinutes)}
+                value={formatMinutes(data.summary.avgDurationMinutes)}
               />
             </Card>
           </Col>
@@ -251,19 +244,16 @@ function TimeTrackingTab() {
       )}
 
       {/* Table */}
-      <div ref={tableWrapperRef} style={{ flex: 1, minHeight: 0 }}>
-        <Table
-          columns={columns}
-          dataSource={data?.items}
-          rowKey={(r) => `${r.orderItemId}-${r.processId}`}
-          loading={isLoading}
-          pagination={false}
-          scroll={{ x: 'max-content', y: tableBodyHeight }}
-          size="small"
-          bordered
-        />
-      </div>
-    </div>
+      <Table
+        columns={columns}
+        dataSource={data?.items}
+        rowKey="orderItemProcessId"
+        loading={isLoading}
+        pagination={{ pageSize: 20, showSizeChanger: true }}
+        size="small"
+        bordered
+      />
+    </>
   );
 }
 
@@ -272,7 +262,6 @@ function TimeTrackingTab() {
 function WorkerHoursTab() {
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
-  const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
 
   const defaultRange: [dayjs.Dayjs, dayjs.Dayjs] = [dayjs().subtract(30, 'day'), dayjs()];
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>(defaultRange);
@@ -313,12 +302,10 @@ function WorkerHoursTab() {
       {
         title: t('reports.workerName'),
         dataIndex: 'fullName',
-        width: 200,
       },
       {
         title: t('reports.totalHours'),
         dataIndex: 'totalMinutes',
-        width: 140,
         sorter: (a, b) => a.totalMinutes - b.totalMinutes,
         defaultSortOrder: 'descend',
         render: (v: number) => formatMinutes(v),
@@ -326,13 +313,11 @@ function WorkerHoursTab() {
       {
         title: t('reports.sessionCount'),
         dataIndex: 'sessionCount',
-        width: 120,
         sorter: (a, b) => a.sessionCount - b.sessionCount,
       },
       {
         title: t('reports.avgPerDay'),
         key: 'avg',
-        width: 140,
         render: (_: unknown, record: WorkerHoursDto) => {
           const days = record.dailyBreakdown.length;
           if (days === 0) return '—';
@@ -348,26 +333,23 @@ function WorkerHoursTab() {
       {
         title: t('reports.date'),
         dataIndex: 'date',
-        width: 140,
         render: (v: string) => dayjs(v).format('DD.MM.YYYY'),
       },
       {
         title: t('reports.totalHours'),
         dataIndex: 'totalMinutes',
-        width: 140,
         render: (v: number) => formatMinutes(v),
       },
       {
         title: t('reports.sessionCount'),
         dataIndex: 'sessionCount',
-        width: 120,
       },
     ],
     [t],
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+    <>
       {/* Filters */}
       <Space wrap style={{ marginBottom: 16 }}>
         <RangePicker
@@ -393,33 +375,30 @@ function WorkerHoursTab() {
       </Space>
 
       {/* Table */}
-      <div ref={tableWrapperRef} style={{ flex: 1, minHeight: 0 }}>
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="userId"
-          loading={isLoading}
-          pagination={false}
-          scroll={{ x: 'max-content', y: tableBodyHeight }}
-          size="small"
-          bordered
-          expandable={{
-            expandedRowKeys: expandedKeys,
-            onExpandedRowsChange: (keys) => setExpandedKeys(keys as string[]),
-            expandedRowRender: (record) => (
-              <Table
-                columns={dailyColumns}
-                dataSource={record.dailyBreakdown}
-                rowKey="date"
-                pagination={false}
-                size="small"
-                style={{ margin: 0 }}
-              />
-            ),
-          }}
-        />
-      </div>
-    </div>
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="userId"
+        loading={isLoading}
+        pagination={{ pageSize: 20, showSizeChanger: true }}
+        size="small"
+        bordered
+        expandable={{
+          expandedRowKeys: expandedKeys,
+          onExpandedRowsChange: (keys) => setExpandedKeys(keys as string[]),
+          expandedRowRender: (record) => (
+            <Table
+              columns={dailyColumns}
+              dataSource={record.dailyBreakdown}
+              rowKey="date"
+              pagination={false}
+              size="small"
+              style={{ margin: 0 }}
+            />
+          ),
+        }}
+      />
+    </>
   );
 }
 
@@ -429,13 +408,13 @@ export function ReportsPage() {
   const { t } = useTranslation('dashboard');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+    <div>
       <Title level={4} style={{ marginBottom: 16 }}>
         {t('reports.title')}
       </Title>
       <Tabs
         defaultActiveKey="averages"
-        style={{ flex: 1, minHeight: 0 }}
+        destroyInactiveTabPane
         items={[
           {
             key: 'averages',
