@@ -588,6 +588,17 @@ export function OrderListPage() {
   const pauseOrder = usePauseOrder();
   const resumeOrder = useResumeOrder();
   const { data: detailOrder, isLoading: detailLoading } = useOrder(detailOrderId ?? undefined);
+  // Fetch processDependencies for the detail order independently from paginated master view
+  const { data: detailDeps } = useQuery({
+    queryKey: ['order-detail-deps', tenantId, detailOrderId],
+    queryFn: () =>
+      ordersApi.getMasterView({ tenantId: tenantId!, search: detailOrder!.orderNumber, page: 1, pageSize: 1 }).then((r) => {
+        const entry = r.data.items.find((o) => o.id === detailOrderId);
+        return entry?.processDependencies ?? {};
+      }),
+    enabled: !!tenantId && !!detailOrderId && !!detailOrder,
+    staleTime: 10_000,
+  });
   // Tick every 10s to update live timer calculations in tooltips
   const [, setTimerTick] = useState(0);
   useEffect(() => {
@@ -1636,7 +1647,7 @@ export function OrderListPage() {
                 <Text type="secondary" style={{ fontSize: 12, marginBottom: 4, display: 'block' }}>
                   {t('orders.processFlow')}
                 </Text>
-                <ProcessTimeline order={detailOrder} processes={processes} tEnum={tEnum} processDependencies={masterResult?.items?.find((o) => o.id === detailOrder.id)?.processDependencies} />
+                <ProcessTimeline order={detailOrder} processes={processes} tEnum={tEnum} processDependencies={detailDeps} />
               </div>
             )}
 
@@ -1784,7 +1795,7 @@ export function OrderListPage() {
                   >
                     <ItemProcessBar
                       item={item} processMap={processMap} tEnum={tEnum}
-                      processDependencies={masterResult?.items?.find((o) => o.id === detailOrder.id)?.processDependencies}
+                      processDependencies={detailDeps}
                       canRestart={(detailOrder.status === OrderStatus.Active || detailOrder.status === OrderStatus.Completed) && user?.role !== UserRole.SalesManager}
                       onRestart={async (oipId, resetTime) => {
                         try {
