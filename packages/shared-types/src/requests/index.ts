@@ -77,6 +77,7 @@ export interface CreateOrderRequest {
 }
 
 export interface UpdateOrderRequest {
+  orderNumber?: string;
   notes?: string;
   customWarningDays?: number;
   customCriticalDays?: number;

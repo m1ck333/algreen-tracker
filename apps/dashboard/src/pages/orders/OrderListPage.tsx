@@ -688,6 +688,7 @@ export function OrderListPage() {
     if (detailOrder) {
       if (detailOrder.status === OrderStatus.Draft) {
         editForm.setFieldsValue({
+          orderNumber: detailOrder.orderNumber,
           notes: detailOrder.notes,
           customWarningDays: detailOrder.customWarningDays,
           customCriticalDays: detailOrder.customCriticalDays,
@@ -1078,6 +1079,7 @@ export function OrderListPage() {
                   await updateOrder.mutateAsync({
                     id: detailOrder.id,
                     data: {
+                      orderNumber: values.orderNumber,
                       notes: values.notes,
                       customWarningDays: values.customWarningDays,
                       customCriticalDays: values.customCriticalDays,
@@ -1973,6 +1975,9 @@ export function OrderListPage() {
             {/* D) Notes & Settings */}
             {detailOrder.status === OrderStatus.Draft ? (
               <Form form={editForm} layout="vertical" style={{ marginTop: 20 }} onValuesChange={onEditValuesChange}>
+                <Form.Item name="orderNumber" label={t('orders.orderNumberLabel')} style={{ marginBottom: 12 }} rules={[{ required: true }, { whitespace: true, message: t('common:errors.INVALID_ORDER_NUMBER') }]}>
+                  <Input />
+                </Form.Item>
                 <Form.Item name="notes" label={t('common:labels.notes')} style={{ marginBottom: 12 }}>
                   <Input.TextArea autoSize={{ minRows: 1, maxRows: 3 }} />
                 </Form.Item>
