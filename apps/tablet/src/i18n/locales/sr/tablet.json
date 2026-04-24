@@ -25,7 +25,9 @@
     "items": "{{count}} stavki",
     "qty": "Kol: {{count}}",
     "daysLeft": "{{count}}d preostalo",
-    "progress": "{{completed}}/{{total}} procesa"
+    "progress": "{{completed}}/{{total}} procesa",
+    "orderNotes": "Napomena narudžbine",
+    "itemNotes": "Napomena stavke"
   },
   "work": {
     "title": "Radna sesija",
@@ -45,7 +47,7 @@
     "completeFailed": "Završavanje procesa nije uspelo",
     "product": "Proizvod",
     "priority": "Prioritet",
-    "deliveryDate": "Isporuka",
+    "deliveryDate": "Rok isporuke",
     "quantity": "Količina",
     "complexity": "Složenost",
     "startedAt": "Započeto u",
@@ -65,7 +67,7 @@
     "noOrders": "Nema dolaznih narudžbina",
     "incoming": "Dolazna",
     "blocked": "{{count}} blokirajućih procesa",
-    "blockedBy": "Blokirano od:",
+    "blockedBy": "Nije završen prethodni proces:",
     "daysLeft": "{{count}}d preostalo",
     "loadFailed": "Učitavanje dolaznih narudžbina nije uspelo",
     "retry": "Pokušaj ponovo",

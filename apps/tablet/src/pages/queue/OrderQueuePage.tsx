@@ -171,6 +171,8 @@ export function OrderQueuePage() {
             completedProcessCount: w.completedProcessCount,
             totalProcessCount: w.totalProcessCount,
             totalDurationMinutes: w.totalDurationMinutes ?? 0,
+            orderNotes: w.orderNotes,
+            itemNotes: w.itemNotes,
           });
           seen.add(w.orderItemProcessId);
         }
@@ -391,7 +393,7 @@ function QueueCard({
             {item.productCategoryName && (
               <span className="inline-block bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-tablet-xs font-medium mr-1.5">{item.productCategoryName}</span>
             )}
-            {item.productName}
+            {item.productName || ''}
           </span>
           <span>{t('queue.qty', { count: item.quantity })}</span>
           {item.complexity && <span>{tEnum('ComplexityType', item.complexity)}</span>}
@@ -419,6 +421,20 @@ function QueueCard({
             </div>
           )}
         </div>
+        {(item.orderNotes || item.itemNotes) && (
+          <div className="mt-2 space-y-1 text-left">
+            {item.orderNotes && (
+              <div className="text-tablet-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1 text-yellow-900 whitespace-pre-wrap">
+                <span className="font-semibold">{t('queue.orderNotes')}:</span> {item.orderNotes}
+              </div>
+            )}
+            {item.itemNotes && (
+              <div className="text-tablet-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1 text-yellow-900 whitespace-pre-wrap">
+                <span className="font-semibold">{t('queue.itemNotes')}:</span> {item.itemNotes}
+              </div>
+            )}
+          </div>
+        )}
       </button>
 
       {isExpanded && (

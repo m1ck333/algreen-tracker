@@ -85,6 +85,8 @@ export interface OrderDetailDto {
   customCriticalDays: number | null;
   items: OrderItemDto[];
   attachments: OrderAttachmentDto[];
+  completedAt: string | null;
+  isInvoiced: boolean;
 }
 
 export interface OrderItemDto {
@@ -152,6 +154,8 @@ export interface OrderMasterViewDto {
   processDependencies: Record<string, string[]>;
   attachmentCount: number;
   createdAt: string;
+  completedAt: string | null;
+  isInvoiced: boolean;
 }
 
 // ─── Block & Change Requests ─────────────────────────────
@@ -409,6 +413,8 @@ export interface TabletQueueItemDto {
   completedProcessCount: number;
   totalProcessCount: number;
   totalDurationMinutes: number;
+  orderNotes: string | null;
+  itemNotes: string | null;
 }
 
 export interface TabletActiveWorkDto {
@@ -431,6 +437,8 @@ export interface TabletActiveWorkDto {
   isTimerRunning: boolean;
   currentLogStartedAt: string | null;
   subProcesses: TabletSubProcessDto[];
+  orderNotes: string | null;
+  itemNotes: string | null;
 }
 
 export interface TabletSubProcessDto {

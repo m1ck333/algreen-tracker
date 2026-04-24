@@ -25,7 +25,9 @@
     "items": "{{count}} items",
     "qty": "Qty: {{count}}",
     "daysLeft": "{{count}}d left",
-    "progress": "{{completed}}/{{total}} processes"
+    "progress": "{{completed}}/{{total}} processes",
+    "orderNotes": "Order note",
+    "itemNotes": "Item note"
   },
   "work": {
     "title": "Work Session",
@@ -45,7 +47,7 @@
     "completeFailed": "Failed to complete process",
     "product": "Product",
     "priority": "Priority",
-    "deliveryDate": "Delivery",
+    "deliveryDate": "Delivery deadline",
     "quantity": "Quantity",
     "complexity": "Complexity",
     "startedAt": "Started at",
@@ -65,7 +67,7 @@
     "noOrders": "No incoming orders",
     "incoming": "Incoming",
     "blocked": "{{count}} blocking processes",
-    "blockedBy": "Blocked by:",
+    "blockedBy": "Previous process not completed:",
     "daysLeft": "{{count}}d left",
     "loadFailed": "Failed to load incoming orders",
     "retry": "Retry",

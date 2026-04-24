@@ -22,3 +22,4 @@ packages/**/*.d.ts.map
 !apps/**/vite.config.ts
 !apps/**/tailwind.config.js
 !apps/**/postcss.config.js
+TESTING_CHECKLIST.md

@@ -98,6 +98,10 @@ export const ordersApi = {
     return apiClient.put(`/orders/${id}/priority`, { priority });
   },
 
+  setInvoiced(id: string, isInvoiced: boolean) {
+    return apiClient.put(`/orders/${id}/invoiced`, { isInvoiced });
+  },
+
   addItem(orderId: string, data: AddOrderItemRequest) {
     return apiClient.post<OrderDetailDto>(`/orders/${orderId}/items`, data);
   },

@@ -1,6 +1,6 @@
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Upload, Button, List, Space, Typography, Modal, App } from 'antd';
-import { UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, UndoOutlined } from '@ant-design/icons';
+import { UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, UndoOutlined, DownloadOutlined } from '@ant-design/icons';
 import { ordersApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
 import type { OrderAttachmentDto } from '@algreen/shared-types';
@@ -170,6 +170,20 @@ export const OrderAttachments = forwardRef<OrderAttachmentsHandle, OrderAttachme
                   onClick={() => {
                     if (isImage(item.contentType)) setImagePreview(getDownloadUrl(item));
                     else openPdfPreview(item);
+                  }}
+                />,
+                <Button
+                  key="download"
+                  type="text"
+                  size="small"
+                  icon={<DownloadOutlined />}
+                  onClick={() => {
+                    const a = document.createElement('a');
+                    a.href = getDownloadUrl(item);
+                    a.download = item.originalFileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                   }}
                 />,
                 ...(canManage

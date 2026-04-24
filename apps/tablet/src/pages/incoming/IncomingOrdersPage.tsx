@@ -299,7 +299,7 @@ function IncomingCard({
             {item.productCategoryName && (
               <span className="text-gray-400 mr-1">{item.productCategoryName} /</span>
             )}
-            {item.productName}
+            {item.productName || ''}
           </span>
           <span>{t('queue.qty', { count: item.quantity })}</span>
           <span className={daysColor}>

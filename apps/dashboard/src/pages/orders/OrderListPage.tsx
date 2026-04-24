@@ -3,9 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Typography, Table, Button, Space, Select, Tag, Drawer, Form, Input,
   InputNumber, DatePicker, App, Row, Col, Spin, Popconfirm, Divider,
-  Tooltip, Progress, Statistic, Upload, List, Modal, Card, Dropdown,
+  Tooltip, Progress, Statistic, Upload, List, Modal, Card, Dropdown, Popover, Checkbox,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined, UndoOutlined, UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined, UndoOutlined, UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, CopyOutlined, FullscreenOutlined, FullscreenExitOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useAuthStore } from '@algreen/auth';
 import { OrderStatus, OrderType, ProcessStatus, ComplexityType, UserRole } from '@algreen/shared-types';
@@ -14,7 +14,7 @@ import {
   useCreateOrder, useOrder, useActivateOrder,
   useUpdateOrder, useCancelOrder, usePauseOrder, useResumeOrder, useReopenOrder,
 } from '../../hooks/useOrders';
-import { productCategoriesApi, processesApi, ordersApi, specialRequestTypesApi, processWorkflowApi } from '@algreen/api-client';
+import { productCategoriesApi, processesApi, ordersApi, specialRequestTypesApi, processWorkflowApi, blockRequestsApi, changeRequestsApi } from '@algreen/api-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { StatusBadge } from '../../components/StatusBadge';
 import { OrderAttachments, type OrderAttachmentsHandle } from '../../components/OrderAttachments';
@@ -22,6 +22,7 @@ import { compressFile } from '../../utils/compressImage';
 import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
+import { useLayoutStore } from '../../stores/layout-store';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -583,6 +584,26 @@ export function OrderListPage() {
   const { guardedClose: guardedEditClose, onValuesChange: onEditValuesChange } = useUnsavedChanges(!!detailOrderId);
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
+  const fullscreen = useLayoutStore((s) => s.fullscreen);
+  const setFullscreen = useLayoutStore((s) => s.setFullscreen);
+
+  useEffect(() => {
+    const onChange = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      setFullscreen(false);
+    };
+  }, [setFullscreen]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  }, []);
   const cancelOrder = useCancelOrder();
   const reopenOrder = useReopenOrder();
   const pauseOrder = usePauseOrder();
@@ -597,6 +618,20 @@ export function OrderListPage() {
         return entry?.processDependencies ?? {};
       }),
     enabled: !!tenantId && !!detailOrderId && !!detailOrder,
+    staleTime: 10_000,
+  });
+
+  // Fetch block & change requests for the detail order
+  const { data: detailBlockRequests } = useQuery({
+    queryKey: ['order-detail-block-requests', tenantId, detailOrderId],
+    queryFn: () => blockRequestsApi.getAll({ tenantId: tenantId!, orderId: detailOrderId!, pageSize: 50 }).then((r) => r.data.items),
+    enabled: !!tenantId && !!detailOrderId,
+    staleTime: 10_000,
+  });
+  const { data: detailChangeRequests } = useQuery({
+    queryKey: ['order-detail-change-requests', tenantId, detailOrderId],
+    queryFn: () => changeRequestsApi.getAll({ tenantId: tenantId!, orderId: detailOrderId!, pageSize: 50 }).then((r) => r.data.items),
+    enabled: !!tenantId && !!detailOrderId,
     staleTime: 10_000,
   });
   // Tick every 10s to update live timer calculations in tooltips
@@ -684,11 +719,42 @@ export function OrderListPage() {
     },
   });
 
+  const setInvoicedMutation = useMutation({
+    mutationFn: ({ id, isInvoiced }: { id: string; isInvoiced: boolean }) =>
+      ordersApi.setInvoiced(id, isInvoiced),
+    onMutate: async ({ id, isInvoiced }) => {
+      await queryClient.cancelQueries({ queryKey: ['orders-master-view'] });
+      const previous = queryClient.getQueriesData({ queryKey: ['orders-master-view'] });
+      queryClient.setQueriesData({ queryKey: ['orders-master-view'] }, (old: unknown) => {
+        const data = old as { items?: OrderMasterViewDto[] } | undefined;
+        if (!data?.items) return old;
+        return { ...data, items: data.items.map((o) => o.id === id ? { ...o, isInvoiced } : o) };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        for (const [key, data] of context.previous) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+      message.error(t('orders.updateFailed'));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
+    },
+  });
+
   useEffect(() => {
     if (detailOrder) {
-      if (detailOrder.status === OrderStatus.Draft) {
+      const isEditableStatus =
+        detailOrder.status === OrderStatus.Draft ||
+        detailOrder.status === OrderStatus.Active ||
+        detailOrder.status === OrderStatus.Paused;
+      if (isEditableStatus) {
         editForm.setFieldsValue({
           orderNumber: detailOrder.orderNumber,
+          deliveryDate: dayjs(detailOrder.deliveryDate),
           notes: detailOrder.notes,
           customWarningDays: detailOrder.customWarningDays,
           customCriticalDays: detailOrder.customCriticalDays,
@@ -793,10 +859,34 @@ export function OrderListPage() {
       {
         title: t('common:labels.created'),
         dataIndex: 'createdAt',
-        width: 150,
+        width: 105,
         render: (d: string) => d ? dayjs(d).format('DD.MM.YYYY.') : '—',
         sorter: true,
         sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
+      },
+      {
+        title: t('common:labels.completed'),
+        dataIndex: 'completedAt',
+        width: 105,
+        render: (d: string | null) => d ? dayjs(d).format('DD.MM.YYYY.') : '—',
+        sorter: true,
+        sortOrder: sortBy === 'completedAt' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
+      },
+      {
+        title: t('orders.invoiced'),
+        dataIndex: 'isInvoiced',
+        width: 90,
+        align: 'center' as const,
+        render: (invoiced: boolean, record: OrderMasterViewDto) => (
+          <Checkbox
+            checked={invoiced}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation();
+              setInvoicedMutation.mutate({ id: record.id, isInvoiced: e.target.checked });
+            }}
+          />
+        ),
       },
       {
         title: t('common:labels.deliveryDate'),
@@ -915,23 +1005,67 @@ export function OrderListPage() {
         <Title level={4} style={{ margin: 0 }}>
           {t('orders.title')}
         </Title>
-        {canCreate && (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              form.resetFields();
-              setCreatePendingItems([]);
-              setPendingFiles(new Map());
-              setAddingItem(true);
-              const maxPriority = (masterResult?.items ?? []).reduce((max, o) => Math.max(max, o.priority), 0);
-              form.setFieldValue('priority', maxPriority + 10);
-              setIsCreating(true);
-            }}
+        <Space>
+          <Popover
+            trigger="click"
+            placement="bottomRight"
+            title={t('orders.legend.title')}
+            content={
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 240 }}>
+                {[
+                  { color: '#92D050', label: t('orders.legend.completed') },
+                  { color: '#1890ff', label: t('orders.legend.inProgress') },
+                  { color: '#FF0000', label: t('orders.legend.blocked') },
+                  { color: '#FFAA00', label: t('orders.legend.stopped') },
+                  { color: '#D9D9D9', label: t('orders.legend.pending') },
+                  { color: '#F0F0F0', label: t('orders.legend.withdrawn') },
+                ].map((entry) => (
+                  <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 18, height: 18, background: entry.color, border: '1px solid #ccc', display: 'inline-block' }} />
+                    <span>{entry.label}</span>
+                  </div>
+                ))}
+                <Divider style={{ margin: '4px 0' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 18, height: 18, background: '#fff', border: '1px dashed #E0E0E0', display: 'inline-block' }} />
+                  <span>{t('orders.legend.notApplicable')}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 18, height: 18, background: '#D9D9D9', border: '2px solid #333', display: 'inline-block' }} />
+                  <span>{t('orders.legend.readyBorder')}</span>
+                </div>
+              </div>
+            }
           >
-            {t('orders.createOrder')}
-          </Button>
-        )}
+            <Tooltip title={t('orders.legend.title')}>
+              <Button icon={<QuestionCircleOutlined />} />
+            </Tooltip>
+          </Popover>
+          <Tooltip title={fullscreen ? t('common:actions.exitFullscreen') : t('common:actions.fullscreen')}>
+            <Button
+              icon={fullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+              onClick={toggleFullscreen}
+            />
+          </Tooltip>
+          {canCreate && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                form.resetFields();
+                itemForm.resetFields();
+                setCreatePendingItems([]);
+                setPendingFiles(new Map());
+                setAddingItem(true);
+                const maxPriority = (masterResult?.items ?? []).reduce((max, o) => Math.max(max, o.priority), 0);
+                form.setFieldValue('priority', maxPriority + 10);
+                setIsCreating(true);
+              }}
+            >
+              {t('orders.createOrder')}
+            </Button>
+          )}
+        </Space>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -1064,30 +1198,33 @@ export function OrderListPage() {
             <Button type="primary" onClick={() => form.submit()} loading={createOrder.isPending}>
               {t('common:actions.save')}
             </Button>
-          ) : detailOrder && detailOrder.status === OrderStatus.Draft && user?.role !== UserRole.SalesManager ? (
+          ) : detailOrder && (detailOrder.status === OrderStatus.Draft || detailOrder.status === OrderStatus.Active || detailOrder.status === OrderStatus.Paused) && user?.role !== UserRole.SalesManager ? (
             <Button type="primary" loading={isSaving} disabled={isSaving} onClick={async () => {
               if (isSaving) return;
               try {
                 const values = await editForm.validateFields();
                 setIsSaving(true);
                 try {
+                  const isDraft = detailOrder.status === OrderStatus.Draft;
                   const complexityOverrides = Array.from(pendingComplexity.entries()).map(([key, complexity]) => {
                     const [itemId, processId] = key.split(':');
                     return { itemId, processId, complexity };
                   });
                   const existingItemIds = new Set(detailOrder.items.map((i) => i.id));
+                  const deliveryDateIso = values.deliveryDate ? dayjs(values.deliveryDate).format('YYYY-MM-DD') + 'T12:00:00Z' : undefined;
                   await updateOrder.mutateAsync({
                     id: detailOrder.id,
                     data: {
                       orderNumber: values.orderNumber,
-                      notes: values.notes,
-                      customWarningDays: values.customWarningDays,
-                      customCriticalDays: values.customCriticalDays,
-                      addItems: pendingItems.length > 0 ? pendingItems : undefined,
-                      removeItemIds: pendingItemRemovals.length > 0 ? pendingItemRemovals : undefined,
+                      deliveryDate: deliveryDateIso,
+                      notes: isDraft ? values.notes : undefined,
+                      customWarningDays: isDraft ? values.customWarningDays : undefined,
+                      customCriticalDays: isDraft ? values.customCriticalDays : undefined,
+                      addItems: isDraft && pendingItems.length > 0 ? pendingItems : undefined,
+                      removeItemIds: isDraft && pendingItemRemovals.length > 0 ? pendingItemRemovals : undefined,
                       complexityOverrides: complexityOverrides.length > 0 ? complexityOverrides : undefined,
-                      addSpecialRequests: pendingSpecialRequestAdds.length > 0 ? pendingSpecialRequestAdds : undefined,
-                      removeSpecialRequests: pendingSpecialRequestRemovals.length > 0 ? pendingSpecialRequestRemovals : undefined,
+                      addSpecialRequests: isDraft && pendingSpecialRequestAdds.length > 0 ? pendingSpecialRequestAdds : undefined,
+                      removeSpecialRequests: isDraft && pendingSpecialRequestRemovals.length > 0 ? pendingSpecialRequestRemovals : undefined,
                     },
                   });
                   // Upload files for newly added items
@@ -1224,7 +1361,6 @@ export function OrderListPage() {
                 <Form form={itemForm} component={false} onFinish={(values) => {
                   setCreatePendingItems((prev) => [...prev, values as AddOrderItemRequest]);
                   itemForm.resetFields();
-                  itemForm.setFieldsValue({ quantity: 1 });
                 }}>
                   <Row gutter={12}>
                     <Col span={12}>
@@ -1233,14 +1369,14 @@ export function OrderListPage() {
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item name="productName" label={t('orders.productName')} rules={[{ required: true }, { whitespace: true, message: t('common:errors.INVALID_PRODUCT_NAME') }]}>
+                      <Form.Item name="productName" label={t('orders.productName')}>
                         <Input />
                       </Form.Item>
                     </Col>
                   </Row>
                   <Row gutter={12}>
                     <Col span={8}>
-                      <Form.Item name="quantity" label={t('orders.quantity')} rules={[{ required: true }, { type: 'number', min: 1, message: t('common:errors.INVALID_QUANTITY') }]} initialValue={1}>
+                      <Form.Item name="quantity" label={t('orders.quantity')} rules={[{ required: true, message: t('common:errors.INVALID_QUANTITY') }, { type: 'number', min: 1, message: t('common:errors.INVALID_QUANTITY') }]}>
                         <InputNumber min={1} precision={0} style={{ width: '100%' }} />
                       </Form.Item>
                     </Col>
@@ -1682,7 +1818,6 @@ export function OrderListPage() {
                   setCurrentDraftItemFiles([]);
                   setPendingItems((prev) => [...prev, values as AddOrderItemRequest]);
                   itemForm.resetFields();
-                  itemForm.setFieldsValue({ quantity: 1 });
                   setAddingItem(false);
                 }}>
                   <Row gutter={12}>
@@ -1697,14 +1832,14 @@ export function OrderListPage() {
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item name="productName" label={t('orders.productName')} rules={[{ required: true }, { whitespace: true, message: t('common:errors.INVALID_PRODUCT_NAME') }]}>
+                      <Form.Item name="productName" label={t('orders.productName')}>
                         <Input />
                       </Form.Item>
                     </Col>
                   </Row>
                   <Row gutter={12}>
                     <Col span={8}>
-                      <Form.Item name="quantity" label={t('orders.quantity')} rules={[{ required: true }, { type: 'number', min: 1, message: t('common:errors.INVALID_QUANTITY') }]} initialValue={1}>
+                      <Form.Item name="quantity" label={t('orders.quantity')} rules={[{ required: true, message: t('common:errors.INVALID_QUANTITY') }, { type: 'number', min: 1, message: t('common:errors.INVALID_QUANTITY') }]}>
                         <InputNumber min={1} precision={0} style={{ width: '100%' }} />
                       </Form.Item>
                     </Col>
@@ -1973,26 +2108,39 @@ export function OrderListPage() {
             </div>
 
             {/* D) Notes & Settings */}
-            {detailOrder.status === OrderStatus.Draft ? (
+            {detailOrder.status === OrderStatus.Draft || detailOrder.status === OrderStatus.Active || detailOrder.status === OrderStatus.Paused ? (
               <Form form={editForm} layout="vertical" style={{ marginTop: 20 }} onValuesChange={onEditValuesChange}>
-                <Form.Item name="orderNumber" label={t('orders.orderNumberLabel')} style={{ marginBottom: 12 }} rules={[{ required: true }, { whitespace: true, message: t('common:errors.INVALID_ORDER_NUMBER') }]}>
-                  <Input />
-                </Form.Item>
-                <Form.Item name="notes" label={t('common:labels.notes')} style={{ marginBottom: 12 }}>
-                  <Input.TextArea autoSize={{ minRows: 1, maxRows: 3 }} />
-                </Form.Item>
                 <Row gutter={12}>
                   <Col span={12}>
-                    <Form.Item name="customWarningDays" label={t('orders.warningDays')} style={{ marginBottom: 0 }}>
-                      <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                    <Form.Item name="orderNumber" label={t('orders.orderNumberLabel')} style={{ marginBottom: 12 }} rules={[{ required: true }, { whitespace: true, message: t('common:errors.INVALID_ORDER_NUMBER') }]}>
+                      <Input />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name="customCriticalDays" label={t('orders.criticalDays')} style={{ marginBottom: 0 }}>
-                      <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                    <Form.Item name="deliveryDate" label={t('common:labels.deliveryDate')} style={{ marginBottom: 12 }} rules={[{ required: true }]}>
+                      <DatePicker format="DD.MM.YYYY." style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
                 </Row>
+                {detailOrder.status === OrderStatus.Draft && (
+                  <>
+                    <Form.Item name="notes" label={t('common:labels.notes')} style={{ marginBottom: 12 }}>
+                      <Input.TextArea autoSize={{ minRows: 1, maxRows: 3 }} />
+                    </Form.Item>
+                    <Row gutter={12}>
+                      <Col span={12}>
+                        <Form.Item name="customWarningDays" label={t('orders.warningDays')} style={{ marginBottom: 0 }}>
+                          <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="customCriticalDays" label={t('orders.criticalDays')} style={{ marginBottom: 0 }}>
+                          <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </>
+                )}
               </Form>
             ) : detailOrder.notes ? (
               <div style={{ marginTop: 20 }}>
@@ -2002,6 +2150,51 @@ export function OrderListPage() {
                 <Text>{detailOrder.notes}</Text>
               </div>
             ) : null}
+
+            {/* D2) Related Requests */}
+            {((detailBlockRequests && detailBlockRequests.length > 0) || (detailChangeRequests && detailChangeRequests.length > 0)) && (
+              <div style={{ marginTop: 20 }}>
+                {detailBlockRequests && detailBlockRequests.length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+                      {t('blockRequests.title')} ({detailBlockRequests.length})
+                    </Text>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {detailBlockRequests.map((br) => (
+                        <div key={br.id} style={{ padding: 8, background: '#fff1f0', border: '1px solid #ffa39e', borderRadius: 4, fontSize: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <span><Tag color={br.status === 'Pending' ? 'orange' : br.status === 'Approved' ? 'red' : 'default'}>{tEnum('RequestStatus', br.status)}</Tag>{br.processName && <Text type="secondary" style={{ marginLeft: 4 }}>· {br.processName}</Text>}</span>
+                            <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(br.createdAt).format('DD.MM.YYYY. HH:mm')}</Text>
+                          </div>
+                          {br.requestNote && <div style={{ whiteSpace: 'pre-wrap' }}>{br.requestNote}</div>}
+                          {br.blockReason && <div style={{ marginTop: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>{t('blockRequests.blockReason')}:</Text> {br.blockReason}</div>}
+                          {br.rejectionNote && <div style={{ marginTop: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>{t('blockRequests.response')}:</Text> {br.rejectionNote}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {detailChangeRequests && detailChangeRequests.length > 0 && (
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+                      {t('changeRequests.title')} ({detailChangeRequests.length})
+                    </Text>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {detailChangeRequests.map((cr) => (
+                        <div key={cr.id} style={{ padding: 8, background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4, fontSize: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <span><Tag color={cr.status === 'Pending' ? 'orange' : cr.status === 'Approved' ? 'green' : 'default'}>{tEnum('RequestStatus', cr.status)}</Tag></span>
+                            <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(cr.createdAt).format('DD.MM.YYYY. HH:mm')}</Text>
+                          </div>
+                          {cr.description && <div style={{ whiteSpace: 'pre-wrap' }}>{cr.description}</div>}
+                          {cr.responseNote && <div style={{ marginTop: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>{t('changeRequests.responseNote')}:</Text> {cr.responseNote}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* E) Attachments — inline, same pattern as create mode */}
             <OrderAttachments orderId={detailOrder.id} attachments={detailOrder.attachments ?? []} readOnly={detailOrder.status !== OrderStatus.Draft} ref={(handle) => { if (handle) attachmentRefsMap.current.set('order', handle); else attachmentRefsMap.current.delete('order'); }} />
