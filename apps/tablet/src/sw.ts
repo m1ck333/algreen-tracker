@@ -7,6 +7,10 @@ declare const self: ServiceWorkerGlobalScope;
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
+// Take over clients immediately on activation so updates apply on next load
+self.addEventListener('install', () => { self.skipWaiting(); });
+self.addEventListener('activate', (event) => { event.waitUntil(self.clients.claim()); });
+
 // Push notification handler
 self.addEventListener('push', (event) => {
   console.log('[SW] push event received', event.data ? 'with data' : 'no data');

@@ -50,7 +50,7 @@ export const ordersApi = {
     if (data.items) {
       data.items.forEach((item, i) => {
         formData.append(`Items[${i}].ProductCategoryId`, item.productCategoryId);
-        formData.append(`Items[${i}].ProductName`, item.productName);
+        formData.append(`Items[${i}].ProductName`, item.productName ?? '');
         formData.append(`Items[${i}].Quantity`, String(item.quantity));
         if (item.notes) formData.append(`Items[${i}].Notes`, item.notes);
       });

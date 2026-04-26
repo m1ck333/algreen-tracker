@@ -136,7 +136,7 @@ export function BlockRequestsPage() {
       render: (name: string | null) => name ?? '—',
     },
     {
-      title: t('common:labels.description'),
+      title: t('blockRequests.requestNote'),
       dataIndex: 'requestNote',
       ellipsis: true,
       sorter: true,

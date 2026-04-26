@@ -467,6 +467,8 @@ export interface TabletIncomingDto {
   completedProcessCount: number;
   totalProcessCount: number;
   blockingProcesses: BlockingProcessDto[];
+  orderNotes: string | null;
+  itemNotes: string | null;
 }
 
 export interface BlockingProcessDto {

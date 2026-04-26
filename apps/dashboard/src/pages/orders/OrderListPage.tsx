@@ -5,7 +5,7 @@ import {
   InputNumber, DatePicker, App, Row, Col, Spin, Popconfirm, Divider,
   Tooltip, Progress, Statistic, Upload, List, Modal, Card, Dropdown, Popover, Checkbox,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined, UndoOutlined, UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, CopyOutlined, FullscreenOutlined, FullscreenExitOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined, UndoOutlined, UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, CopyOutlined, FullscreenOutlined, FullscreenExitOutlined, QuestionCircleOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useAuthStore } from '@algreen/auth';
 import { OrderStatus, OrderType, ProcessStatus, ComplexityType, UserRole } from '@algreen/shared-types';
@@ -264,9 +264,9 @@ function ProcessCell({
     );
   }
 
-  // Paused sub-process gap: show as gray with bold border (ready-like) instead of blue
+  // Paused sub-process gap: show as orange with bold border instead of blue
   const showAsReady = paused && status === ProcessStatus.InProgress;
-  const color = showAsReady ? '#D9D9D9' : processStatusColors[status];
+  const color = showAsReady ? '#FFAA00' : processStatusColors[status];
   const label = tEnum('ProcessStatus', status);
 
   const timeStr = duration ? formatDurationSec(duration) : '';
@@ -356,8 +356,8 @@ function ProcessTimeline({
             return sum + (p ? calcLiveSeconds(p) : 0);
           }, 0);
           const timeStr = formatDurationSec(totalSec);
-          const showBold = isReady;
-          const color = isReady ? '#D9D9D9' : (status ? processStatusColors[status] : '#F0F0F0');
+          const showBold = isReady || aggPaused;
+          const color = aggPaused ? '#FFAA00' : isReady ? '#D9D9D9' : (status ? processStatusColors[status] : '#F0F0F0');
 
           return (
             <Tooltip key={proc.id} title={<div><div><b>{proc.name}</b></div><div style={{ color: statusColor(status, aggPaused) }}>{aggPaused ? t('orders.paused') : (status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable'))}</div>{timeStr && <div>{timeStr}</div>}</div>}>
@@ -448,7 +448,7 @@ function ItemProcessBar({
             isReady = prev.status === ProcessStatus.Completed || prev.isWithdrawn;
           }
         }
-        const color = procPaused ? '#D9D9D9' : processStatusColors[proc.status];
+        const color = procPaused ? '#FFAA00' : processStatusColors[proc.status];
         const statusLabel = tEnum('ProcessStatus', proc.status);
         return (
           canRestart && proc.status === ProcessStatus.Completed && onRestart ? (
@@ -688,6 +688,11 @@ export function OrderListPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [pendingNewItemFiles, setPendingNewItemFiles] = useState<Map<number, File[]>>(new Map());
   const [currentDraftItemFiles, setCurrentDraftItemFiles] = useState<File[]>([]);
+  const [editingOrderNumber, setEditingOrderNumber] = useState(false);
+  const [orderNumberDraft, setOrderNumberDraft] = useState('');
+  const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
+  const [deliveryDateDraft, setDeliveryDateDraft] = useState<dayjs.Dayjs | null>(null);
+  const [savingInline, setSavingInline] = useState(false);
 
   const clearPendingState = useCallback(() => {
     setPendingItems([]);
@@ -745,6 +750,43 @@ export function OrderListPage() {
     },
   });
 
+  const saveInlineOrderNumber = useCallback(async () => {
+    if (!detailOrder) return;
+    const newValue = orderNumberDraft.trim();
+    if (!newValue) { message.error(t('common:errors.INVALID_ORDER_NUMBER')); return; }
+    if (newValue === detailOrder.orderNumber) { setEditingOrderNumber(false); return; }
+    setSavingInline(true);
+    try {
+      await updateOrder.mutateAsync({ id: detailOrder.id, data: { orderNumber: newValue } });
+      await queryClient.invalidateQueries({ queryKey: ['orders', detailOrder.id] });
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
+      message.success(t('orders.updatedSuccess'));
+      setEditingOrderNumber(false);
+    } catch (err) {
+      message.error(getTranslatedError(err, t, t('orders.updateFailed')));
+    } finally {
+      setSavingInline(false);
+    }
+  }, [detailOrder, orderNumberDraft, updateOrder, queryClient, t, message]);
+
+  const saveInlineDeliveryDate = useCallback(async () => {
+    if (!detailOrder || !deliveryDateDraft) return;
+    const iso = dayjs(deliveryDateDraft).format('YYYY-MM-DD') + 'T12:00:00Z';
+    if (dayjs(iso).isSame(dayjs(detailOrder.deliveryDate), 'day')) { setEditingDeliveryDate(false); return; }
+    setSavingInline(true);
+    try {
+      await updateOrder.mutateAsync({ id: detailOrder.id, data: { deliveryDate: iso } });
+      await queryClient.invalidateQueries({ queryKey: ['orders', detailOrder.id] });
+      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
+      message.success(t('orders.updatedSuccess'));
+      setEditingDeliveryDate(false);
+    } catch (err) {
+      message.error(getTranslatedError(err, t, t('orders.updateFailed')));
+    } finally {
+      setSavingInline(false);
+    }
+  }, [detailOrder, deliveryDateDraft, updateOrder, queryClient, t, message]);
+
   useEffect(() => {
     if (detailOrder) {
       const isEditableStatus =
@@ -753,14 +795,16 @@ export function OrderListPage() {
         detailOrder.status === OrderStatus.Paused;
       if (isEditableStatus) {
         editForm.setFieldsValue({
-          orderNumber: detailOrder.orderNumber,
-          deliveryDate: dayjs(detailOrder.deliveryDate),
           notes: detailOrder.notes,
           customWarningDays: detailOrder.customWarningDays,
           customCriticalDays: detailOrder.customCriticalDays,
         });
       }
       setLocalPriority(detailOrder.priority);
+      setOrderNumberDraft(detailOrder.orderNumber);
+      setDeliveryDateDraft(dayjs(detailOrder.deliveryDate));
+      setEditingOrderNumber(false);
+      setEditingDeliveryDate(false);
     }
   }, [detailOrder, editForm]);
 
@@ -878,14 +922,26 @@ export function OrderListPage() {
         width: 90,
         align: 'center' as const,
         render: (invoiced: boolean, record: OrderMasterViewDto) => (
-          <Checkbox
-            checked={invoiced}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => {
-              e.stopPropagation();
-              setInvoicedMutation.mutate({ id: record.id, isInvoiced: e.target.checked });
-            }}
-          />
+          <span onClick={(e) => e.stopPropagation()}>
+            {invoiced ? (
+              <Popconfirm
+                title={t('orders.uninvoiceConfirm')}
+                onConfirm={(e) => { e?.stopPropagation(); setInvoicedMutation.mutate({ id: record.id, isInvoiced: false }); }}
+                onCancel={(e) => e?.stopPropagation()}
+                okText={t('common:actions.confirm')}
+                cancelText={t('common:actions.cancel')}
+              >
+                <Checkbox checked />
+              </Popconfirm>
+            ) : (
+              <Checkbox
+                checked={false}
+                onChange={(e) => {
+                  setInvoicedMutation.mutate({ id: record.id, isInvoiced: e.target.checked });
+                }}
+              />
+            )}
+          </span>
         ),
       },
       {
@@ -1018,7 +1074,6 @@ export function OrderListPage() {
                   { color: '#FF0000', label: t('orders.legend.blocked') },
                   { color: '#FFAA00', label: t('orders.legend.stopped') },
                   { color: '#D9D9D9', label: t('orders.legend.pending') },
-                  { color: '#F0F0F0', label: t('orders.legend.withdrawn') },
                 ].map((entry) => (
                   <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ width: 18, height: 18, background: entry.color, border: '1px solid #ccc', display: 'inline-block' }} />
@@ -1182,7 +1237,29 @@ export function OrderListPage() {
 
       {/* Unified Order Drawer — handles both create and edit/detail */}
       <Drawer
-        title={isCreating ? t('orders.createOrder') : detailOrder ? t('orders.order', { number: detailOrder.orderNumber }) : ''}
+        title={isCreating ? t('orders.createOrder') : detailOrder ? (
+          editingOrderNumber ? (
+            <Space size={4}>
+              <Input
+                size="small"
+                style={{ width: 180 }}
+                value={orderNumberDraft}
+                autoFocus
+                onChange={(e) => setOrderNumberDraft(e.target.value)}
+                onPressEnter={saveInlineOrderNumber}
+              />
+              <Button size="small" type="primary" loading={savingInline} icon={<CheckOutlined />} onClick={saveInlineOrderNumber} />
+              <Button size="small" icon={<CloseCircleOutlined />} onClick={() => { setOrderNumberDraft(detailOrder.orderNumber); setEditingOrderNumber(false); }} />
+            </Space>
+          ) : (
+            <Space size={4}>
+              <span>{t('orders.order', { number: detailOrder.orderNumber })}</span>
+              {detailOrder.status !== OrderStatus.Completed && detailOrder.status !== OrderStatus.Cancelled && user?.role !== UserRole.SalesManager && (
+                <Button type="text" size="small" icon={<EditOutlined />} onClick={() => setEditingOrderNumber(true)} />
+              )}
+            </Space>
+          )
+        ) : ''}
         open={isCreating || !!detailOrderId}
         onClose={(e) => {
           const doClose = () => {
@@ -1198,7 +1275,7 @@ export function OrderListPage() {
             <Button type="primary" onClick={() => form.submit()} loading={createOrder.isPending}>
               {t('common:actions.save')}
             </Button>
-          ) : detailOrder && (detailOrder.status === OrderStatus.Draft || detailOrder.status === OrderStatus.Active || detailOrder.status === OrderStatus.Paused) && user?.role !== UserRole.SalesManager ? (
+          ) : detailOrder && detailOrder.status === OrderStatus.Draft && user?.role !== UserRole.SalesManager ? (
             <Button type="primary" loading={isSaving} disabled={isSaving} onClick={async () => {
               if (isSaving) return;
               try {
@@ -1211,12 +1288,9 @@ export function OrderListPage() {
                     return { itemId, processId, complexity };
                   });
                   const existingItemIds = new Set(detailOrder.items.map((i) => i.id));
-                  const deliveryDateIso = values.deliveryDate ? dayjs(values.deliveryDate).format('YYYY-MM-DD') + 'T12:00:00Z' : undefined;
                   await updateOrder.mutateAsync({
                     id: detailOrder.id,
                     data: {
-                      orderNumber: values.orderNumber,
-                      deliveryDate: deliveryDateIso,
                       notes: isDraft ? values.notes : undefined,
                       customWarningDays: isDraft ? values.customWarningDays : undefined,
                       customCriticalDays: isDraft ? values.customCriticalDays : undefined,
@@ -1763,11 +1837,31 @@ export function OrderListPage() {
                 </div>
               </Col>
               <Col span={8}>
-                <Statistic
-                  title={t('common:labels.deliveryDate')}
-                  value={dayjs(detailOrder.deliveryDate).format('DD.MM.YYYY.')}
-                  valueStyle={{ color: deliveryDateColor, fontSize: 20 }}
-                />
+                <div>
+                  <div style={{ color: '#00000073', fontSize: 14, marginBottom: 4 }}>{t('common:labels.deliveryDate')}</div>
+                  {editingDeliveryDate ? (
+                    <Space size={4}>
+                      <DatePicker
+                        size="small"
+                        value={deliveryDateDraft}
+                        format="DD.MM.YYYY."
+                        autoFocus
+                        onChange={(d) => setDeliveryDateDraft(d)}
+                      />
+                      <Button size="small" type="primary" loading={savingInline} icon={<CheckOutlined />} onClick={saveInlineDeliveryDate} />
+                      <Button size="small" icon={<CloseCircleOutlined />} onClick={() => { setDeliveryDateDraft(dayjs(detailOrder.deliveryDate)); setEditingDeliveryDate(false); }} />
+                    </Space>
+                  ) : (
+                    <Space size={4}>
+                      <span style={{ color: deliveryDateColor, fontSize: 20, fontWeight: 500 }}>
+                        {dayjs(detailOrder.deliveryDate).format('DD.MM.YYYY.')}
+                      </span>
+                      {detailOrder.status !== OrderStatus.Completed && detailOrder.status !== OrderStatus.Cancelled && user?.role !== UserRole.SalesManager && (
+                        <Button type="text" size="small" icon={<EditOutlined />} onClick={() => setEditingDeliveryDate(true)} />
+                      )}
+                    </Space>
+                  )}
+                </div>
               </Col>
               <Col span={8}>
                 <Statistic
@@ -2108,39 +2202,23 @@ export function OrderListPage() {
             </div>
 
             {/* D) Notes & Settings */}
-            {detailOrder.status === OrderStatus.Draft || detailOrder.status === OrderStatus.Active || detailOrder.status === OrderStatus.Paused ? (
+            {detailOrder.status === OrderStatus.Draft ? (
               <Form form={editForm} layout="vertical" style={{ marginTop: 20 }} onValuesChange={onEditValuesChange}>
+                <Form.Item name="notes" label={t('common:labels.notes')} style={{ marginBottom: 12 }}>
+                  <Input.TextArea autoSize={{ minRows: 1, maxRows: 3 }} />
+                </Form.Item>
                 <Row gutter={12}>
                   <Col span={12}>
-                    <Form.Item name="orderNumber" label={t('orders.orderNumberLabel')} style={{ marginBottom: 12 }} rules={[{ required: true }, { whitespace: true, message: t('common:errors.INVALID_ORDER_NUMBER') }]}>
-                      <Input />
+                    <Form.Item name="customWarningDays" label={t('orders.warningDays')} style={{ marginBottom: 0 }}>
+                      <InputNumber min={0} precision={0} style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name="deliveryDate" label={t('common:labels.deliveryDate')} style={{ marginBottom: 12 }} rules={[{ required: true }]}>
-                      <DatePicker format="DD.MM.YYYY." style={{ width: '100%' }} />
+                    <Form.Item name="customCriticalDays" label={t('orders.criticalDays')} style={{ marginBottom: 0 }}>
+                      <InputNumber min={0} precision={0} style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
                 </Row>
-                {detailOrder.status === OrderStatus.Draft && (
-                  <>
-                    <Form.Item name="notes" label={t('common:labels.notes')} style={{ marginBottom: 12 }}>
-                      <Input.TextArea autoSize={{ minRows: 1, maxRows: 3 }} />
-                    </Form.Item>
-                    <Row gutter={12}>
-                      <Col span={12}>
-                        <Form.Item name="customWarningDays" label={t('orders.warningDays')} style={{ marginBottom: 0 }}>
-                          <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item name="customCriticalDays" label={t('orders.criticalDays')} style={{ marginBottom: 0 }}>
-                          <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  </>
-                )}
               </Form>
             ) : detailOrder.notes ? (
               <div style={{ marginTop: 20 }}>
@@ -2166,7 +2244,7 @@ export function OrderListPage() {
                             <span><Tag color={br.status === 'Pending' ? 'orange' : br.status === 'Approved' ? 'red' : 'default'}>{tEnum('RequestStatus', br.status)}</Tag>{br.processName && <Text type="secondary" style={{ marginLeft: 4 }}>· {br.processName}</Text>}</span>
                             <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(br.createdAt).format('DD.MM.YYYY. HH:mm')}</Text>
                           </div>
-                          {br.requestNote && <div style={{ whiteSpace: 'pre-wrap' }}>{br.requestNote}</div>}
+                          {br.requestNote && <div><Text type="secondary" style={{ fontSize: 11 }}>{t('blockRequests.requestNote')}:</Text> <span style={{ whiteSpace: 'pre-wrap' }}>{br.requestNote}</span></div>}
                           {br.blockReason && <div style={{ marginTop: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>{t('blockRequests.blockReason')}:</Text> {br.blockReason}</div>}
                           {br.rejectionNote && <div style={{ marginTop: 4 }}><Text type="secondary" style={{ fontSize: 11 }}>{t('blockRequests.response')}:</Text> {br.rejectionNote}</div>}
                         </div>

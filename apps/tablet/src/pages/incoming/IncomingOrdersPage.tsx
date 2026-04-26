@@ -358,6 +358,22 @@ function IncomingCard({
             </div>
           </div>
 
+          {/* Notes */}
+          {(item.orderNotes || item.itemNotes) && (
+            <div className="space-y-1">
+              {item.orderNotes && (
+                <div className="text-tablet-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1 text-yellow-900 whitespace-pre-wrap">
+                  <span className="font-semibold">{t('queue.orderNotes')}:</span> {item.orderNotes}
+                </div>
+              )}
+              {item.itemNotes && (
+                <div className="text-tablet-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1 text-yellow-900 whitespace-pre-wrap">
+                  <span className="font-semibold">{t('queue.itemNotes')}:</span> {item.itemNotes}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Blocking processes */}
           {item.blockingProcesses.length > 0 && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2">
