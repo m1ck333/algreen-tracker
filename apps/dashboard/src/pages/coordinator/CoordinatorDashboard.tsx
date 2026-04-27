@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Row, Col, Card, Typography, Table, Alert, Statistic, List, Tag, Badge, Tooltip, Button, Drawer } from 'antd';
+import { Row, Col, Card, Typography, Table, Alert, Statistic, List, Tag, Badge, Tooltip, Button, Drawer, theme } from 'antd';
 import {
   WarningOutlined,
   ClockCircleOutlined,
@@ -46,6 +46,7 @@ function formatTime(iso: string): string {
 
 export function CoordinatorDashboard() {
   const navigate = useNavigate();
+  const { token } = theme.useToken();
   const [activeOrdersProcess, setActiveOrdersProcess] = useState<LiveViewProcessDto | null>(null);
   const warnings = useDashboardWarnings();
   const liveView = useDashboardLiveView();
@@ -71,15 +72,15 @@ export function CoordinatorDashboard() {
                 { title: t('coordinator.stats.ordersCompleted'), value: s.today?.ordersCompleted ?? 0 },
                 { title: t('coordinator.stats.processesCompleted'), value: s.today?.processesCompleted ?? 0 },
                 { title: t('coordinator.stats.avgProcessTime'), value: s.today?.averageProcessTimeMinutes ?? 0, suffix: t('coordinator.stats.min') },
-                { title: t('coordinator.stats.criticalWarnings'), value: s.warnings?.criticalCount ?? 0, color: s.warnings?.criticalCount ? '#cf1322' : undefined },
-                { title: t('coordinator.stats.warnings'), value: s.warnings?.warningCount ?? 0, color: s.warnings?.warningCount ? '#faad14' : undefined },
+                { title: t('coordinator.stats.criticalWarnings'), value: s.warnings?.criticalCount ?? 0, color: s.warnings?.criticalCount ? token.colorError : undefined },
+                { title: t('coordinator.stats.warnings'), value: s.warnings?.warningCount ?? 0, color: s.warnings?.warningCount ? token.colorWarning : undefined },
                 { title: t('coordinator.stats.pendingBlockRequests'), value: s.pendingBlockRequests ?? 0 },
               ];
               return (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px 16px' }}>
                   {items.map((item) => (
                     <div key={item.title} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 64 }}>
-                      <div style={{ fontSize: 13, color: 'rgba(0,0,0,0.45)', lineHeight: 1.3, marginBottom: 4 }}>{item.title}</div>
+                      <div style={{ fontSize: 13, color: token.colorTextSecondary, lineHeight: 1.3, marginBottom: 4 }}>{item.title}</div>
                       <Statistic
                         value={item.value}
                         suffix={item.suffix}
@@ -117,7 +118,7 @@ export function CoordinatorDashboard() {
                       title={item.orderNumber}
                       description={
                         <>
-                          <span style={isOverdue ? { color: '#cf1322', fontWeight: 500 } : undefined}>
+                          <span style={isOverdue ? { color: token.colorError, fontWeight: 500 } : undefined}>
                             {daysText}
                           </span>
                           {' · '}
@@ -178,7 +179,7 @@ export function CoordinatorDashboard() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {processWorkers.map((w) => (
                             <div key={w.userId} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: w.isCheckedIn ? '#52c41a' : '#ff4d4f', flexShrink: 0 }} />
+                              <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: w.isCheckedIn ? token.colorSuccess : token.colorError, flexShrink: 0 }} />
                               <Text style={{ fontSize: 13 }}>
                                 {w.name}
                                 {w.isCheckedIn && w.checkedInAt && (
@@ -227,7 +228,7 @@ export function CoordinatorDashboard() {
                 renderItem={(item: PendingBlockRequestDto) => (
                   <List.Item
                     extra={
-                      <div style={{ textAlign: 'right', fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>
+                      <div style={{ textAlign: 'right', fontSize: 12, color: token.colorTextSecondary }}>
                         <div>{item.requestedBy}</div>
                         <div>{formatDateTime(item.requestedAt)}</div>
                       </div>

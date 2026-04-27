@@ -8,7 +8,7 @@ export const theme: ThemeConfig = {
   },
   components: {
     Layout: {
-      siderBg: '#001529',
+      siderBg: '#0d3818',
       headerBg: '#ffffff',
     },
     Form: {

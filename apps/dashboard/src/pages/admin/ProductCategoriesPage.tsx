@@ -3,7 +3,7 @@ import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import {
   Typography, Table, Button, Drawer, Form, Input, Tag, App,
-  Select, InputNumber, Divider, Popconfirm, DatePicker,
+  Select, InputNumber, Divider, Popconfirm, DatePicker, theme,
 } from 'antd';
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -78,9 +78,10 @@ function SortableRow(props: SortableRowProps) {
 
 function DragHandle() {
   const listeners = React.useContext(DragHandleContext);
+  const { token } = theme.useToken();
   return (
     <HolderOutlined
-      style={{ color: '#999', cursor: 'grab' }}
+      style={{ color: token.colorTextTertiary, cursor: 'grab' }}
       {...listeners}
       onClick={(e) => e.stopPropagation()}
     />

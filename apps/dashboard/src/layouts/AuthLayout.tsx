@@ -1,7 +1,8 @@
 import { Outlet } from 'react-router-dom';
-import { Layout } from 'antd';
+import { Layout, theme } from 'antd';
 
 export function AuthLayout() {
+  const { token } = theme.useToken();
   return (
     <Layout
       style={{
@@ -9,7 +10,7 @@ export function AuthLayout() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f0f2f5',
+        background: token.colorBgLayout,
       }}
     >
       <Outlet />

@@ -1,5 +1,5 @@
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { Upload, Button, List, Space, Typography, Modal, App } from 'antd';
+import { Upload, Button, List, Space, Typography, Modal, App, theme } from 'antd';
 import { UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, UndoOutlined, DownloadOutlined } from '@ant-design/icons';
 import { ordersApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
@@ -37,6 +37,7 @@ export const OrderAttachments = forwardRef<OrderAttachmentsHandle, OrderAttachme
   function OrderAttachments({ orderId, orderItemId, attachments, readOnly = false }, ref) {
     const tenantId = useAuthStore((s) => s.tenantId);
     const user = useAuthStore((s) => s.user);
+    const { token } = theme.useToken();
     const [pendingUploads, setPendingUploads] = useState<File[]>([]);
     const [pendingDeletes, setPendingDeletes] = useState<Set<string>>(new Set());
     const [pdfPreview, setPdfPreview] = useState<string | null>(null);
@@ -211,7 +212,7 @@ export const OrderAttachments = forwardRef<OrderAttachmentsHandle, OrderAttachme
                     alt={item.originalFileName}
                   />
                 ) : (
-                  <FilePdfOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />
+                  <FilePdfOutlined style={{ fontSize: 24, color: token.colorError }} />
                 )}
                 <div>
                   <Text ellipsis style={{ maxWidth: 200 }}>
@@ -257,7 +258,7 @@ export const OrderAttachments = forwardRef<OrderAttachmentsHandle, OrderAttachme
                       alt={file.name}
                     />
                   ) : (
-                    <FilePdfOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />
+                    <FilePdfOutlined style={{ fontSize: 24, color: token.colorError }} />
                   )}
                   <div>
                     <Text ellipsis style={{ maxWidth: 200 }}>{file.name}</Text>
@@ -295,7 +296,7 @@ export const OrderAttachments = forwardRef<OrderAttachmentsHandle, OrderAttachme
                 ]}
               >
                 <Space size={8}>
-                  <FilePdfOutlined style={{ fontSize: 24, color: '#d9d9d9' }} />
+                  <FilePdfOutlined style={{ fontSize: 24, color: token.colorTextDisabled }} />
                   <Text delete ellipsis style={{ maxWidth: 200 }}>
                     {item.originalFileName}
                   </Text>

@@ -3,7 +3,7 @@ import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import {
   Typography, Table, Button, Drawer, Form, Input, InputNumber, Tag, App,
-  Popconfirm, Divider, Select, DatePicker,
+  Popconfirm, Divider, Select, DatePicker, theme,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, HolderOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -71,9 +71,10 @@ function SortableRow(props: SortableRowProps) {
 
 function DragHandle() {
   const listeners = React.useContext(DragHandleContext);
+  const { token } = theme.useToken();
   return (
     <HolderOutlined
-      style={{ color: '#999', cursor: 'grab' }}
+      style={{ color: token.colorTextTertiary, cursor: 'grab' }}
       {...listeners}
       onClick={(e) => e.stopPropagation()}
     />

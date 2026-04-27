@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Card, Form, Input, Button, Typography, Alert } from 'antd';
+import { Card, Form, Input, Button, Typography, Alert, theme } from 'antd';
 import { UserOutlined, LockOutlined, BankOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@algreen/auth';
 import { useTranslation } from '@algreen/i18n';
@@ -11,6 +11,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
   const { t } = useTranslation('dashboard');
+  const { token } = theme.useToken();
 
   const onFinish = async (values: { email: string; password: string; tenantCode: string }) => {
     try {
@@ -22,7 +23,7 @@ export function LoginPage() {
   };
 
   return (
-    <Card style={{ width: 400, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+    <Card style={{ width: 400, boxShadow: token.boxShadow }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <Title level={3} style={{ margin: 0 }}>
           {t('login.title')}

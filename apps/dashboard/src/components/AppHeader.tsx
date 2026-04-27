@@ -1,4 +1,4 @@
-import { Layout, Space, Button, Dropdown, Typography } from 'antd';
+import { Layout, Space, Button, Dropdown, Typography, theme } from 'antd';
 import { LogoutOutlined, UserOutlined, GlobalOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@algreen/auth';
 import { useTranslation } from '@algreen/i18n';
@@ -11,6 +11,7 @@ export function AppHeader() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { t, i18n } = useTranslation('dashboard');
+  const { token } = theme.useToken();
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -19,12 +20,12 @@ export function AppHeader() {
   return (
     <Header
       style={{
-        background: '#fff',
+        background: token.colorBgContainer,
         padding: '0 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
-        borderBottom: '1px solid #f0f0f0',
+        borderBottom: `1px solid ${token.colorBorderSecondary}`,
       }}
     >
       <Space size="middle">

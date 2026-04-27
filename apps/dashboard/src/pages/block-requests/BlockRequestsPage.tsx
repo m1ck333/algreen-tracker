@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTableHeight } from '../../hooks/useTableHeight';
-import { Typography, Table, Space, Button, App, Popconfirm, Modal, Input, Select, DatePicker, Dropdown } from 'antd';
+import { Typography, Table, Space, Button, App, Popconfirm, Modal, Input, Select, DatePicker, Dropdown, theme } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -38,6 +38,7 @@ function getTranslatedError(error: unknown, t: (key: string, opts?: Record<strin
 export function BlockRequestsPage() {
   const tenantId = useAuthStore((s) => s.tenantId);
   const userId = useAuthStore((s) => s.user?.id);
+  const { token } = theme.useToken();
   const [statusFilter, setStatusFilter] = useState<RequestStatus | undefined>(undefined);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
@@ -162,13 +163,13 @@ export function BlockRequestsPage() {
       width: 150,
       sorter: true,
       sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
-      render: (d: string) => (<div><div>{dayjs(d).format('DD.MM.YYYY.')}</div><div style={{ fontSize: 11, color: '#999' }}>{dayjs(d).format('HH:mm')}</div></div>),
+      render: (d: string) => (<div><div>{dayjs(d).format('DD.MM.YYYY.')}</div><div style={{ fontSize: 11, color: token.colorTextSecondary }}>{dayjs(d).format('HH:mm')}</div></div>),
     },
     {
       title: t('common:labels.handledAt'),
       dataIndex: 'updatedAt',
       width: 150,
-      render: (d: string | null) => d ? (<div><div>{dayjs(d).format('DD.MM.YYYY.')}</div><div style={{ fontSize: 11, color: '#999' }}>{dayjs(d).format('HH:mm')}</div></div>) : '—',
+      render: (d: string | null) => d ? (<div><div>{dayjs(d).format('DD.MM.YYYY.')}</div><div style={{ fontSize: 11, color: token.colorTextSecondary }}>{dayjs(d).format('HH:mm')}</div></div>) : '—',
       sorter: true,
       sortOrder: sortBy === 'updatedAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },

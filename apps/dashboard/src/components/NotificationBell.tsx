@@ -1,4 +1,4 @@
-import { Badge, Button, Popover, List, Typography, Space, Empty, Tooltip } from 'antd';
+import { Badge, Button, Popover, List, Typography, Space, Empty, Tooltip, theme } from 'antd';
 import { BellOutlined, CheckOutlined, DeleteOutlined, ClearOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationsApi } from '@algreen/api-client';
@@ -25,6 +25,7 @@ export function NotificationBell() {
   const userId = useAuthStore((s) => s.user?.id);
   const { t } = useTranslation('dashboard');
   const queryClient = useQueryClient();
+  const { token } = theme.useToken();
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(1);
 
@@ -127,7 +128,7 @@ export function NotificationBell() {
         renderItem={(item: NotificationDto) => (
           <List.Item
             style={{
-              background: item.isRead ? undefined : '#f6ffed',
+              background: item.isRead ? undefined : token.colorSuccessBg,
               padding: '8px 12px',
             }}
             actions={[

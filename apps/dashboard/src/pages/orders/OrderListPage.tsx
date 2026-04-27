@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Typography, Table, Button, Space, Select, Tag, Drawer, Form, Input,
   InputNumber, DatePicker, App, Row, Col, Spin, Popconfirm, Divider,
-  Tooltip, Progress, Statistic, Upload, List, Modal, Card, Dropdown, Popover, Checkbox,
+  Tooltip, Progress, Statistic, Upload, List, Modal, Card, Dropdown, Popover, Checkbox, theme,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined, UndoOutlined, UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, CopyOutlined, FullscreenOutlined, FullscreenExitOutlined, QuestionCircleOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -26,6 +26,8 @@ import { useLayoutStore } from '../../stores/layout-store';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
+
+const ATTACHMENT_RECOVERY = import.meta.env.VITE_ATTACHMENT_RECOVERY === 'true';
 
 // ─── Process status color mapping (matching Excel conditional formatting) ────
 
@@ -507,6 +509,7 @@ function ItemProcessBar({
 export function OrderListPage() {
   const user = useAuthStore((s) => s.user);
   const tenantId = useAuthStore((s) => s.tenantId);
+  const { token } = theme.useToken();
   const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>(undefined);
   const [orderTypeFilter, setOrderTypeFilter] = useState<OrderType | undefined>(undefined);
   const [search, setSearch] = useState('');
@@ -876,7 +879,7 @@ export function OrderListPage() {
             <span style={{ fontWeight: 500 }}>{text}</span>
             {record.attachmentCount > 0 && (
               <Tooltip title={`${record.attachmentCount} ${record.attachmentCount === 1 ? 'dokument' : 'dokumenata'}`}>
-                <PaperClipOutlined style={{ color: '#1677ff', fontSize: 13 }} />
+                <PaperClipOutlined style={{ color: token.colorPrimary, fontSize: 13 }} />
               </Tooltip>
             )}
           </Space>
@@ -1275,7 +1278,7 @@ export function OrderListPage() {
             <Button type="primary" onClick={() => form.submit()} loading={createOrder.isPending}>
               {t('common:actions.save')}
             </Button>
-          ) : detailOrder && detailOrder.status === OrderStatus.Draft && user?.role !== UserRole.SalesManager ? (
+          ) : detailOrder && (detailOrder.status === OrderStatus.Draft || (ATTACHMENT_RECOVERY && detailOrder.status !== OrderStatus.Cancelled)) && user?.role !== UserRole.SalesManager ? (
             <Button type="primary" loading={isSaving} disabled={isSaving} onClick={async () => {
               if (isSaving) return;
               try {
@@ -1550,7 +1553,7 @@ export function OrderListPage() {
                                   alt={file.name}
                                 />
                               ) : (
-                                <FilePdfOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />
+                                <FilePdfOutlined style={{ fontSize: 24, color: token.colorError }} />
                               )}
                               <div>
                                 <Text ellipsis style={{ maxWidth: 200 }}>{file.name}</Text>
@@ -1637,7 +1640,7 @@ export function OrderListPage() {
                         alt={file.name}
                       />
                     ) : (
-                      <FilePdfOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />
+                      <FilePdfOutlined style={{ fontSize: 24, color: token.colorError }} />
                     )}
                     <div>
                       <Text ellipsis style={{ maxWidth: 200 }}>{file.name}</Text>
@@ -1838,7 +1841,7 @@ export function OrderListPage() {
               </Col>
               <Col span={8}>
                 <div>
-                  <div style={{ color: '#00000073', fontSize: 14, marginBottom: 4 }}>{t('common:labels.deliveryDate')}</div>
+                  <div style={{ color: token.colorTextSecondary, fontSize: 14, marginBottom: 4 }}>{t('common:labels.deliveryDate')}</div>
                   {editingDeliveryDate ? (
                     <Space size={4}>
                       <DatePicker
@@ -1976,7 +1979,7 @@ export function OrderListPage() {
                               {file.type.startsWith('image/') ? (
                                 <img src={URL.createObjectURL(file)} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }} onClick={() => openPendingPreview(file)} alt={file.name} />
                               ) : (
-                                <FilePdfOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />
+                                <FilePdfOutlined style={{ fontSize: 24, color: token.colorError }} />
                               )}
                               <div>
                                 <Text ellipsis style={{ maxWidth: 200 }}>{file.name}</Text>
@@ -2127,7 +2130,7 @@ export function OrderListPage() {
                                     placeholder={process?.code ?? '?'}
                                     allowClear
                                     disabled={!isDraft}
-                                    style={{ width: 100, ...(pendingVal ? { borderColor: '#1677ff' } : {}) }}
+                                    style={{ width: 100, ...(pendingVal ? { borderColor: token.colorPrimary } : {}) }}
                                     popupMatchSelectWidth={false}
                                     options={Object.values(ComplexityType).map((c) => ({
                                       label: `${process?.code ?? '?'} ${tEnum('ComplexityType', c)}`,
@@ -2159,7 +2162,7 @@ export function OrderListPage() {
                         {item.notes}
                       </Text>
                     )}
-                    <OrderAttachments orderId={detailOrder.id} orderItemId={item.id} attachments={item.attachments ?? []} readOnly={!isDraft} ref={(handle) => { if (handle) attachmentRefsMap.current.set(item.id, handle); else attachmentRefsMap.current.delete(item.id); }} />
+                    <OrderAttachments orderId={detailOrder.id} orderItemId={item.id} attachments={item.attachments ?? []} readOnly={!isDraft && !ATTACHMENT_RECOVERY} ref={(handle) => { if (handle) attachmentRefsMap.current.set(item.id, handle); else attachmentRefsMap.current.delete(item.id); }} />
                   </Card>
                 );
               })}
@@ -2172,7 +2175,7 @@ export function OrderListPage() {
                   <Card
                     key={`pending-${i}`}
                     size="small"
-                    style={{ borderStyle: 'dashed', borderColor: '#1677ff' }}
+                    style={{ borderStyle: 'dashed', borderColor: token.colorPrimary }}
                     title={
                       <Space>
                         <Text strong>{item.productName}</Text>
@@ -2239,7 +2242,7 @@ export function OrderListPage() {
                     </Text>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {detailBlockRequests.map((br) => (
-                        <div key={br.id} style={{ padding: 8, background: '#fff1f0', border: '1px solid #ffa39e', borderRadius: 4, fontSize: 12 }}>
+                        <div key={br.id} style={{ padding: 8, background: token.colorErrorBg, border: `1px solid ${token.colorErrorBorder}`, borderRadius: token.borderRadius, fontSize: 12 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
                             <span><Tag color={br.status === 'Pending' ? 'orange' : br.status === 'Approved' ? 'red' : 'default'}>{tEnum('RequestStatus', br.status)}</Tag>{br.processName && <Text type="secondary" style={{ marginLeft: 4 }}>· {br.processName}</Text>}</span>
                             <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(br.createdAt).format('DD.MM.YYYY. HH:mm')}</Text>
@@ -2259,7 +2262,7 @@ export function OrderListPage() {
                     </Text>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {detailChangeRequests.map((cr) => (
-                        <div key={cr.id} style={{ padding: 8, background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4, fontSize: 12 }}>
+                        <div key={cr.id} style={{ padding: 8, background: token.colorWarningBg, border: `1px solid ${token.colorWarningBorder}`, borderRadius: token.borderRadius, fontSize: 12 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
                             <span><Tag color={cr.status === 'Pending' ? 'orange' : cr.status === 'Approved' ? 'green' : 'default'}>{tEnum('RequestStatus', cr.status)}</Tag></span>
                             <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(cr.createdAt).format('DD.MM.YYYY. HH:mm')}</Text>
@@ -2275,7 +2278,7 @@ export function OrderListPage() {
             )}
 
             {/* E) Attachments — inline, same pattern as create mode */}
-            <OrderAttachments orderId={detailOrder.id} attachments={detailOrder.attachments ?? []} readOnly={detailOrder.status !== OrderStatus.Draft} ref={(handle) => { if (handle) attachmentRefsMap.current.set('order', handle); else attachmentRefsMap.current.delete('order'); }} />
+            <OrderAttachments orderId={detailOrder.id} attachments={detailOrder.attachments ?? []} readOnly={detailOrder.status !== OrderStatus.Draft && !ATTACHMENT_RECOVERY} ref={(handle) => { if (handle) attachmentRefsMap.current.set('order', handle); else attachmentRefsMap.current.delete('order'); }} />
           </>
         ) : (
           <Typography.Text>{t('orders.orderNotFound')}</Typography.Text>

@@ -1,8 +1,20 @@
 import { Component } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
-import { Button, Typography, Result } from 'antd';
+import { Button, Typography, Result, theme } from 'antd';
 
 const { Paragraph, Text } = Typography;
+
+function DevErrorDetails({ error }: { error: Error }) {
+  const { token } = theme.useToken();
+  return (
+    <Paragraph>
+      <Text strong style={{ fontSize: 14, color: token.colorError }}>{error.message}</Text>
+      <pre style={{ marginTop: 8, fontSize: 12, color: token.colorTextSecondary, maxHeight: 200, overflow: 'auto', background: token.colorFillSecondary, padding: 12, borderRadius: token.borderRadius }}>
+        {error.stack}
+      </pre>
+    </Paragraph>
+  );
+}
 
 interface Props {
   children: ReactNode;
@@ -52,16 +64,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </Button>,
           ]}
         >
-          {import.meta.env.DEV && this.state.error && (
-            <Paragraph>
-              <Text strong style={{ fontSize: 14, color: '#cf1322' }}>
-                {this.state.error.message}
-              </Text>
-              <pre style={{ marginTop: 8, fontSize: 12, color: '#666', maxHeight: 200, overflow: 'auto', background: '#f5f5f5', padding: 12, borderRadius: 6 }}>
-                {this.state.error.stack}
-              </pre>
-            </Paragraph>
-          )}
+          {import.meta.env.DEV && this.state.error && <DevErrorDetails error={this.state.error} />}
         </Result>
       </div>
     );
