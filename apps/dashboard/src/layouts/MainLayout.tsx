@@ -9,7 +9,7 @@ import {
 } from '@algreen/signalr-client';
 import { tokenManager } from '@algreen/api-client';
 import { SidebarMenu } from '../components/SidebarMenu';
-import { AppHeader } from '../components/AppHeader';
+import { SidebarFooter } from '../components/SidebarFooter';
 import { ConnectionAlert } from '../components/ConnectionAlert';
 import { useSignalRQueryInvalidation } from '../hooks/useSignalRQueryInvalidation';
 import { useLayoutStore } from '../stores/layout-store';
@@ -51,29 +51,34 @@ export function MainLayout() {
           onCollapse={setCollapsed}
           breakpoint="lg"
           theme="dark"
-          style={{ overflow: 'auto', height: '100vh', position: 'sticky', top: 0, left: 0 }}
+          style={{ height: '100vh', position: 'sticky', top: 0, left: 0 }}
         >
-          <div
-            style={{
-              height: 48,
-              margin: 16,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-            }}
-          >
-            <img
-              src={collapsed ? '/algreen-logo.png' : '/algreen-logo-text.png'}
-              alt="AlGreen"
-              style={{ height: collapsed ? 32 : 28, objectFit: 'contain' }}
-            />
+          <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)' }}>
+            <div
+              style={{
+                height: 48,
+                margin: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={collapsed ? '/algreen-logo.png' : '/algreen-logo-text.png'}
+                alt="Algreen"
+                style={{ height: collapsed ? 32 : 28, objectFit: 'contain' }}
+              />
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+              <SidebarMenu collapsed={collapsed} />
+            </div>
+            <SidebarFooter collapsed={collapsed} />
           </div>
-          <SidebarMenu collapsed={collapsed} />
         </Sider>
       )}
       <Layout style={{ overflow: 'hidden' }}>
-        {!fullscreen && <AppHeader />}
         <Content
           style={{
             margin: fullscreen ? 0 : 24,

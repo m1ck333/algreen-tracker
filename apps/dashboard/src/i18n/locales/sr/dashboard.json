@@ -12,7 +12,12 @@
     "specialRequests": "Specijalni zahtevi",
     "tenants": "Firme",
     "shifts": "Smene",
-    "reports": "Vremena procesa"
+    "reports": "Vremena procesa",
+    "notifications": "Obaveštenja",
+    "profile": "Profil"
+  },
+  "profile": {
+    "language": "Jezik"
   },
   "login": {
     "title": "Algreen MES",
