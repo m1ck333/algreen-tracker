@@ -38,6 +38,11 @@ function getTranslatedError(error: unknown, t: (key: string, opts?: Record<strin
 export function UsersPage() {
   const tenantId = useAuthStore((s) => s.tenantId);
   const currentUserId = useAuthStore((s) => s.user?.id);
+  const currentUserRole = useAuthStore((s) => s.user?.role);
+  const isSuperAdmin = currentUserRole === UserRole.SuperAdmin;
+  const assignableRoles = Object.values(UserRole).filter(
+    (r) => isSuperAdmin || r !== UserRole.SuperAdmin,
+  );
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserDto | null>(null);
@@ -326,7 +331,7 @@ export function UsersPage() {
           </Form.Item>
           <Form.Item name="role" label={t('common:labels.role')} rules={[{ required: true }]}>
             <Select
-              options={Object.values(UserRole).map((r) => ({ label: tEnum('UserRole', r), value: r }))}
+              options={assignableRoles.map((r) => ({ label: tEnum('UserRole', r), value: r }))}
               onChange={() => createForm.setFieldValue('processIds', undefined)}
             />
           </Form.Item>
@@ -385,7 +390,7 @@ export function UsersPage() {
           </Form.Item>
           <Form.Item name="role" label={t('common:labels.role')} rules={[{ required: true }]}>
             <Select
-              options={Object.values(UserRole).map((r) => ({ label: tEnum('UserRole', r), value: r }))}
+              options={assignableRoles.map((r) => ({ label: tEnum('UserRole', r), value: r }))}
               onChange={() => editForm.setFieldValue('processIds', undefined)}
             />
           </Form.Item>
