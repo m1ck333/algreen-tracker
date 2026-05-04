@@ -818,7 +818,8 @@ export function OrderListPage() {
   const canCreate =
     user?.role === UserRole.SalesManager ||
     user?.role === UserRole.Manager ||
-    user?.role === UserRole.Admin;
+    user?.role === UserRole.Admin ||
+    user?.role === UserRole.SuperAdmin;
 
   const onCreateFinish = async (values: Record<string, unknown>) => {
     try {

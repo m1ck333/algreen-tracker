@@ -11,6 +11,7 @@ export function RoleRedirect() {
     case UserRole.Coordinator:
     case UserRole.Manager:
     case UserRole.Admin:
+    case UserRole.SuperAdmin:
       return <Navigate to="/dashboard" replace />;
     case UserRole.SalesManager:
       return <Navigate to="/sales" replace />;

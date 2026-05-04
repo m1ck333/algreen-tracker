@@ -50,7 +50,8 @@ export const OrderAttachments = forwardRef<OrderAttachmentsHandle, OrderAttachme
     const canManage = !readOnly && (
       user?.role === UserRole.SalesManager ||
       user?.role === UserRole.Manager ||
-      user?.role === UserRole.Admin);
+      user?.role === UserRole.Admin ||
+      user?.role === UserRole.SuperAdmin);
 
     // Reset pending state when order changes
     useEffect(() => {

@@ -71,6 +71,7 @@ export enum ComplexityType {
 }
 
 export enum UserRole {
+  SuperAdmin = 'SuperAdmin',
   Admin = 'Admin',
   Manager = 'Manager',
   Coordinator = 'Coordinator',

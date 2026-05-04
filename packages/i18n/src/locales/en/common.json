@@ -183,6 +183,7 @@
       "PriorityChange": "Priority Change"
     },
     "UserRole": {
+      "SuperAdmin": "Super Admin",
       "Admin": "Admin",
       "Manager": "Manager",
       "Coordinator": "Coordinator",

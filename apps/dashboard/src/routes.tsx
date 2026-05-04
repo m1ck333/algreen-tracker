@@ -40,7 +40,7 @@ export function AppRoutes() {
           path="/dashboard"
           element={
             <RequireRole
-              roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin]}
+              roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin, UserRole.SuperAdmin]}
             >
               <CoordinatorDashboard />
             </RequireRole>
@@ -62,7 +62,7 @@ export function AppRoutes() {
           path="/block-requests"
           element={
             <RequireRole
-              roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin]}
+              roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin, UserRole.SuperAdmin]}
             >
               <BlockRequestsPage />
             </RequireRole>
@@ -72,7 +72,7 @@ export function AppRoutes() {
           path="/change-requests"
           element={
             <RequireRole
-              roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin]}
+              roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin, UserRole.SuperAdmin]}
             >
               <ChangeRequestsPage />
             </RequireRole>
@@ -83,7 +83,7 @@ export function AppRoutes() {
           path="/reports"
           element={
             <RequireRole
-              roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin]}
+              roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin, UserRole.SuperAdmin]}
             >
               <ReportsPage />
             </RequireRole>
@@ -94,7 +94,7 @@ export function AppRoutes() {
         <Route
           path="/admin/users"
           element={
-            <RequireRole roles={[UserRole.Admin, UserRole.Manager]}>
+            <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.SuperAdmin]}>
               <UsersPage />
             </RequireRole>
           }
@@ -102,7 +102,7 @@ export function AppRoutes() {
         <Route
           path="/admin/processes"
           element={
-            <RequireRole roles={[UserRole.Admin, UserRole.Manager]}>
+            <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.SuperAdmin]}>
               <ProcessesPage />
             </RequireRole>
           }
@@ -110,7 +110,7 @@ export function AppRoutes() {
         <Route
           path="/admin/product-categories"
           element={
-            <RequireRole roles={[UserRole.Admin, UserRole.Manager]}>
+            <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.SuperAdmin]}>
               <ProductCategoriesPage />
             </RequireRole>
           }
@@ -118,7 +118,7 @@ export function AppRoutes() {
         <Route
           path="/admin/special-request-types"
           element={
-            <RequireRole roles={[UserRole.Admin, UserRole.Manager]}>
+            <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.SuperAdmin]}>
               <SpecialRequestTypesPage />
             </RequireRole>
           }
@@ -126,7 +126,7 @@ export function AppRoutes() {
         <Route
           path="/admin/tenants"
           element={
-            <RequireRole roles={[UserRole.Admin]}>
+            <RequireRole roles={[UserRole.SuperAdmin]}>
               <TenantsPage />
             </RequireRole>
           }
@@ -134,7 +134,7 @@ export function AppRoutes() {
         <Route
           path="/admin/shifts"
           element={
-            <RequireRole roles={[UserRole.Admin, UserRole.Manager]}>
+            <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.SuperAdmin]}>
               <ShiftsPage />
             </RequireRole>
           }

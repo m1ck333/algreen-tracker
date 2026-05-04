@@ -34,8 +34,8 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
   const { t } = useTranslation('dashboard');
 
   const isCoordOrAbove =
-    role === UserRole.Coordinator || role === UserRole.Manager || role === UserRole.Admin;
-  const isAdminOrManager = role === UserRole.Admin || role === UserRole.Manager;
+    role === UserRole.Coordinator || role === UserRole.Manager || role === UserRole.Admin || role === UserRole.SuperAdmin;
+  const isAdminOrManager = role === UserRole.Admin || role === UserRole.Manager || role === UserRole.SuperAdmin;
   const isSales = role === UserRole.SalesManager;
 
   const { data: pendingBlockCount } = useQuery({
@@ -90,7 +90,7 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
         { key: '/admin/processes', icon: <ApartmentOutlined />, label: t('nav.processes') },
         { key: '/admin/product-categories', icon: <AppstoreOutlined />, label: t('nav.categories') },
         { key: '/admin/special-request-types', icon: <TagOutlined />, label: t('nav.specialRequests') },
-        role === UserRole.Admin && {
+        role === UserRole.SuperAdmin && {
           key: '/admin/tenants',
           icon: <BankOutlined />,
           label: t('nav.tenants'),

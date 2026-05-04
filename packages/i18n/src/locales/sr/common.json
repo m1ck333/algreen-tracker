@@ -183,6 +183,7 @@
       "PriorityChange": "Promena prioriteta"
     },
     "UserRole": {
+      "SuperAdmin": "Super Administrator",
       "Admin": "Administrator",
       "Manager": "Menadžer",
       "Coordinator": "Koordinator",
