@@ -6,7 +6,6 @@ import type {
 import { apiClient } from '../axios-instance';
 
 export interface TimeTrackingQuery {
-  tenantId: string;
   from: string;
   to: string;
   processId?: string;
@@ -14,17 +13,14 @@ export interface TimeTrackingQuery {
 }
 
 export interface WorkerHoursQuery {
-  tenantId: string;
   from: string;
   to: string;
   userId?: string;
 }
 
 export const reportsApi = {
-  getProcessAverages(tenantId: string) {
-    return apiClient.get<{ processes: ProcessAverageDto[] }>('/reports/process-averages', {
-      params: { tenantId },
-    });
+  getProcessAverages() {
+    return apiClient.get<{ processes: ProcessAverageDto[] }>('/reports/process-averages');
   },
 
   getTimeTracking(params: TimeTrackingQuery) {

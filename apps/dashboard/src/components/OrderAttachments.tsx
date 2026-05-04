@@ -35,7 +35,6 @@ interface OrderAttachmentsProps {
 
 export const OrderAttachments = forwardRef<OrderAttachmentsHandle, OrderAttachmentsProps>(
   function OrderAttachments({ orderId, orderItemId, attachments, readOnly = false }, ref) {
-    const tenantId = useAuthStore((s) => s.tenantId);
     const user = useAuthStore((s) => s.user);
     const { token } = theme.useToken();
     const [pendingUploads, setPendingUploads] = useState<File[]>([]);
@@ -71,11 +70,11 @@ export const OrderAttachments = forwardRef<OrderAttachmentsHandle, OrderAttachme
         setPendingUploads([]);
         try {
           for (const attachmentId of deletesToProcess) {
-            await ordersApi.deleteAttachment(orderId, attachmentId, tenantId!);
+            await ordersApi.deleteAttachment(orderId, attachmentId);
           }
           for (const file of uploadsToProcess) {
             const compressed = await compressFile(file);
-            await ordersApi.uploadAttachment(orderId, compressed, tenantId!, orderItemId);
+            await ordersApi.uploadAttachment(orderId, compressed, orderItemId);
           }
           return true;
         } catch {

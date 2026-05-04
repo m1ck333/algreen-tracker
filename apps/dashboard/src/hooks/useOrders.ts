@@ -6,12 +6,9 @@ import type { OrderStatus, CreateOrderRequest, UpdateOrderRequest, AddOrderItemR
 
 export function useOrders(filters?: { status?: OrderStatus; search?: string; page?: number; pageSize?: number }) {
   const tenantId = useAuthStore((s) => s.tenantId);
-  const params: OrdersQuery = {
-    tenantId: tenantId!,
-    ...filters,
-  };
+  const params: OrdersQuery = { ...filters };
   return useQuery({
-    queryKey: ['orders', params],
+    queryKey: ['orders', tenantId, params],
     queryFn: () => ordersApi.getAll(params).then((r) => r.data),
     enabled: !!tenantId,
   });

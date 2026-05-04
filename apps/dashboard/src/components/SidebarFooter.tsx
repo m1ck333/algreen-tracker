@@ -213,7 +213,7 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
         block
         danger
         icon={<LogoutOutlined />}
-        onClick={() => { setProfileOpen(false); logout(); }}
+        onClick={() => { setProfileOpen(false); queryClient.clear(); logout(); }}
       >
         {t('common:actions.logout')}
       </Button>

@@ -63,7 +63,6 @@ export function ShiftsPage() {
   const { data: pagedResult, isLoading } = useQuery({
     queryKey: ['shifts', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => shiftsApi.getAll({
-      tenantId: tenantId!,
       search: debouncedSearch || undefined,
       isActive: isActiveFilter,
       createdFrom: dateFrom?.format('YYYY-MM-DD'),
@@ -79,7 +78,6 @@ export function ShiftsPage() {
   const createMutation = useMutation({
     mutationFn: (values: { name: string; startTime: dayjs.Dayjs; endTime: dayjs.Dayjs }) =>
       shiftsApi.create({
-        tenantId: tenantId!,
         name: values.name,
         startTime: values.startTime.format('HH:mm:ss'),
         endTime: values.endTime.format('HH:mm:ss'),

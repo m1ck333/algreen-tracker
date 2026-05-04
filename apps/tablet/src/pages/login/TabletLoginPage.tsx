@@ -21,17 +21,17 @@ export function TabletLoginPage() {
     try {
       await login(email, password, tenantCode);
 
-      const { user, tenantId } = useAuthStore.getState();
-      if (!user || !tenantId) {
+      const { user } = useAuthStore.getState();
+      if (!user) {
         navigate('/queue', { replace: true });
         return;
       }
 
       setSettingUp(true);
 
-      // Check in (no processId needed anymore)
+      // Check in (tenant derived from JWT)
       try {
-        await workSessionsApi.checkIn({ tenantId, userId: user.id });
+        await workSessionsApi.checkIn({ userId: user.id });
       } catch {
         // Non-critical — proceed even if check-in fails
       }

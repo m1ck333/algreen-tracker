@@ -63,7 +63,6 @@ export function BlockRequestsPage() {
   const { data: pagedResult, isLoading } = useQuery({
     queryKey: ['block-requests', tenantId, statusFilter, debouncedSearch, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => blockRequestsApi.getAll({
-      tenantId: tenantId!,
       status: statusFilter,
       search: debouncedSearch || undefined,
       createdFrom: dateFrom?.format('YYYY-MM-DD'),

@@ -42,11 +42,11 @@ export const processWorkflowApi = {
     return apiClient.post(`/order-item-processes/${id}/withdraw`, data);
   },
 
-  pauseStation(data: { processId: string; tenantId: string; userId: string }) {
+  pauseStation(data: { processId: string; userId: string }) {
     return apiClient.post('/order-item-processes/pause-station', data);
   },
 
-  resumeStation(data: { processId: string; tenantId: string; userId: string }) {
+  resumeStation(data: { processId: string; userId: string }) {
     return apiClient.post('/order-item-processes/resume-station', data);
   },
 };

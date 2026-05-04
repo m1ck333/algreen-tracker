@@ -42,7 +42,7 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
     queryKey: ['block-requests-pending-count', tenantId],
     queryFn: () =>
       blockRequestsApi
-        .getAll({ tenantId: tenantId!, status: RequestStatus.Pending, page: 1, pageSize: 1 })
+        .getAll({ status: RequestStatus.Pending, page: 1, pageSize: 1 })
         .then((r) => r.data.totalCount),
     enabled: !!tenantId && isCoordOrAbove,
     refetchInterval: 30_000,

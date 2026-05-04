@@ -23,7 +23,7 @@ export function IncomingOrdersPage() {
 
   const { data: incomingGroups, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['tablet-incoming', userId, tenantId],
-    queryFn: () => tabletApi.getIncoming(userId!, tenantId!).then((r) => r.data),
+    queryFn: () => tabletApi.getIncoming(userId!).then((r) => r.data),
     enabled: !!tenantId && !!userId,
     refetchInterval: 60_000,
   });
@@ -96,7 +96,7 @@ export function IncomingOrdersPage() {
 
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
-    queryFn: () => processesApi.getAll({ tenantId: tenantId!, pageSize: 100 }).then((r) => r.data.items),
+    queryFn: () => processesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
     enabled: !!tenantId,
     staleTime: 5 * 60_000,
   });

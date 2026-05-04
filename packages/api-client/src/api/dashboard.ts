@@ -8,23 +8,23 @@ import type {
 import { apiClient } from '../axios-instance';
 
 export const dashboardApi = {
-  getWarnings(tenantId: string) {
-    return apiClient.get<DeadlineWarningDto[]>('/dashboard/warnings', { params: { tenantId } });
+  getWarnings() {
+    return apiClient.get<DeadlineWarningDto[]>('/dashboard/warnings');
   },
 
-  getLiveView(tenantId: string) {
-    return apiClient.get<LiveViewProcessDto[]>('/dashboard/live-view', { params: { tenantId } });
+  getLiveView() {
+    return apiClient.get<LiveViewProcessDto[]>('/dashboard/live-view');
   },
 
-  getWorkersStatus(tenantId: string) {
-    return apiClient.get<WorkerStatusDto[]>('/dashboard/workers-status', { params: { tenantId } });
+  getWorkersStatus() {
+    return apiClient.get<WorkerStatusDto[]>('/dashboard/workers-status');
   },
 
-  getPendingBlocks(tenantId: string) {
-    return apiClient.get<PendingBlockRequestDto[]>('/dashboard/pending-blocks', { params: { tenantId } });
+  getPendingBlocks() {
+    return apiClient.get<PendingBlockRequestDto[]>('/dashboard/pending-blocks');
   },
 
-  getStatistics(tenantId: string) {
-    return apiClient.get<DashboardStatisticsDto>('/dashboard/statistics', { params: { tenantId } });
+  getStatistics() {
+    return apiClient.get<DashboardStatisticsDto>('/dashboard/statistics');
   },
 };

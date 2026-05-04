@@ -118,7 +118,6 @@ export function ProcessesPage() {
   const { data: pagedResult, isLoading } = useQuery({
     queryKey: ['processes', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => processesApi.getAll({
-      tenantId: tenantId!,
       search: debouncedSearch || undefined,
       isActive: isActiveFilter,
       createdFrom: dateFrom?.format('YYYY-MM-DD'),
@@ -151,7 +150,6 @@ export function ProcessesPage() {
   const createMutation = useMutation({
     mutationFn: (values: { code: string; name: string; sequenceOrder: number }) =>
       processesApi.create({
-        tenantId: tenantId!,
         ...values,
         subProcesses: pendingSubProcesses.length > 0
           ? pendingSubProcesses.map(({ name, sequenceOrder }) => ({ name, sequenceOrder }))

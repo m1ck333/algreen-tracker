@@ -60,7 +60,6 @@ export function ChangeRequestsPage() {
   const { data: pagedResult, isLoading } = useQuery({
     queryKey: ['change-requests', tenantId, statusFilter, debouncedSearch, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => changeRequestsApi.getAll({
-      tenantId: tenantId!,
       status: statusFilter,
       search: debouncedSearch || undefined,
       createdFrom: dateFrom?.format('YYYY-MM-DD'),

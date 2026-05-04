@@ -5,7 +5,7 @@ export const pushApi = {
     return apiClient.get<{ publicKey: string }>('/push/vapid-public-key');
   },
 
-  subscribe(data: { tenantId: string; userId: string; endpoint: string; p256dhKey: string; authKey: string }) {
+  subscribe(data: { userId: string; endpoint: string; p256dhKey: string; authKey: string }) {
     return apiClient.post('/push/subscribe', data);
   },
 

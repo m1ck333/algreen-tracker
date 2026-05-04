@@ -3,8 +3,8 @@ import type { CheckInRequest, CheckOutRequest } from '@algreen/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const workSessionsApi = {
-  getAll(tenantId: string, date: string) {
-    return apiClient.get<PagedResult<WorkSessionDto>>('/work-sessions', { params: { tenantId, date } });
+  getAll(date: string) {
+    return apiClient.get<PagedResult<WorkSessionDto>>('/work-sessions', { params: { date } });
   },
 
   checkIn(data: CheckInRequest) {

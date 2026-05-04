@@ -51,7 +51,7 @@ export function OrderQueuePage() {
 
   const { data: queueGroups, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['tablet-queue', userId, tenantId],
-    queryFn: () => tabletApi.getQueue(userId!, tenantId!).then((r) => r.data),
+    queryFn: () => tabletApi.getQueue(userId!).then((r) => r.data),
     enabled: !!tenantId && !!userId,
     refetchInterval: 60_000,
   });
@@ -63,7 +63,7 @@ export function OrderQueuePage() {
 
   const { data: activeGroups } = useQuery({
     queryKey: ['tablet-active', userId, tenantId],
-    queryFn: () => tabletApi.getActive(userId!, tenantId!).then((r) => r.data),
+    queryFn: () => tabletApi.getActive(userId!).then((r) => r.data),
     enabled: !!userId && !!tenantId,
     refetchInterval: 120_000,
   });
@@ -278,7 +278,6 @@ export function OrderQueuePage() {
               subProcessNameMap={subProcessNameMap}
               subProcessOrderMap={subProcessOrderMap}
               userId={userId!}
-              tenantId={tenantId!}
               t={t}
               tEnum={tEnum}
             />
@@ -307,7 +306,6 @@ function QueueCard({
   subProcessNameMap,
   subProcessOrderMap,
   userId,
-  tenantId,
   t,
   tEnum,
 }: {
@@ -320,7 +318,6 @@ function QueueCard({
   subProcessNameMap: Map<string, string>;
   subProcessOrderMap: Map<string, number>;
   userId: string;
-  tenantId: string;
   t: (key: string, opts?: Record<string, unknown>) => string;
   tEnum: (enumName: string, value: string) => string;
 }) {
@@ -446,7 +443,6 @@ function QueueCard({
             subProcessNameMap={subProcessNameMap}
             subProcessOrderMap={subProcessOrderMap}
             userId={userId}
-            tenantId={tenantId}
             t={t}
             tEnum={tEnum}
           />
@@ -464,7 +460,6 @@ function WorkPanel({
   subProcessNameMap,
   subProcessOrderMap,
   userId,
-  tenantId,
   t,
   tEnum,
 }: {
@@ -474,7 +469,6 @@ function WorkPanel({
   subProcessNameMap: Map<string, string>;
   subProcessOrderMap: Map<string, number>;
   userId: string;
-  tenantId: string;
   t: (key: string, opts?: Record<string, unknown>) => string;
   tEnum: (enumName: string, value: string) => string;
 }) {
@@ -586,7 +580,6 @@ function WorkPanel({
   const blockMutation = useMutation({
     mutationFn: () =>
       blockRequestsApi.create({
-        tenantId,
         orderItemProcessId,
         requestedByUserId: userId,
         requestNote: blockReason,

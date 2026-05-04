@@ -12,7 +12,6 @@ import { apiClient } from '../axios-instance';
 import { tokenManager } from '../token-manager';
 
 export interface OrdersQuery {
-  tenantId: string;
   status?: OrderStatus;
   orderType?: OrderType;
   search?: string;
@@ -39,7 +38,6 @@ export const ordersApi = {
 
   create(data: CreateOrderRequest & { attachments?: File[]; itemAttachments?: Map<number, File[]> }) {
     const formData = new FormData();
-    formData.append('TenantId', data.tenantId);
     formData.append('OrderNumber', data.orderNumber);
     formData.append('DeliveryDate', data.deliveryDate);
     formData.append('Priority', String(data.priority));
@@ -134,19 +132,17 @@ export const ordersApi = {
     });
   },
 
-  uploadAttachment(orderId: string, file: File, tenantId: string, orderItemId?: string) {
+  uploadAttachment(orderId: string, file: File, orderItemId?: string) {
     const formData = new FormData();
     formData.append('file', file);
     return apiClient.post<OrderAttachmentDto>(`/orders/${orderId}/attachments`, formData, {
-      params: { tenantId, ...(orderItemId ? { orderItemId } : {}) },
+      params: orderItemId ? { orderItemId } : undefined,
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
 
-  deleteAttachment(orderId: string, attachmentId: string, tenantId: string) {
-    return apiClient.delete(`/orders/${orderId}/attachments/${attachmentId}`, {
-      params: { tenantId },
-    });
+  deleteAttachment(orderId: string, attachmentId: string) {
+    return apiClient.delete(`/orders/${orderId}/attachments/${attachmentId}`);
   },
 
   getAttachmentDownloadUrl(orderId: string, attachmentId: string) {

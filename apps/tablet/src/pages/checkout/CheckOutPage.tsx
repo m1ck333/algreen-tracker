@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@algreen/auth';
 import { tabletApi, workSessionsApi, processWorkflowApi } from '@algreen/api-client';
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import { useWorkSessionStore } from '../../stores/work-session-store';
+import { useOfflineStore } from '../../offline/offline-store';
 import { unsubscribeFromPush } from '../../services/push';
 
 export function CheckOutPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const queryClient = useQueryClient();
   const clearWorkSession = useWorkSessionStore((s) => s.clear);
   const checkInTime = useWorkSessionStore((s) => s.checkInTime);
   const { t } = useTranslation('tablet');
@@ -26,11 +29,10 @@ export function CheckOutPage() {
         // Pause all active work - sub-process logs
         await tabletApi.pause(user.id).catch(() => {});
         // Pause all active work - main process timers for each user process
-        const tenantId = useAuthStore.getState().tenantId;
-        if (tenantId && user.processes?.length) {
+        if (user.processes?.length) {
           await Promise.allSettled(
             user.processes.map((p) =>
-              processWorkflowApi.pauseStation({ processId: p.processId, tenantId, userId: user.id })
+              processWorkflowApi.pauseStation({ processId: p.processId, userId: user.id })
             )
           );
         }
@@ -42,6 +44,8 @@ export function CheckOutPage() {
     }
     unsubscribeFromPush().catch(() => {});
     clearWorkSession();
+    useOfflineStore.getState().clearPendingActions();
+    queryClient.clear();
     logout();
     navigate('/login', { replace: true });
   };

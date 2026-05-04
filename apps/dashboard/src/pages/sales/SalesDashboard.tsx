@@ -58,20 +58,19 @@ export function SalesDashboard() {
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ['orders', tenantId, sortBy, sortDirection],
-    queryFn: () => ordersApi.getAll({ tenantId: tenantId!, sortBy, sortDirection }).then((r) => r.data.items),
+    queryFn: () => ordersApi.getAll({ sortBy, sortDirection }).then((r) => r.data.items),
     enabled: !!tenantId,
   });
 
   const { data: changeRequests, isLoading: crLoading } = useQuery({
     queryKey: ['change-requests', 'my', userId],
-    queryFn: () => changeRequestsApi.getMy({ tenantId: tenantId!, userId: userId! }).then((r) => r.data.items),
+    queryFn: () => changeRequestsApi.getMy({ userId: userId! }).then((r) => r.data.items),
     enabled: !!tenantId && !!userId,
   });
 
   const createOrderMutation = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
       ordersApi.create({
-        tenantId: tenantId!,
         orderNumber: values.orderNumber as string,
         deliveryDate: dayjs(values.deliveryDate as string).format('YYYY-MM-DD') + 'T12:00:00Z',
         priority: values.priority as number,
@@ -90,7 +89,6 @@ export function SalesDashboard() {
   const createCRMutation = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
       changeRequestsApi.create({
-        tenantId: tenantId!,
         orderId: values.orderId as string,
         requestedByUserId: userId!,
         requestType: values.requestType as ChangeRequestType,

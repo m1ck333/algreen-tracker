@@ -106,9 +106,9 @@ export async function stopConnection(): Promise<void> {
   }
 }
 
-export async function joinTenantGroup(tenantId: string): Promise<void> {
+export async function joinTenantGroup(): Promise<void> {
   if (connection?.state === signalR.HubConnectionState.Connected) {
-    await connection.invoke('JoinTenantGroup', tenantId);
+    await connection.invoke('JoinTenantGroup');
   }
 }
 

@@ -33,7 +33,7 @@ export function MainLayout() {
     createConnection(jwt);
     startConnection()
       .then(() => {
-        if (!cancelled) return joinTenantGroup(tenantId);
+        if (!cancelled) return joinTenantGroup();
       })
       .catch(console.error);
 

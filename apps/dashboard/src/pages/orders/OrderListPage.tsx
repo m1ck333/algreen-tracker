@@ -534,7 +534,6 @@ export function OrderListPage() {
   const { data: masterResult, isLoading } = useQuery({
     queryKey: ['orders-master-view', tenantId, statusFilter, orderTypeFilter, debouncedSearch, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => ordersApi.getMasterView({
-      tenantId: tenantId!,
       status: statusFilter,
       orderType: orderTypeFilter,
       search: debouncedSearch || undefined,
@@ -616,7 +615,7 @@ export function OrderListPage() {
   const { data: detailDeps } = useQuery({
     queryKey: ['order-detail-deps', tenantId, detailOrderId],
     queryFn: () =>
-      ordersApi.getMasterView({ tenantId: tenantId!, search: detailOrder!.orderNumber, page: 1, pageSize: 1 }).then((r) => {
+      ordersApi.getMasterView({ search: detailOrder!.orderNumber, page: 1, pageSize: 1 }).then((r) => {
         const entry = r.data.items.find((o) => o.id === detailOrderId);
         return entry?.processDependencies ?? {};
       }),
@@ -627,13 +626,13 @@ export function OrderListPage() {
   // Fetch block & change requests for the detail order
   const { data: detailBlockRequests } = useQuery({
     queryKey: ['order-detail-block-requests', tenantId, detailOrderId],
-    queryFn: () => blockRequestsApi.getAll({ tenantId: tenantId!, orderId: detailOrderId!, pageSize: 50 }).then((r) => r.data.items),
+    queryFn: () => blockRequestsApi.getAll({ orderId: detailOrderId!, pageSize: 50 }).then((r) => r.data.items),
     enabled: !!tenantId && !!detailOrderId,
     staleTime: 10_000,
   });
   const { data: detailChangeRequests } = useQuery({
     queryKey: ['order-detail-change-requests', tenantId, detailOrderId],
-    queryFn: () => changeRequestsApi.getAll({ tenantId: tenantId!, orderId: detailOrderId!, pageSize: 50 }).then((r) => r.data.items),
+    queryFn: () => changeRequestsApi.getAll({ orderId: detailOrderId!, pageSize: 50 }).then((r) => r.data.items),
     enabled: !!tenantId && !!detailOrderId,
     staleTime: 10_000,
   });
@@ -647,12 +646,12 @@ export function OrderListPage() {
   const activateMutation = useActivateOrder();
   const { data: categories } = useQuery({
     queryKey: ['product-categories', tenantId],
-    queryFn: () => productCategoriesApi.getAll({ tenantId: tenantId!, pageSize: 100 }).then((r) => r.data.items),
+    queryFn: () => productCategoriesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
     enabled: !!tenantId,
   });
   const { data: specialRequestTypes } = useQuery({
     queryKey: ['special-request-types', tenantId],
-    queryFn: () => specialRequestTypesApi.getAll({ tenantId: tenantId!, pageSize: 100 }).then((r) => r.data.items),
+    queryFn: () => specialRequestTypesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
     enabled: !!tenantId && !!detailOrderId,
   });
   const srtMap = useMemo(() => {
@@ -667,7 +666,7 @@ export function OrderListPage() {
   // Fetch all processes for master view columns
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
-    queryFn: () => processesApi.getAll({ tenantId: tenantId!, pageSize: 100 }).then((r) =>
+    queryFn: () => processesApi.getAll({ pageSize: 100 }).then((r) =>
       [...r.data.items].sort((a, b) => a.sequenceOrder - b.sequenceOrder)
     ),
     enabled: !!tenantId,
@@ -834,7 +833,6 @@ export function OrderListPage() {
         if (compressed.length > 0) compressedItemAttachments.set(key, compressed);
       }
       await createOrder.mutateAsync({
-        tenantId: tenantId!,
         orderNumber: values.orderNumber as string,
         deliveryDate: dayjs(values.deliveryDate as string).format('YYYY-MM-DD') + 'T12:00:00Z',
         priority: values.priority as number,
@@ -1314,7 +1312,7 @@ export function OrderListPage() {
                       for (const file of files) {
                         try {
                           const compressed = await compressFile(file);
-                          await ordersApi.uploadAttachment(detailOrder.id, compressed, tenantId!, targetItem.id);
+                          await ordersApi.uploadAttachment(detailOrder.id, compressed, targetItem.id);
                         } catch { /* skip failed uploads */ }
                       }
                     }

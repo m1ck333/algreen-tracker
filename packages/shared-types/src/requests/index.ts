@@ -15,7 +15,6 @@ export interface RefreshTokenRequest {
 // ─── Users ───────────────────────────────────────────────
 
 export interface CreateUserRequest {
-  tenantId: string;
   email: string;
   password: string;
   firstName: string;
@@ -25,7 +24,6 @@ export interface CreateUserRequest {
 }
 
 export interface UpdateUserRequest {
-  tenantId: string;
   firstName: string;
   lastName: string;
   role: UserRole;
@@ -42,7 +40,6 @@ export interface ChangePasswordRequest {
 // ─── Shifts ──────────────────────────────────────────────
 
 export interface CreateShiftRequest {
-  tenantId: string;
   name: string;
   startTime: string;
   endTime: string;
@@ -65,7 +62,6 @@ export interface CreateOrderItemInput {
 }
 
 export interface CreateOrderRequest {
-  tenantId: string;
   orderNumber: string;
   deliveryDate: string;
   priority: number;
@@ -113,7 +109,6 @@ export interface OverrideComplexityRequest {
 // ─── Block Requests ──────────────────────────────────────
 
 export interface CreateBlockRequestRequest {
-  tenantId: string;
   orderItemProcessId?: string;
   orderItemSubProcessId?: string;
   requestedByUserId: string;
@@ -128,7 +123,6 @@ export interface HandleBlockRequestRequest {
 // ─── Change Requests ─────────────────────────────────────
 
 export interface CreateChangeRequestRequest {
-  tenantId: string;
   orderId: string;
   requestedByUserId: string;
   requestType: ChangeRequestType;
@@ -143,7 +137,6 @@ export interface HandleChangeRequestRequest {
 // ─── Work Sessions ───────────────────────────────────────
 
 export interface CheckInRequest {
-  tenantId: string;
   userId: string;
 }
 
@@ -193,7 +186,6 @@ export interface CompleteSubProcessRequest {
 // ─── Processes ───────────────────────────────────────────
 
 export interface CreateProcessRequest {
-  tenantId: string;
   code: string;
   name: string;
   sequenceOrder: number;
@@ -232,7 +224,6 @@ export interface CategoryDependencyInput {
 }
 
 export interface CreateProductCategoryRequest {
-  tenantId: string;
   name: string;
   description?: string;
   defaultWarningDays?: number;
@@ -265,7 +256,6 @@ export interface AddCategoryDependencyRequest {
 // ─── Special Request Types ───────────────────────────────
 
 export interface CreateSpecialRequestTypeRequest {
-  tenantId: string;
   code: string;
   name: string;
   description?: string;

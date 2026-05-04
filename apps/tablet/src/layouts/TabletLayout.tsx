@@ -82,7 +82,7 @@ export function TabletLayout() {
       .then(async () => {
         if (cancelled) return;
         console.log('[SignalR] Connected. Joining groups...');
-        await joinTenantGroup(tenantId);
+        await joinTenantGroup();
         console.log('[SignalR] Joined tenant:', tenantId);
       })
       .catch((err) => console.error('[SignalR] Connection failed:', err));

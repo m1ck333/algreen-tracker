@@ -7,21 +7,21 @@ import type {
 import { apiClient } from '../axios-instance';
 
 export const tabletApi = {
-  getQueue(userId: string, tenantId: string) {
+  getQueue(userId: string) {
     return apiClient.get<ProcessGroupDto<TabletQueueItemDto>[]>('/tablet/queue', {
-      params: { userId, tenantId },
+      params: { userId },
     });
   },
 
-  getActive(userId: string, tenantId: string) {
+  getActive(userId: string) {
     return apiClient.get<ProcessGroupDto<TabletActiveWorkDto>[]>('/tablet/active', {
-      params: { userId, tenantId },
+      params: { userId },
     });
   },
 
-  getIncoming(userId: string, tenantId: string) {
+  getIncoming(userId: string) {
     return apiClient.get<ProcessGroupDto<TabletIncomingDto>[]>('/tablet/incoming', {
-      params: { userId, tenantId },
+      params: { userId },
     });
   },
 

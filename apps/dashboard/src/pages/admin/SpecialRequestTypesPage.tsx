@@ -63,7 +63,6 @@ export function SpecialRequestTypesPage() {
   const { data: pagedResult, isLoading } = useQuery({
     queryKey: ['special-request-types', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => specialRequestTypesApi.getAll({
-      tenantId: tenantId!,
       search: debouncedSearch || undefined,
       isActive: isActiveFilter,
       createdFrom: dateFrom?.format('YYYY-MM-DD'),
@@ -80,7 +79,7 @@ export function SpecialRequestTypesPage() {
 
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
-    queryFn: () => processesApi.getAll({ tenantId: tenantId!, pageSize: 100 }).then((r) => r.data.items),
+    queryFn: () => processesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
     enabled: !!tenantId && (!!detailItem || createOpen),
   });
 
@@ -98,7 +97,6 @@ export function SpecialRequestTypesPage() {
   const createMutation = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
       specialRequestTypesApi.create({
-        tenantId: tenantId!,
         code: values.code as string,
         name: values.name as string,
         description: values.description as string | undefined,

@@ -45,7 +45,7 @@ function ProcessAveragesTab() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['reports-process-averages', tenantId],
-    queryFn: () => reportsApi.getProcessAverages(tenantId!).then((r) => r.data.processes),
+    queryFn: () => reportsApi.getProcessAverages().then((r) => r.data.processes),
     enabled: !!tenantId,
   });
 
@@ -116,7 +116,7 @@ function TimeTrackingTab() {
 
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
-    queryFn: () => processesApi.getAll({ tenantId: tenantId! }).then((r) => r.data.items),
+    queryFn: () => processesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
     enabled: !!tenantId,
   });
 
@@ -132,7 +132,6 @@ function TimeTrackingTab() {
     queryFn: () =>
       reportsApi
         .getTimeTracking({
-          tenantId: tenantId!,
           from: dateRange[0].format('YYYY-MM-DD'),
           to: dateRange[1].format('YYYY-MM-DD'),
           processId,
@@ -272,7 +271,7 @@ function WorkerHoursTab() {
     queryKey: ['users', tenantId],
     queryFn: () =>
       usersApi
-        .getAll({ tenantId: tenantId!, role: UserRole.Department, page: 1, pageSize: 100 })
+        .getAll({ role: UserRole.Department, page: 1, pageSize: 100 })
         .then((r) => r.data.items),
     enabled: !!tenantId,
   });
@@ -288,7 +287,6 @@ function WorkerHoursTab() {
     queryFn: () =>
       reportsApi
         .getWorkerHours({
-          tenantId: tenantId!,
           from: dateRange[0].format('YYYY-MM-DD'),
           to: dateRange[1].format('YYYY-MM-DD'),
           userId,

@@ -67,7 +67,6 @@ export function UsersPage() {
   const { data: pagedResult, isLoading } = useQuery({
     queryKey: ['users', tenantId, debouncedSearch, roleFilter, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => usersApi.getAll({
-      tenantId: tenantId!,
       search: debouncedSearch || undefined,
       role: roleFilter,
       isActive: isActiveFilter,
@@ -85,7 +84,7 @@ export function UsersPage() {
 
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
-    queryFn: () => processesApi.getAll({ tenantId: tenantId!, pageSize: 100 }).then((r) => r.data.items),
+    queryFn: () => processesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
     enabled: !!tenantId,
   });
 
@@ -98,7 +97,6 @@ export function UsersPage() {
   const createMutation = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
       usersApi.create({
-        tenantId: tenantId!,
         email: values.email as string,
         password: values.password as string,
         firstName: values.firstName as string,
@@ -118,7 +116,6 @@ export function UsersPage() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, values }: { id: string; values: Record<string, unknown> }) => {
       await usersApi.update(id, {
-        tenantId: tenantId!,
         firstName: values.firstName as string,
         lastName: values.lastName as string,
         role: values.role as UserRole,

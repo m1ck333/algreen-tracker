@@ -1,6 +1,8 @@
 import { pushApi } from '@algreen/api-client';
 import { useAuthStore } from '@algreen/auth';
 
+const VAPID_KEY_STORAGE = 'algreen_vapid_public_key';
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -28,23 +30,48 @@ export async function subscribeToPush(): Promise<boolean> {
     const registration = await navigator.serviceWorker.ready;
     console.log('[Push] Service worker ready, scope:', registration.scope);
 
-    // Get VAPID key from server
-    const { data } = await pushApi.getVapidPublicKey();
-    const vapidPublicKey = data.publicKey;
+    // Fetch current VAPID public key from server (must succeed before any subscribe attempt)
+    let vapidPublicKey: string;
+    try {
+      const { data } = await pushApi.getVapidPublicKey();
+      vapidPublicKey = data.publicKey;
+    } catch (err) {
+      console.error('[Push] Failed to fetch VAPID public key from server, skipping subscribe:', err);
+      return false;
+    }
     console.log('[Push] VAPID public key received:', vapidPublicKey ? 'yes' : 'no');
     if (!vapidPublicKey) return false;
 
-    // Check for existing subscription
+    // Compare server key against cached key to detect rotation
+    const cachedKey = localStorage.getItem(VAPID_KEY_STORAGE);
     const existing = await registration.pushManager.getSubscription();
-    if (existing) {
-      console.log('[Push] Existing subscription found, reusing');
+    const keyMatches = cachedKey !== null && cachedKey === vapidPublicKey;
+
+    let subscription = existing;
+    if (existing && !keyMatches) {
+      // Either no cache (first run after this patch) or server key changed → force clean re-subscribe
+      console.info(cachedKey === null
+        ? '[Push] No cached VAPID key, treating as unknown state, forcing re-subscribe'
+        : '[Push] VAPID key changed, forcing re-subscribe');
+      try {
+        await existing.unsubscribe();
+      } catch (err) {
+        console.warn('[Push] existing.unsubscribe() failed:', err);
+      }
+      localStorage.removeItem(VAPID_KEY_STORAGE);
+      subscription = null;
+    } else if (existing && keyMatches) {
+      console.info('[Push] VAPID key unchanged, reusing existing subscription');
+    } else {
+      console.info('[Push] No existing browser subscription, creating new one');
     }
 
-    // Subscribe to push
-    const subscription = existing ?? await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer,
-    });
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer,
+      });
+    }
 
     const json = subscription.toJSON();
     console.log('[Push] Subscription endpoint:', json.endpoint?.slice(0, 60) + '...');
@@ -53,22 +80,23 @@ export async function subscribeToPush(): Promise<boolean> {
       return false;
     }
 
-    // Register subscription on the server
-    const { tenantId, user } = useAuthStore.getState();
-    if (!tenantId || !user?.id) {
-      console.warn('[Push] No tenantId or userId in auth store');
+    // Register subscription on the server (tenant derived from JWT)
+    const { user } = useAuthStore.getState();
+    if (!user?.id) {
+      console.warn('[Push] No userId in auth store');
       return false;
     }
 
     await pushApi.subscribe({
-      tenantId,
       userId: user.id,
       endpoint: json.endpoint,
       p256dhKey: json.keys.p256dh,
       authKey: json.keys.auth,
     });
 
-    console.log('[Push] Subscription registered on server successfully');
+    // Cache the public key the subscription was generated against, so the next login can detect rotation
+    localStorage.setItem(VAPID_KEY_STORAGE, vapidPublicKey);
+    console.info('[Push] Subscription registered on server successfully, VAPID key cached');
     return true;
   } catch (err) {
     console.error('[Push] Subscription failed:', err);
@@ -85,7 +113,11 @@ export async function unsubscribeFromPush(): Promise<void> {
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 3000)),
     ]);
     const subscription = await registration.pushManager.getSubscription();
-    if (!subscription) return;
+    if (!subscription) {
+      // Even if there's no browser subscription, clean any stale cached key for next login
+      localStorage.removeItem(VAPID_KEY_STORAGE);
+      return;
+    }
 
     // Unregister on server
     try {
@@ -95,6 +127,7 @@ export async function unsubscribeFromPush(): Promise<void> {
     }
 
     await subscription.unsubscribe();
+    localStorage.removeItem(VAPID_KEY_STORAGE);
     console.log('[Push] Unsubscribed successfully');
   } catch (err) {
     console.warn('[Push] Unsubscribe failed:', err);

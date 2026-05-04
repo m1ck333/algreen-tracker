@@ -151,7 +151,6 @@ export function ProductCategoriesPage() {
   const { data: pagedResult, isLoading } = useQuery({
     queryKey: ['product-categories', tenantId, debouncedSearch, isActiveFilter, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => productCategoriesApi.getAll({
-      tenantId: tenantId!,
       search: debouncedSearch || undefined,
       isActive: isActiveFilter,
       createdFrom: dateFrom?.format('YYYY-MM-DD'),
@@ -172,7 +171,7 @@ export function ProductCategoriesPage() {
 
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
-    queryFn: () => processesApi.getAll({ tenantId: tenantId!, pageSize: 100 }).then((r) => r.data.items),
+    queryFn: () => processesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
     enabled: !!tenantId,
   });
 
@@ -206,7 +205,6 @@ export function ProductCategoriesPage() {
   const createMutation = useMutation({
     mutationFn: (values: { name: string; description?: string; defaultWarningDays?: number; defaultCriticalDays?: number }) =>
       productCategoriesApi.create({
-        tenantId: tenantId!,
         name: values.name,
         description: values.description,
         defaultWarningDays: values.defaultWarningDays,
