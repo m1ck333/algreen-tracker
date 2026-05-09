@@ -76,6 +76,10 @@
   "orders": {
     "title": "Narudžbine",
     "orderNumber": "Br. narudžbine",
+    "export": {
+      "progress": "Napredak (kompletirano/ukupno)",
+      "invoiced": "Fakturisana"
+    },
     "filterByStatus": "Filtriraj po statusu",
     "createOrder": "Kreiraj narudžbinu",
     "orderNotFound": "Narudžbina nije pronađena",
@@ -117,6 +121,7 @@
     "reopenFailed": "Greška pri otvaranju narudžbine",
     "duplicate": "Dupliraj",
     "paused": "Pauzirano",
+    "ready": "Spreman za izvršavanje",
     "pauseOrder": "Pauziraj",
     "resumeOrder": "Nastavi",
     "editOrder": "Izmeni",
@@ -413,5 +418,21 @@
   "language": {
     "sr": "Srpski",
     "en": "English"
+  },
+  "export": {
+    "button": "Izvezi",
+    "xlsx": "Excel (.xlsx)",
+    "csv": "CSV (.csv)",
+    "generated": "Generisano",
+    "success": "Izvezeno {{count}} redova",
+    "failed": "Izvoz nije uspeo",
+    "appliedFilters": "Primenjeni filteri",
+    "search": "Pretraga",
+    "status": "Status",
+    "type": "Tip",
+    "dateFrom": "Od datuma",
+    "dateTo": "Do datuma",
+    "isActive": "Aktivan",
+    "role": "Uloga"
   }
 }

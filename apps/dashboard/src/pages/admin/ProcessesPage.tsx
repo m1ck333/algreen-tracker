@@ -12,6 +12,8 @@ import { useAuthStore } from '@algreen/auth';
 import type { ProcessDto, SubProcessDto } from '@algreen/shared-types';
 import { useTranslation } from '@algreen/i18n';
 import dayjs from 'dayjs';
+import { TableExportButton } from '../../components/TableExportButton';
+import type { ExportColumn } from '../../utils/exportTable';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -382,13 +384,62 @@ export function ProcessesPage() {
     .sort((a, b) => a.sequenceOrder - b.sequenceOrder)
     .map((s, idx) => ({ ...s, sequenceOrder: idx + 1 }));
 
+  const exportColumns: ExportColumn<ProcessDto>[] = [
+    { header: t('common:labels.code'), value: (p) => p.code, width: 12 },
+    { header: t('common:labels.name'), value: (p) => p.name, width: 26 },
+    { header: t('common:labels.order'), value: (p) => p.sequenceOrder, align: 'right', width: 12 },
+    {
+      header: t('admin.processes.subProcesses'),
+      value: (p) => (p.subProcesses ?? []).map((sp) => sp.name).join(', '),
+      width: 32,
+    },
+    {
+      header: t('common:labels.status'),
+      value: (p) => (p.isActive ? t('common:status.active') : t('common:status.inactive')),
+      cell: (p) => (p.isActive ? { fillColor: '#D9F2D9' } : { fillColor: '#F5F5F5' }),
+      width: 14,
+    },
+    { header: t('common:labels.created'), value: (p) => (p.createdAt ? new Date(p.createdAt) : null), width: 18 },
+  ];
+  const exportFilters: Array<{ label: string; value: string }> = [];
+  if (debouncedSearch) exportFilters.push({ label: t('export.search'), value: debouncedSearch });
+  if (isActiveFilter !== undefined) exportFilters.push({ label: t('export.isActive'), value: isActiveFilter ? t('common:status.active') : t('common:status.inactive') });
+  if (dateFrom) exportFilters.push({ label: t('export.dateFrom'), value: dateFrom.format('DD.MM.YYYY.') });
+  if (dateTo) exportFilters.push({ label: t('export.dateTo'), value: dateTo.format('DD.MM.YYYY.') });
+
+  const fetchAllProcesses = async (): Promise<ProcessDto[]> => {
+    const { data } = await processesApi.getAll({
+      search: debouncedSearch || undefined,
+      isActive: isActiveFilter,
+      createdFrom: dateFrom?.format('YYYY-MM-DD'),
+      createdTo: dateTo?.format('YYYY-MM-DD'),
+      page: 1,
+      pageSize: 10000,
+      sortBy,
+      sortDirection,
+    });
+    return data.items;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>{t('admin.processes.title')}</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); createForm.setFieldValue('sequenceOrder', nextSequenceOrder); setPendingSubProcesses([]); setAddSubName(''); setAddSubOrder(1); setCreateOpen(true); }}>
-          {t('admin.processes.addProcess')}
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <TableExportButton
+            onFetchAll={fetchAllProcesses}
+            columns={exportColumns}
+            options={{
+              fileName: `processes-${dayjs().format('YYYY-MM-DD')}`,
+              title: `${t('common:appName')} — ${t('admin.processes.title')}`,
+              filters: exportFilters,
+              sheetName: t('admin.processes.title'),
+            }}
+          />
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); createForm.setFieldValue('sequenceOrder', nextSequenceOrder); setPendingSubProcesses([]); setAddSubName(''); setAddSubOrder(1); setCreateOpen(true); }}>
+            {t('admin.processes.addProcess')}
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>

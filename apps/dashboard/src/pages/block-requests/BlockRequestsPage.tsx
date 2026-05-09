@@ -19,6 +19,8 @@ import type { BlockRequestDto } from '@algreen/shared-types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import dayjs from 'dayjs';
+import { TableExportButton } from '../../components/TableExportButton';
+import type { ExportColumn } from '../../utils/exportTable';
 
 const { Title } = Typography;
 
@@ -241,9 +243,57 @@ export function BlockRequestsPage() {
     },
   ];
 
+  const exportColumns: ExportColumn<BlockRequestDto>[] = [
+    { header: t('common:labels.orderNumber'), value: (b) => b.orderNumber ?? '', width: 16 },
+    { header: t('blockRequests.requestNote'), value: (b) => b.requestNote ?? '', width: 30 },
+    { header: t('blockRequests.blockReason'), value: (b) => b.blockReason ?? '', width: 30 },
+    {
+      header: t('common:labels.status'),
+      value: (b) => tEnum('RequestStatus', b.status),
+      cell: (b) => {
+        const c = b.status === 'Approved' ? '#D9F2D9' : b.status === 'Rejected' ? '#FFE6E6' : b.status === 'Resolved' ? '#E6F4FF' : '#FFF7E6';
+        return { fillColor: c };
+      },
+      width: 14,
+    },
+    { header: t('common:labels.created'), value: (b) => (b.createdAt ? new Date(b.createdAt) : null), width: 18 },
+    { header: t('common:labels.handledAt'), value: (b) => (b.handledAt ? new Date(b.handledAt) : null), width: 18 },
+  ];
+  const exportFilters: Array<{ label: string; value: string }> = [];
+  if (debouncedSearch) exportFilters.push({ label: t('export.search'), value: debouncedSearch });
+  if (statusFilter) exportFilters.push({ label: t('export.status'), value: tEnum('RequestStatus', statusFilter) });
+  if (dateFrom) exportFilters.push({ label: t('export.dateFrom'), value: dateFrom.format('DD.MM.YYYY.') });
+  if (dateTo) exportFilters.push({ label: t('export.dateTo'), value: dateTo.format('DD.MM.YYYY.') });
+
+  const fetchAllBlocks = async (): Promise<BlockRequestDto[]> => {
+    const { data } = await blockRequestsApi.getAll({
+      status: statusFilter,
+      search: debouncedSearch || undefined,
+      createdFrom: dateFrom?.format('YYYY-MM-DD'),
+      createdTo: dateTo?.format('YYYY-MM-DD'),
+      page: 1,
+      pageSize: 10000,
+      sortBy,
+      sortDirection,
+    });
+    return data.items;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <Title level={4} style={{ marginBottom: 16 }}>{t('blockRequests.title')}</Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0 }}>{t('blockRequests.title')}</Title>
+        <TableExportButton
+          onFetchAll={fetchAllBlocks}
+          columns={exportColumns}
+          options={{
+            fileName: `block-requests-${dayjs().format('YYYY-MM-DD')}`,
+            title: `${t('common:appName')} — ${t('blockRequests.title')}`,
+            filters: exportFilters,
+            sheetName: t('blockRequests.title'),
+          }}
+        />
+      </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
         <Input.Search

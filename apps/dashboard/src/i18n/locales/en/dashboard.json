@@ -76,6 +76,10 @@
   "orders": {
     "title": "Orders",
     "orderNumber": "Order #",
+    "export": {
+      "progress": "Progress (done/total)",
+      "invoiced": "Invoiced"
+    },
     "filterByStatus": "Filter by status",
     "createOrder": "Create Order",
     "orderNotFound": "Order not found",
@@ -117,6 +121,7 @@
     "reopenFailed": "Failed to reopen order",
     "duplicate": "Duplicate",
     "paused": "Paused",
+    "ready": "Ready to start",
     "pauseOrder": "Pause",
     "resumeOrder": "Resume",
     "editOrder": "Edit",
@@ -411,5 +416,21 @@
   "language": {
     "sr": "Srpski",
     "en": "English"
+  },
+  "export": {
+    "button": "Export",
+    "xlsx": "Excel (.xlsx)",
+    "csv": "CSV (.csv)",
+    "generated": "Generated",
+    "success": "Exported {{count}} rows",
+    "failed": "Export failed",
+    "appliedFilters": "Applied filters",
+    "search": "Search",
+    "status": "Status",
+    "type": "Type",
+    "dateFrom": "From",
+    "dateTo": "To",
+    "isActive": "Active",
+    "role": "Role"
   }
 }

@@ -11,6 +11,8 @@ import { tenantsApi } from '@algreen/api-client';
 import type { TenantDto } from '@algreen/shared-types';
 import { useTranslation } from '@algreen/i18n';
 import dayjs from 'dayjs';
+import { TableExportButton } from '../../components/TableExportButton';
+import type { ExportColumn } from '../../utils/exportTable';
 
 const { Title } = Typography;
 
@@ -216,13 +218,56 @@ export function TenantsPage() {
     },
   ];
 
+  const exportColumns: ExportColumn<TenantDto>[] = [
+    { header: t('common:labels.name'), value: (tn) => tn.name, width: 28 },
+    { header: t('common:labels.code'), value: (tn) => tn.code, width: 14 },
+    {
+      header: t('common:labels.status'),
+      value: (tn) => (tn.isActive ? t('common:status.active') : t('common:status.inactive')),
+      cell: (tn) => (tn.isActive ? { fillColor: '#D9F2D9' } : { fillColor: '#F5F5F5' }),
+      width: 14,
+    },
+    { header: t('common:labels.created'), value: (tn) => (tn.createdAt ? new Date(tn.createdAt) : null), width: 18 },
+  ];
+  const exportFilters: Array<{ label: string; value: string }> = [];
+  if (debouncedSearch) exportFilters.push({ label: t('export.search'), value: debouncedSearch });
+  if (isActiveFilter !== undefined) exportFilters.push({ label: t('export.isActive'), value: isActiveFilter ? t('common:status.active') : t('common:status.inactive') });
+  if (dateFrom) exportFilters.push({ label: t('export.dateFrom'), value: dateFrom.format('DD.MM.YYYY.') });
+  if (dateTo) exportFilters.push({ label: t('export.dateTo'), value: dateTo.format('DD.MM.YYYY.') });
+
+  const fetchAllTenants = async (): Promise<TenantDto[]> => {
+    const { data } = await tenantsApi.getAll({
+      search: debouncedSearch || undefined,
+      isActive: isActiveFilter,
+      createdFrom: dateFrom?.format('YYYY-MM-DD'),
+      createdTo: dateTo?.format('YYYY-MM-DD'),
+      page: 1,
+      pageSize: 10000,
+      sortBy,
+      sortDirection,
+    });
+    return data.items;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>{t('admin.tenants.title')}</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          {t('admin.tenants.addTenant')}
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <TableExportButton
+            onFetchAll={fetchAllTenants}
+            columns={exportColumns}
+            options={{
+              fileName: `tenants-${dayjs().format('YYYY-MM-DD')}`,
+              title: `${t('common:appName')} — ${t('admin.tenants.title')}`,
+              filters: exportFilters,
+              sheetName: t('admin.tenants.title'),
+            }}
+          />
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            {t('admin.tenants.addTenant')}
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>

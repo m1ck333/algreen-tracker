@@ -18,6 +18,8 @@ import { useAuthStore } from '@algreen/auth';
 import type { ShiftDto } from '@algreen/shared-types';
 import { useTranslation } from '@algreen/i18n';
 import dayjs from 'dayjs';
+import { TableExportButton } from '../../components/TableExportButton';
+import type { ExportColumn } from '../../utils/exportTable';
 
 const { Title } = Typography;
 
@@ -192,13 +194,61 @@ export function ShiftsPage() {
     },
   ];
 
+  const exportColumns: ExportColumn<ShiftDto>[] = [
+    { header: t('common:labels.name'), value: (s) => s.name, width: 24 },
+    { header: t('common:labels.start'), value: (s) => s.startTime, width: 12 },
+    { header: t('common:labels.end'), value: (s) => s.endTime, width: 12 },
+    {
+      header: t('common:labels.status'),
+      value: (s) => (s.isActive ? t('common:status.active') : t('common:status.inactive')),
+      cell: (s) => (s.isActive ? { fillColor: '#D9F2D9' } : { fillColor: '#F5F5F5' }),
+      width: 14,
+    },
+    {
+      header: t('common:labels.created'),
+      value: (s) => (s.createdAt ? new Date(s.createdAt) : null),
+      width: 18,
+    },
+  ];
+  const exportFilters: Array<{ label: string; value: string }> = [];
+  if (debouncedSearch) exportFilters.push({ label: t('export.search'), value: debouncedSearch });
+  if (isActiveFilter !== undefined) exportFilters.push({ label: t('export.isActive'), value: isActiveFilter ? t('common:status.active') : t('common:status.inactive') });
+  if (dateFrom) exportFilters.push({ label: t('export.dateFrom'), value: dateFrom.format('DD.MM.YYYY.') });
+  if (dateTo) exportFilters.push({ label: t('export.dateTo'), value: dateTo.format('DD.MM.YYYY.') });
+
+  const fetchAllShifts = async (): Promise<ShiftDto[]> => {
+    const { data } = await shiftsApi.getAll({
+      search: debouncedSearch || undefined,
+      isActive: isActiveFilter,
+      createdFrom: dateFrom?.format('YYYY-MM-DD'),
+      createdTo: dateTo?.format('YYYY-MM-DD'),
+      page: 1,
+      pageSize: 10000,
+      sortBy,
+      sortDirection,
+    });
+    return data.items;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>{t('admin.shifts.title')}</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          {t('admin.shifts.addShift')}
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <TableExportButton
+            onFetchAll={fetchAllShifts}
+            columns={exportColumns}
+            options={{
+              fileName: `shifts-${dayjs().format('YYYY-MM-DD')}`,
+              title: `${t('common:appName')} — ${t('admin.shifts.title')}`,
+              filters: exportFilters,
+              sheetName: t('admin.shifts.title'),
+            }}
+          />
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            {t('admin.shifts.addShift')}
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>

@@ -4,6 +4,8 @@ import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@algreen/auth';
 import { useTranslation } from '@algreen/i18n';
+import { TableExportButton } from '../../components/TableExportButton';
+import type { ExportColumn } from '../../utils/exportTable';
 import { reportsApi } from '@algreen/api-client';
 import { processesApi } from '@algreen/api-client';
 import { usersApi } from '@algreen/api-client';
@@ -90,16 +92,48 @@ function ProcessAveragesTab() {
     [t],
   );
 
+  const exportColumns: ExportColumn<ProcessAverageDto>[] = [
+    { header: t('reports.processCode'), value: (p) => p.processCode, width: 14 },
+    { header: t('reports.processName'), value: (p) => p.processName, width: 26 },
+    ...complexities.flatMap((c) => [
+      {
+        header: `${complexityLabels[c]} — ${t('reports.avg')} (min)`,
+        value: (p: ProcessAverageDto) => p.averages[c]?.avgMinutes ?? null,
+        align: 'right' as const,
+        width: 18,
+      },
+      {
+        header: `${complexityLabels[c]} — ${t('reports.count')}`,
+        value: (p: ProcessAverageDto) => p.averages[c]?.count ?? 0,
+        align: 'right' as const,
+        width: 14,
+      },
+    ]),
+  ];
+
   return (
-    <Table
-      columns={columns}
-      dataSource={data}
-      rowKey="processId"
-      loading={isLoading}
-      pagination={false}
-      size="small"
-      bordered
-    />
+    <>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <TableExportButton
+          onFetchAll={async () => data ?? []}
+          columns={exportColumns}
+          options={{
+            fileName: `reports-process-averages-${dayjs().format('YYYY-MM-DD')}`,
+            title: `${t('common:appName')} — ${t('reports.tabAverages')}`,
+            sheetName: t('reports.tabAverages'),
+          }}
+        />
+      </div>
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="processId"
+        loading={isLoading}
+        pagination={false}
+        size="small"
+        bordered
+      />
+    </>
   );
 }
 
@@ -243,6 +277,32 @@ function TimeTrackingTab() {
       )}
 
       {/* Table */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <TableExportButton
+          onFetchAll={async () => data?.items ?? []}
+          columns={[
+            { header: t('reports.orderNumber'), value: (i: TimeTrackingItemDto) => i.orderNumber, width: 16 },
+            { header: t('reports.productName'), value: (i: TimeTrackingItemDto) => i.productName, width: 26 },
+            { header: t('reports.processCode'), value: (i: TimeTrackingItemDto) => i.processCode, width: 12 },
+            { header: t('reports.processName'), value: (i: TimeTrackingItemDto) => i.processName, width: 22 },
+            { header: t('reports.complexity'), value: (i: TimeTrackingItemDto) => i.complexity ?? '', width: 14 },
+            { header: t('reports.startedAt'), value: (i: TimeTrackingItemDto) => (i.startedAt ? new Date(i.startedAt) : null), width: 18 },
+            { header: t('reports.completedAt'), value: (i: TimeTrackingItemDto) => (i.completedAt ? new Date(i.completedAt) : null), width: 18 },
+            { header: `${t('reports.duration')} (min)`, value: (i: TimeTrackingItemDto) => i.totalDurationMinutes, align: 'right', width: 14 },
+          ]}
+          options={{
+            fileName: `reports-time-tracking-${dayjs().format('YYYY-MM-DD')}`,
+            title: `${t('common:appName')} — ${t('reports.tabTimeTracking')}`,
+            filters: [
+              { label: t('export.dateFrom'), value: dateRange[0].format('DD.MM.YYYY.') },
+              { label: t('export.dateTo'), value: dateRange[1].format('DD.MM.YYYY.') },
+              ...(processId ? [{ label: t('reports.processCode'), value: processes?.find((p) => p.id === processId)?.code ?? processId }] : []),
+              ...(complexity ? [{ label: t('reports.complexity'), value: complexity }] : []),
+            ],
+            sheetName: t('reports.tabTimeTracking'),
+          }}
+        />
+      </div>
       <Table
         columns={columns}
         dataSource={data?.items}
@@ -373,6 +433,26 @@ function WorkerHoursTab() {
       </Space>
 
       {/* Table */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <TableExportButton
+          onFetchAll={async () => data ?? []}
+          columns={[
+            { header: t('reports.workerName'), value: (w: WorkerHoursDto) => w.fullName, width: 24 },
+            { header: `${t('reports.totalHours')} (min)`, value: (w: WorkerHoursDto) => w.totalMinutes, align: 'right', width: 18 },
+            { header: t('reports.sessionCount'), value: (w: WorkerHoursDto) => w.sessionCount, align: 'right', width: 14 },
+          ]}
+          options={{
+            fileName: `reports-worker-hours-${dayjs().format('YYYY-MM-DD')}`,
+            title: `${t('common:appName')} — ${t('reports.tabWorkerHours')}`,
+            filters: [
+              { label: t('export.dateFrom'), value: dateRange[0].format('DD.MM.YYYY.') },
+              { label: t('export.dateTo'), value: dateRange[1].format('DD.MM.YYYY.') },
+              ...(userId ? [{ label: t('reports.workerName'), value: users?.find((u) => u.id === userId)?.fullName ?? userId }] : []),
+            ],
+            sheetName: t('reports.tabWorkerHours'),
+          }}
+        />
+      </div>
       <Table
         columns={columns}
         dataSource={data}
@@ -412,7 +492,7 @@ export function ReportsPage() {
       </Title>
       <Tabs
         defaultActiveKey="averages"
-        destroyInactiveTabPane
+        destroyOnHidden
         items={[
           {
             key: 'averages',

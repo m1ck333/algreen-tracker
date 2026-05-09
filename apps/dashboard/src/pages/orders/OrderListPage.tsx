@@ -24,6 +24,8 @@ import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import { useLayoutStore } from '../../stores/layout-store';
 import dayjs from 'dayjs';
+import { TableExportButton } from '../../components/TableExportButton';
+import type { ExportColumn } from '../../utils/exportTable';
 
 const { Title, Text } = Typography;
 
@@ -36,9 +38,13 @@ const processStatusColors: Record<ProcessStatus, string> = {
   [ProcessStatus.InProgress]: '#1890ff',  // Blue - in progress
   [ProcessStatus.Blocked]: '#FF0000',     // Red - blocked
   [ProcessStatus.Stopped]: '#FFAA00',     // Orange - stopped
-  [ProcessStatus.Pending]: '#D9D9D9',     // Light gray - pending
+  [ProcessStatus.Pending]: '#BFBFBF',     // Medium gray - pending (darker than empty/not-applicable)
   [ProcessStatus.Withdrawn]: '#F0F0F0',   // Very light gray - withdrawn
 };
+
+// Bold border for "ready to start" — fixed vivid green, distinct from Completed
+// bright green and clearly visible against any cell fill in both light/dark themes.
+const READY_BORDER_COLOR = '#1B5E20';
 
 const orderTypeColors: Record<OrderType, string> = {
   [OrderType.Standard]: 'blue',
@@ -254,6 +260,7 @@ function ProcessCell({
   tEnum: (enumName: string, value: string) => string;
 }) {
   const { t } = useTranslation('dashboard');
+  const { token } = theme.useToken();
   if (status === null) {
     return (
       <div style={{
@@ -261,7 +268,7 @@ function ProcessCell({
         height: 24,
         margin: '0 auto',
         borderRadius: 4,
-        border: '1px dashed #E0E0E0',
+        border: `1px dashed ${token.colorBorderSecondary}`,
       }} />
     );
   }
@@ -273,8 +280,9 @@ function ProcessCell({
 
   const timeStr = duration ? formatDurationSec(duration) : '';
 
+  const tooltipStatus = paused ? t('orders.paused') : (isReady ? t('orders.ready') : label);
   return (
-    <Tooltip title={<div><div><b>{processName}</b></div><div style={{ color: statusColor(status, !!paused) }}>{paused ? t('orders.paused') : label}</div>{timeStr && <div>{timeStr}</div>}</div>}>
+    <Tooltip title={<div><div><b>{processName}</b></div><div style={{ color: isReady ? READY_BORDER_COLOR : statusColor(status, !!paused) }}>{tooltipStatus}</div>{timeStr && <div>{timeStr}</div>}</div>}>
       <div
         style={{
           width: 24,
@@ -282,7 +290,7 @@ function ProcessCell({
           margin: '0 auto',
           borderRadius: 4,
           backgroundColor: color,
-          border: (isReady || showAsReady) ? '3px solid #333' : '1px solid rgba(0,0,0,0.1)',
+          border: isReady ? `3px solid ${READY_BORDER_COLOR}` : `1px solid ${token.colorBorderSecondary}`,
           cursor: 'default',
         }}
       />
@@ -315,6 +323,7 @@ function ProcessTimeline({
   processDependencies?: Record<string, string[]>;
 }) {
   const { t } = useTranslation('dashboard');
+  const { token } = theme.useToken();
   const STEP = 48; // px per process step
   const CIRCLE = 24;
   const totalWidth = processes.length * STEP;
@@ -358,18 +367,23 @@ function ProcessTimeline({
             return sum + (p ? calcLiveSeconds(p) : 0);
           }, 0);
           const timeStr = formatDurationSec(totalSec);
-          const showBold = isReady || aggPaused;
-          const color = aggPaused ? '#FFAA00' : isReady ? '#D9D9D9' : (status ? processStatusColors[status] : '#F0F0F0');
+          const showBold = isReady;
+          const color = aggPaused ? '#FFAA00' : isReady ? '#BFBFBF' : (status ? processStatusColors[status] : '#F0F0F0');
+          const tooltipStatus = aggPaused
+            ? t('orders.paused')
+            : isReady
+              ? t('orders.ready')
+              : (status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable'));
 
           return (
-            <Tooltip key={proc.id} title={<div><div><b>{proc.name}</b></div><div style={{ color: statusColor(status, aggPaused) }}>{aggPaused ? t('orders.paused') : (status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable'))}</div>{timeStr && <div>{timeStr}</div>}</div>}>
+            <Tooltip key={proc.id} title={<div><div><b>{proc.name}</b></div><div style={{ color: isReady ? READY_BORDER_COLOR : statusColor(status, aggPaused) }}>{tooltipStatus}</div>{timeStr && <div>{timeStr}</div>}</div>}>
               <div style={{ position: 'absolute', left: x, top: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', width: STEP }}>
                 <div style={{
                   width: CIRCLE,
                   height: CIRCLE,
                   borderRadius: '50%',
                   backgroundColor: color,
-                  border: showBold ? '3px solid #333' : ('2px solid ' + (status ? color : '#D9D9D9')),
+                  border: showBold ? `3px solid ${READY_BORDER_COLOR}` : ('2px solid ' + (status ? color : token.colorBorderSecondary)),
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -417,6 +431,7 @@ function ItemProcessBar({
   processDependencies?: Record<string, string[]>;
 }) {
   const { t } = useTranslation('dashboard');
+  const { token } = theme.useToken();
   const sorted = [...item.processes]
     .filter((p) => p.status !== ProcessStatus.Withdrawn)
     .sort((a, b) => {
@@ -430,7 +445,10 @@ function ItemProcessBar({
       {sorted.map((proc, idx) => {
         const process = processMap.get(proc.processId);
         const procPaused = isPaused(proc);
-        // Check if this Pending process is ready to start (using dependencies if available)
+        // Check if this Pending process is ready to start (using dependencies if available).
+        // IMPORTANT: look up dependencies in the UNFILTERED `item.processes`, not in
+        // `sorted` (which strips Withdrawn). If a dep is Withdrawn for this item it
+        // counts as satisfied — strip-then-lookup made every such case look "not ready".
         let isReady = false;
         if (proc.status === ProcessStatus.Pending) {
           const allDeps = processDependencies ?? {};
@@ -438,8 +456,9 @@ function ItemProcessBar({
           const deps = allDeps[proc.processId];
           if (deps && deps.length > 0) {
             isReady = deps.every((depId) => {
-              const depProc = sorted.find((p) => p.processId === depId);
-              return depProc && (depProc.status === ProcessStatus.Completed || depProc.isWithdrawn);
+              const depProc = item.processes.find((p) => p.processId === depId);
+              if (!depProc) return true; // dep doesn't exist on this item → effectively withdrawn
+              return depProc.status === ProcessStatus.Completed || depProc.isWithdrawn;
             });
           } else if (hasDependencySystem) {
             isReady = true;
@@ -464,10 +483,10 @@ function ItemProcessBar({
                 ],
               }}
             >
-              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div style={{ color: statusColor(proc.status, procPaused) }}>{procPaused ? t('orders.paused') : statusLabel}</div>{calcLiveSeconds(proc) > 0 && <div>{formatDurationSec(calcLiveSeconds(proc))}</div>}{proc.subProcesses && <SubProcessTooltip subProcesses={proc.subProcesses} processMap={processMap} />}</div>}>
+              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div style={{ color: isReady ? READY_BORDER_COLOR : statusColor(proc.status, procPaused) }}>{procPaused ? t('orders.paused') : isReady ? t('orders.ready') : statusLabel}</div>{calcLiveSeconds(proc) > 0 && <div>{formatDurationSec(calcLiveSeconds(proc))}</div>}{proc.subProcesses && <SubProcessTooltip subProcesses={proc.subProcesses} processMap={processMap} />}</div>}>
                 <div style={{
                   padding: '2px 6px', borderRadius: 4, backgroundColor: color,
-                  border: (procPaused || isReady) ? '3px solid #333' : '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
+                  border: isReady ? `3px solid ${READY_BORDER_COLOR}` : `1px solid ${token.colorBorderSecondary}`, fontSize: 11, fontWeight: 500,
                   color: (procPaused || isReady) ? '#666' : '#fff', cursor: 'pointer', lineHeight: '16px',
                 }}>
                   {process?.code ?? '?'}{proc.complexity ? <span style={{ opacity: 0.85 }}> {proc.complexity}</span> : null}
@@ -480,7 +499,7 @@ function ItemProcessBar({
               title={
                 <div>
                   <div><b>{process?.name ?? proc.processId}</b></div>
-                  <div style={{ color: statusColor(proc.status, procPaused) }}>{procPaused ? t('orders.paused') : statusLabel}</div>
+                  <div style={{ color: isReady ? READY_BORDER_COLOR : statusColor(proc.status, procPaused) }}>{procPaused ? t('orders.paused') : isReady ? t('orders.ready') : statusLabel}</div>
                   {(proc.complexity || calcLiveSeconds(proc) > 0) && (
                     <div>{proc.complexity ?? ''}{calcLiveSeconds(proc) > 0 ? `${proc.complexity ? ' · ' : ''}${formatDurationSec(calcLiveSeconds(proc))}` : ''}</div>
                   )}
@@ -490,7 +509,7 @@ function ItemProcessBar({
             >
               <div style={{
                 padding: '2px 6px', borderRadius: 4, backgroundColor: color,
-                border: (procPaused || isReady) ? '3px solid #333' : '1px solid rgba(0,0,0,0.1)', fontSize: 11, fontWeight: 500,
+                border: isReady ? `3px solid ${READY_BORDER_COLOR}` : `1px solid ${token.colorBorderSecondary}`, fontSize: 11, fontWeight: 500,
                 color: proc.status === ProcessStatus.Pending || proc.status === ProcessStatus.Withdrawn || procPaused ? '#666' : '#fff',
                 cursor: 'default', lineHeight: '16px',
               }}>
@@ -679,6 +698,99 @@ export function OrderListPage() {
     return map;
   }, [processes]);
 
+  // ─── Export ──────────────────────────────────────────────
+  const exportColumns: ExportColumn<OrderMasterViewDto>[] = useMemo(() => {
+    const baseCols: ExportColumn<OrderMasterViewDto>[] = [
+      { header: t('common:labels.orderNumber'), value: (o) => o.orderNumber, width: 16 },
+      {
+        header: t('common:labels.type'),
+        value: (o) => tEnum('OrderType', o.orderType),
+        cell: (o) => ({ fillColor: orderTypeColors[o.orderType] === 'blue' ? '#E6F4FF' : orderTypeColors[o.orderType] === 'orange' ? '#FFF4E6' : orderTypeColors[o.orderType] === 'red' ? '#FFE6E6' : '#F4E6FF' }),
+        width: 14,
+      },
+      {
+        header: t('common:labels.status'),
+        value: (o) => tEnum('OrderStatus', o.status),
+        cell: (o) => ({ fontColor: orderStatusTextColors[o.status]?.replace('#', ''), bold: true }),
+        width: 14,
+      },
+      {
+        header: t('common:labels.deliveryDate'),
+        value: (o) => (o.deliveryDate ? new Date(o.deliveryDate) : null),
+        width: 16,
+      },
+      { header: t('common:labels.priority'), value: (o) => o.priority, align: 'right', width: 10 },
+      {
+        header: t('orders.export.progress'),
+        value: (o) => `${o.completedProcesses}/${o.totalProcesses}`,
+        align: 'center',
+        width: 12,
+      },
+      {
+        header: t('orders.export.invoiced'),
+        value: (o) => (o.isInvoiced ? t('common:status.active') : '-'),
+        align: 'center',
+        width: 12,
+      },
+      {
+        header: t('common:labels.created'),
+        value: (o) => (o.createdAt ? new Date(o.createdAt) : null),
+        width: 18,
+      },
+      {
+        header: t('common:labels.completed'),
+        value: (o) => (o.completedAt ? new Date(o.completedAt) : null),
+        width: 18,
+      },
+    ];
+    const procCols: ExportColumn<OrderMasterViewDto>[] = (processes ?? [])
+      .slice()
+      .sort((a, b) => a.sequenceOrder - b.sequenceOrder)
+      .map((proc) => ({
+        header: `${proc.code} — ${proc.name}`,
+        value: (o) => {
+          const status = o.processStatuses[proc.id];
+          return status ? tEnum('ProcessStatus', status) : '';
+        },
+        cell: (o) => {
+          const status = o.processStatuses[proc.id] as ProcessStatus | undefined;
+          if (!status) return undefined;
+          const isPaused = o.processPaused[proc.id];
+          const fill = isPaused ? '#FFAA00' : processStatusColors[status];
+          const dark = status === ProcessStatus.Blocked || status === ProcessStatus.InProgress;
+          return { fillColor: fill, fontColor: dark ? '#FFFFFF' : '#1F1F1F', bold: status === ProcessStatus.Blocked };
+        },
+        align: 'center',
+        width: 14,
+      }));
+    return [...baseCols, ...procCols];
+  }, [processes, t, tEnum]);
+
+  const exportFilters: Array<{ label: string; value: string }> = useMemo(() => {
+    const filters: Array<{ label: string; value: string }> = [];
+    if (debouncedSearch) filters.push({ label: t('export.search'), value: debouncedSearch });
+    if (statusFilter) filters.push({ label: t('export.status'), value: tEnum('OrderStatus', statusFilter) });
+    if (orderTypeFilter) filters.push({ label: t('export.type'), value: tEnum('OrderType', orderTypeFilter) });
+    if (dateFrom) filters.push({ label: t('export.dateFrom'), value: dateFrom.format('DD.MM.YYYY.') });
+    if (dateTo) filters.push({ label: t('export.dateTo'), value: dateTo.format('DD.MM.YYYY.') });
+    return filters;
+  }, [debouncedSearch, statusFilter, orderTypeFilter, dateFrom, dateTo, t, tEnum]);
+
+  const fetchAllOrders = async (): Promise<OrderMasterViewDto[]> => {
+    const { data } = await ordersApi.getMasterView({
+      status: statusFilter,
+      orderType: orderTypeFilter,
+      search: debouncedSearch || undefined,
+      dateFrom: dateFrom?.format('YYYY-MM-DD'),
+      dateTo: dateTo?.format('YYYY-MM-DD'),
+      page: 1,
+      pageSize: 10000,
+      sortBy,
+      sortDirection,
+    });
+    return data.items;
+  };
+
   const queryClient = useQueryClient();
 
   // ─── Pending state for unified form ──────────────────────
@@ -714,15 +826,6 @@ export function OrderListPage() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
       queryClient.invalidateQueries({ queryKey: ['orders', variables.id] });
-    },
-  });
-
-  const withdrawMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { targetProcessId: string; reason: string; userId: string } }) =>
-      ordersApi.withdraw(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
-      queryClient.invalidateQueries({ queryKey: ['orders', detailOrderId] });
     },
   });
 
@@ -981,20 +1084,15 @@ export function OrderListPage() {
       render: (_: unknown, record: OrderMasterViewDto) => {
         const statusStr = record.processStatuses[proc.id];
         const status = statusStr ? (statusStr as ProcessStatus) : null;
-        // "Ready" = Pending + all dependencies completed
-        let isReady = false;
-        if (status === ProcessStatus.Pending && record.status === OrderStatus.Active) {
+        // "Ready" comes from BE `processReady` (per-item check) — aggregated
+        // processStatuses can't tell that one item is ready while a sibling is
+        // mid-pipeline. Sequential fallback (no dep system at all) stays here
+        // since BE returns processReady=false in that case.
+        let isReady = (record.processReady?.[proc.id] ?? false) && record.status === OrderStatus.Active;
+        if (!isReady && status === ProcessStatus.Pending && record.status === OrderStatus.Active) {
           const allDeps = record.processDependencies ?? {};
           const hasDependencySystem = Object.keys(allDeps).length > 0;
-          const deps = allDeps[proc.id];
-          if (deps && deps.length > 0) {
-            // Has explicit dependencies: ready when ALL are completed
-            isReady = deps.every((depId) => record.processStatuses[depId] === ProcessStatus.Completed);
-          } else if (hasDependencySystem) {
-            // Category uses dependencies but this process has none → independent, always ready
-            isReady = true;
-          } else {
-            // No dependency system at all → sequential fallback
+          if (!hasDependencySystem) {
             if (idx === 0) {
               isReady = true;
             } else {
@@ -1075,7 +1173,7 @@ export function OrderListPage() {
                   { color: '#1890ff', label: t('orders.legend.inProgress') },
                   { color: '#FF0000', label: t('orders.legend.blocked') },
                   { color: '#FFAA00', label: t('orders.legend.stopped') },
-                  { color: '#D9D9D9', label: t('orders.legend.pending') },
+                  { color: '#BFBFBF', label: t('orders.legend.pending') },
                 ].map((entry) => (
                   <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ width: 18, height: 18, background: entry.color, border: '1px solid #ccc', display: 'inline-block' }} />
@@ -1084,11 +1182,11 @@ export function OrderListPage() {
                 ))}
                 <Divider style={{ margin: '4px 0' }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 18, height: 18, background: '#fff', border: '1px dashed #E0E0E0', display: 'inline-block' }} />
+                  <span style={{ width: 18, height: 18, background: 'transparent', border: `1px dashed ${token.colorBorderSecondary}`, display: 'inline-block' }} />
                   <span>{t('orders.legend.notApplicable')}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 18, height: 18, background: '#D9D9D9', border: '2px solid #333', display: 'inline-block' }} />
+                  <span style={{ width: 18, height: 18, background: '#BFBFBF', border: `3px solid ${READY_BORDER_COLOR}`, display: 'inline-block' }} />
                   <span>{t('orders.legend.readyBorder')}</span>
                 </div>
               </div>
@@ -1104,6 +1202,16 @@ export function OrderListPage() {
               onClick={toggleFullscreen}
             />
           </Tooltip>
+          <TableExportButton
+            onFetchAll={fetchAllOrders}
+            columns={exportColumns}
+            options={{
+              fileName: `orders-${dayjs().format('YYYY-MM-DD')}`,
+              title: `${t('common:appName')} — ${t('orders.title')}`,
+              filters: exportFilters,
+              sheetName: t('orders.title'),
+            }}
+          />
           {canCreate && (
             <Button
               type="primary"

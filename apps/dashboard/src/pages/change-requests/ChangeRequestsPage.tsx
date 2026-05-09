@@ -19,6 +19,8 @@ import type { ChangeRequestDto } from '@algreen/shared-types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import dayjs from 'dayjs';
+import { TableExportButton } from '../../components/TableExportButton';
+import type { ExportColumn } from '../../utils/exportTable';
 
 const { Title } = Typography;
 
@@ -192,9 +194,58 @@ export function ChangeRequestsPage() {
     },
   ];
 
+  const exportColumns: ExportColumn<ChangeRequestDto>[] = [
+    { header: t('common:labels.orderNumber'), value: (c) => c.orderNumber ?? '', width: 16 },
+    { header: t('changeRequests.requestType'), value: (c) => tEnum('ChangeRequestType', c.requestType), width: 18 },
+    { header: t('changeRequests.description'), value: (c) => c.description ?? '', width: 32 },
+    { header: t('changeRequests.responseNote'), value: (c) => c.responseNote ?? '', width: 30 },
+    {
+      header: t('common:labels.status'),
+      value: (c) => tEnum('RequestStatus', c.status),
+      cell: (c) => {
+        const fill = c.status === 'Approved' ? '#D9F2D9' : c.status === 'Rejected' ? '#FFE6E6' : '#FFF7E6';
+        return { fillColor: fill };
+      },
+      width: 14,
+    },
+    { header: t('common:labels.created'), value: (c) => (c.createdAt ? new Date(c.createdAt) : null), width: 18 },
+    { header: t('common:labels.handledAt'), value: (c) => (c.handledAt ? new Date(c.handledAt) : null), width: 18 },
+  ];
+  const exportFilters: Array<{ label: string; value: string }> = [];
+  if (debouncedSearch) exportFilters.push({ label: t('export.search'), value: debouncedSearch });
+  if (statusFilter) exportFilters.push({ label: t('export.status'), value: tEnum('RequestStatus', statusFilter) });
+  if (dateFrom) exportFilters.push({ label: t('export.dateFrom'), value: dateFrom.format('DD.MM.YYYY.') });
+  if (dateTo) exportFilters.push({ label: t('export.dateTo'), value: dateTo.format('DD.MM.YYYY.') });
+
+  const fetchAllChanges = async (): Promise<ChangeRequestDto[]> => {
+    const { data } = await changeRequestsApi.getAll({
+      status: statusFilter,
+      search: debouncedSearch || undefined,
+      createdFrom: dateFrom?.format('YYYY-MM-DD'),
+      createdTo: dateTo?.format('YYYY-MM-DD'),
+      page: 1,
+      pageSize: 10000,
+      sortBy,
+      sortDirection,
+    });
+    return data.items;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <Title level={4} style={{ marginBottom: 16 }}>{t('changeRequests.title')}</Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0 }}>{t('changeRequests.title')}</Title>
+        <TableExportButton
+          onFetchAll={fetchAllChanges}
+          columns={exportColumns}
+          options={{
+            fileName: `change-requests-${dayjs().format('YYYY-MM-DD')}`,
+            title: `${t('common:appName')} — ${t('changeRequests.title')}`,
+            filters: exportFilters,
+            sheetName: t('changeRequests.title'),
+          }}
+        />
+      </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
         <Input.Search

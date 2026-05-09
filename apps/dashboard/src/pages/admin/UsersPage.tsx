@@ -19,6 +19,8 @@ import { UserRole } from '@algreen/shared-types';
 import type { UserDto, ProcessDto } from '@algreen/shared-types';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import dayjs from 'dayjs';
+import { TableExportButton } from '../../components/TableExportButton';
+import type { ExportColumn } from '../../utils/exportTable';
 
 const { Title } = Typography;
 
@@ -216,13 +218,82 @@ export function UsersPage() {
     },
   ];
 
+  // ─── Export ──────────────────────────────────────────────
+  const exportColumns: ExportColumn<UserDto>[] = [
+    { header: t('common:labels.firstName'), value: (u) => u.firstName, width: 16 },
+    { header: t('common:labels.lastName'), value: (u) => u.lastName, width: 16 },
+    { header: t('common:labels.email'), value: (u) => u.email, width: 28 },
+    { header: t('common:labels.role'), value: (u) => tEnum('UserRole', u.role), width: 16 },
+    {
+      header: t('admin.users.process'),
+      value: (u) =>
+        (u.processes ?? [])
+          .map((p) => {
+            const proc = processMap.get(p.processId);
+            return proc ? `${proc.code} — ${proc.name}` : '';
+          })
+          .filter(Boolean)
+          .join(', '),
+      width: 32,
+    },
+    {
+      header: t('common:labels.status'),
+      value: (u) => (u.isActive ? t('common:status.active') : t('common:status.inactive')),
+      cell: (u) => (u.isActive ? { fillColor: '#D9F2D9' } : { fillColor: '#F5F5F5' }),
+      width: 14,
+    },
+    {
+      header: t('common:labels.created'),
+      value: (u) => (u.createdAt ? new Date(u.createdAt) : null),
+      width: 18,
+    },
+  ];
+  const exportFilters: Array<{ label: string; value: string }> = [];
+  if (debouncedSearch) exportFilters.push({ label: t('export.search'), value: debouncedSearch });
+  if (roleFilter) exportFilters.push({ label: t('export.role'), value: tEnum('UserRole', roleFilter as UserRole) });
+  if (isActiveFilter !== undefined) {
+    exportFilters.push({
+      label: t('export.isActive'),
+      value: isActiveFilter ? t('common:status.active') : t('common:status.inactive'),
+    });
+  }
+  if (dateFrom) exportFilters.push({ label: t('export.dateFrom'), value: dateFrom.format('DD.MM.YYYY.') });
+  if (dateTo) exportFilters.push({ label: t('export.dateTo'), value: dateTo.format('DD.MM.YYYY.') });
+
+  const fetchAllUsers = async (): Promise<UserDto[]> => {
+    const { data } = await usersApi.getAll({
+      search: debouncedSearch || undefined,
+      role: roleFilter,
+      isActive: isActiveFilter,
+      createdFrom: dateFrom?.format('YYYY-MM-DD'),
+      createdTo: dateTo?.format('YYYY-MM-DD'),
+      page: 1,
+      pageSize: 10000,
+      sortBy,
+      sortDirection,
+    });
+    return data.items;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>{t('admin.users.title')}</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          {t('admin.users.addUser')}
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <TableExportButton
+            onFetchAll={fetchAllUsers}
+            columns={exportColumns}
+            options={{
+              fileName: `users-${dayjs().format('YYYY-MM-DD')}`,
+              title: `${t('common:appName')} — ${t('admin.users.title')}`,
+              filters: exportFilters,
+              sheetName: t('admin.users.title'),
+            }}
+          />
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            {t('admin.users.addUser')}
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
