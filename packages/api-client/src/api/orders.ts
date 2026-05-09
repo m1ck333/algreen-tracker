@@ -4,7 +4,6 @@ import type {
   CreateOrderRequest,
   UpdateOrderRequest,
   AddOrderItemRequest,
-  WithdrawOrderToProcessRequest,
   AddSpecialRequestRequest,
   OverrideComplexityRequest,
 } from '@algreen/shared-types';
@@ -106,10 +105,6 @@ export const ordersApi = {
 
   removeItem(orderId: string, itemId: string) {
     return apiClient.delete(`/orders/${orderId}/items/${itemId}`);
-  },
-
-  withdraw(id: string, data: WithdrawOrderToProcessRequest) {
-    return apiClient.post(`/orders/${id}/withdraw`, data);
   },
 
   addSpecialRequest(orderId: string, itemId: string, data: AddSpecialRequestRequest) {

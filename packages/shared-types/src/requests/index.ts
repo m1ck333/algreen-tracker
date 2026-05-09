@@ -92,12 +92,6 @@ export interface AddOrderItemRequest {
   notes?: string;
 }
 
-export interface WithdrawOrderToProcessRequest {
-  targetProcessId: string;
-  reason: string;
-  userId: string;
-}
-
 export interface AddSpecialRequestRequest {
   specialRequestTypeId: string;
 }
@@ -166,11 +160,6 @@ export interface BlockProcessRequest {
 export interface UnblockProcessRequest {
   userId: string;
   resetTime?: boolean;
-}
-
-export interface WithdrawProcessRequest {
-  userId: string;
-  reason: string;
 }
 
 // ─── Sub-Process Workflow ────────────────────────────────

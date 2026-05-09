@@ -5,7 +5,6 @@ import type {
   ResumeProcessWorkRequest,
   BlockProcessRequest,
   UnblockProcessRequest,
-  WithdrawProcessRequest,
 } from '@algreen/shared-types';
 import { apiClient } from '../axios-instance';
 
@@ -36,10 +35,6 @@ export const processWorkflowApi = {
 
   unblock(id: string, data: UnblockProcessRequest) {
     return apiClient.post(`/order-item-processes/${id}/unblock`, data);
-  },
-
-  withdraw(id: string, data: WithdrawProcessRequest) {
-    return apiClient.post(`/order-item-processes/${id}/withdraw`, data);
   },
 
   pauseStation(data: { processId: string; userId: string }) {

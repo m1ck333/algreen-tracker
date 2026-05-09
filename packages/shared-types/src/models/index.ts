@@ -150,6 +150,13 @@ export interface OrderMasterViewDto {
   processDurations: Record<string, number>;
   /** Map of processId → whether any item's process is paused */
   processPaused: Record<string, boolean>;
+  /**
+   * Map of processId → true if at least one item has this process ready to start
+   * (Pending + all of that item's dependencies Completed or Withdrawn). Computed
+   * BE-side because the aggregated processStatuses can't capture per-item readiness
+   * when sibling items are still mid-pipeline.
+   */
+  processReady: Record<string, boolean>;
   /** Map of processId → list of processIds it depends on */
   processDependencies: Record<string, string[]>;
   attachmentCount: number;
