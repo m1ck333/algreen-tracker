@@ -367,7 +367,10 @@ function ProcessTimeline({
             return sum + (p ? calcLiveSeconds(p) : 0);
           }, 0);
           const timeStr = formatDurationSec(totalSec);
-          const showBold = isReady;
+          // Bold "ready" border suppressed when any item is paused — paused
+          // dominates aggregate (orange color) and overlaying bold = ready
+          // contradicts the paused signal. Matches drawer→master-table behavior.
+          const showBold = isReady && !aggPaused;
           const color = aggPaused ? '#FFAA00' : isReady ? '#BFBFBF' : (status ? processStatusColors[status] : '#F0F0F0');
           const tooltipStatus = aggPaused
             ? t('orders.paused')
