@@ -12,6 +12,17 @@ export function setOnForceLogout(callback: () => void) {
   _onForceLogout = callback;
 }
 
+// Forbidden (403) fallback toast. The FE should hide actions the user can't
+// perform, but for race conditions / stale sessions / programmatic calls
+// we show a generic message. The optional errorCode is whatever the BE
+// returns in error.code (e.g. "FORBIDDEN_ROLE_ASSIGNMENT") so the toast
+// handler can pick a more specific message.
+let _onForbidden: ((errorCode?: string) => void) | null = null;
+
+export function setOnForbidden(callback: (errorCode?: string) => void) {
+  _onForbidden = callback;
+}
+
 function forceLogout() {
   tokenManager.clear();
   if (_onForceLogout) {
@@ -51,6 +62,14 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // 403 fallback — fires AFTER the FE's role gates failed (race, stale
+    // session, programmatic call, or BE guard the FE doesn't know about).
+    // Pass through error.code so the handler can pick a specific message.
+    if (error.response?.status === 403 && _onForbidden) {
+      const code = error.response?.data?.error?.code as string | undefined;
+      _onForbidden(code);
+    }
 
     if (error.response?.status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
