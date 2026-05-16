@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import * as Sentry from '@sentry/react';
 import type { UserDto } from '@algreen/shared-types';
 import { authApi, tokenManager } from '@algreen/api-client';
 import { parseJwt } from './jwt-utils';
@@ -31,13 +32,18 @@ export const useAuthStore = create<AuthState>()(
           tokenManager.setTokens(data.token, data.refreshToken);
           const payload = parseJwt(data.token);
           const user = data.user;
+          const resolvedTenantId = payload?.tenant_id ?? user.tenantId;
           set({
             user,
-            tenantId: payload?.tenant_id ?? user.tenantId,
+            tenantId: resolvedTenantId,
             isAuthenticated: true,
             isLoading: false,
             error: null,
           });
+          Sentry.setUser({ id: user.id });
+          if (resolvedTenantId) {
+            Sentry.setTag('tenant_id', resolvedTenantId);
+          }
         } catch (err: unknown) {
           const code =
             (err as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
@@ -54,6 +60,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           error: null,
         });
+        Sentry.setUser(null);
       },
 
       setUser: (user) => set({ user }),

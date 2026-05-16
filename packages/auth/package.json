@@ -9,8 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@algreen/shared-types": "workspace:*",
     "@algreen/api-client": "workspace:*",
+    "@algreen/shared-types": "workspace:*",
+    "@sentry/react": "^10.53.1",
     "zustand": "^4.5.0"
   },
   "peerDependencies": {
