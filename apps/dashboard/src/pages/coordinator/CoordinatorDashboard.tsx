@@ -71,7 +71,7 @@ export function CoordinatorDashboard() {
                 { title: t('coordinator.stats.ordersActive'), value: s.today?.ordersActive ?? 0 },
                 { title: t('coordinator.stats.ordersCompleted'), value: s.today?.ordersCompleted ?? 0 },
                 { title: t('coordinator.stats.processesCompleted'), value: s.today?.processesCompleted ?? 0 },
-                { title: t('coordinator.stats.avgProcessTime'), value: s.today?.averageProcessTimeMinutes ?? 0, suffix: t('coordinator.stats.min') },
+                { title: t('coordinator.stats.avgProcessTime'), value: Math.round(s.today?.averageProcessTimeMinutes ?? 0), suffix: t('coordinator.stats.min') },
                 { title: t('coordinator.stats.criticalWarnings'), value: s.warnings?.criticalCount ?? 0, color: s.warnings?.criticalCount ? token.colorError : undefined },
                 { title: t('coordinator.stats.warnings'), value: s.warnings?.warningCount ?? 0, color: s.warnings?.warningCount ? token.colorWarning : undefined },
                 { title: t('coordinator.stats.pendingBlockRequests'), value: s.pendingBlockRequests ?? 0 },
