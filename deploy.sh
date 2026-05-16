@@ -1,68 +1,45 @@
 #!/bin/bash
-# Deploy dashboard and/or tablet to alblue (staging) or algreen (pilot).
+# Deploy algreen-tracker-fe → algreen pilot (Mile's production).
 #
-# Usage: ./deploy.sh [staging|pilot] [dashboard|tablet|all]
-#   staging → alblue.duckdns.org + alblue-tablet.duckdns.org → /opt/alblue/
-#   pilot   → tracker-api.algreen.rs → /opt/algreen/  (FROZEN, see pilot-deploy-gate)
+# IMPORTANT: This repo deploys ONLY to algreen pilot. For alblue staging
+# use the alblue-tracker-fe repo, which carries the blue branding and
+# title. The two repos have diverged on logos, theme colors and
+# localStorage keys — never deploy this one to /opt/alblue/.
 #
-# Sentry: shared mes-api project, distinguished by VITE_SENTRY_ENVIRONMENT.
-# The DSN is a public identifier (gets baked into the JS bundle either way),
-# so committing it here gives no extra exposure.
+# Sentry: dormant by default. Set VITE_SENTRY_DSN before invoking to
+# activate the FE SDK; otherwise the SDK no-ops. Once the pilot is
+# unfrozen and ready for Sprint 3, uncomment the inline SENTRY_DSN.
 set -e
 
-SENTRY_DSN="https://315954545e637502fd5497b3090b5c9c@o4511398917177344.ingest.de.sentry.io/4511398994313296"
+export VITE_API_BASE_URL=https://tracker-api.algreen.rs/api
+export VITE_SIGNALR_URL=https://tracker-api.algreen.rs/hubs/production
 
-TARGET=${1:-}
-APP=${2:-all}
+# Sentry — leave empty so SDK no-ops until pilot is unfrozen and ready
+# to take Sprint 3 changes. To activate, uncomment the DSN line.
+# SENTRY_DSN="https://315954545e637502fd5497b3090b5c9c@o4511398917177344.ingest.de.sentry.io/4511398994313296"
+export VITE_SENTRY_DSN="${SENTRY_DSN:-}"
+export VITE_SENTRY_ENVIRONMENT="algreen-pilot"
+export VITE_SENTRY_RELEASE="$(git rev-parse --short HEAD)"
 
-if [ "$TARGET" = "staging" ]; then
-  DASHBOARD_API=https://alblue.duckdns.org
-  TABLET_API=https://alblue-tablet.duckdns.org
-  HOST=root@46.101.166.137
-  REMOTE_BASE=/opt/alblue
-  SENTRY_ENV=alblue-staging
-elif [ "$TARGET" = "pilot" ]; then
-  DASHBOARD_API=https://tracker-api.algreen.rs
-  TABLET_API=https://tracker-api.algreen.rs
-  HOST=root@46.101.166.137
-  REMOTE_BASE=/opt/algreen
-  SENTRY_ENV=algreen-pilot
-else
-  echo "Usage: ./deploy.sh [staging|pilot] [dashboard|tablet|all]"
-  echo "  staging → /opt/alblue/   (alblue.duckdns.org + alblue-tablet.duckdns.org)"
-  echo "  pilot   → /opt/algreen/  (tracker-api.algreen.rs)  FROZEN"
-  exit 1
-fi
+TARGET=${1:-all}
 
-SENTRY_RELEASE=$(git rev-parse --short HEAD)
-
-if [ "$APP" = "dashboard" ] || [ "$APP" = "all" ]; then
-  echo "🔨 Building dashboard ($TARGET, $SENTRY_RELEASE)..."
-  VITE_API_BASE_URL="${DASHBOARD_API}/api" \
-  VITE_SIGNALR_URL="${DASHBOARD_API}/hubs/production" \
-  VITE_SENTRY_DSN="$SENTRY_DSN" \
-  VITE_SENTRY_ENVIRONMENT="$SENTRY_ENV" \
-  VITE_SENTRY_RELEASE="$SENTRY_RELEASE" \
+if [ "$TARGET" = "dashboard" ] || [ "$TARGET" = "all" ]; then
+  echo "🔨 Building dashboard..."
   pnpm --filter dashboard build
-  echo "📦 Uploading dashboard → ${HOST}:${REMOTE_BASE}/dashboard/ ..."
-  rsync -az --delete apps/dashboard/dist/ "${HOST}:${REMOTE_BASE}/dashboard/"
+  echo "📦 Uploading dashboard..."
+  rsync -az --delete apps/dashboard/dist/ root@46.101.166.137:/opt/algreen/dashboard/
   echo "✅ Dashboard deployed!"
 fi
 
-if [ "$APP" = "tablet" ] || [ "$APP" = "all" ]; then
-  echo "🔨 Building tablet ($TARGET, $SENTRY_RELEASE)..."
-  VITE_API_BASE_URL="${TABLET_API}/api" \
-  VITE_SIGNALR_URL="${TABLET_API}/hubs/production" \
-  VITE_SENTRY_DSN="$SENTRY_DSN" \
-  VITE_SENTRY_ENVIRONMENT="$SENTRY_ENV" \
-  VITE_SENTRY_RELEASE="$SENTRY_RELEASE" \
+if [ "$TARGET" = "tablet" ] || [ "$TARGET" = "all" ]; then
+  echo "🔨 Building tablet..."
   pnpm --filter tablet build
-  echo "📦 Uploading tablet → ${HOST}:${REMOTE_BASE}/tablet/ ..."
-  rsync -az --delete apps/tablet/dist/ "${HOST}:${REMOTE_BASE}/tablet/"
+  echo "📦 Uploading tablet..."
+  rsync -az --delete apps/tablet/dist/ root@46.101.166.137:/opt/algreen/tablet/
   echo "✅ Tablet deployed!"
 fi
 
-if [ "$APP" != "dashboard" ] && [ "$APP" != "tablet" ] && [ "$APP" != "all" ]; then
-  echo "Usage: ./deploy.sh [staging|pilot] [dashboard|tablet|all]"
+if [ "$TARGET" != "dashboard" ] && [ "$TARGET" != "tablet" ] && [ "$TARGET" != "all" ]; then
+  echo "Usage: ./deploy.sh [dashboard|tablet|all]"
   exit 1
 fi
