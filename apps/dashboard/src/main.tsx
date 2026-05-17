@@ -22,7 +22,20 @@ setOnForceLogout(() => useAuthStore.getState().logout());
 setOnForbidden((code) => {
   switch (code) {
     case 'FORBIDDEN_ROLE_ASSIGNMENT':
-      message.error('Nemate dozvolu da dodelite ovu ulogu.');
+    case 'FORBIDDEN_ROLE_CHANGE':
+      message.error('Samo SuperAdmin može da menja ulogu korisnika.');
+      break;
+    case 'LAST_ADMIN_REMOVAL':
+      message.error('Nije moguće ukloniti poslednjeg aktivnog Admina u tenant-u.');
+      break;
+    case 'SELF_DELETE_FORBIDDEN':
+      message.error('Ne možete obrisati sopstveni nalog.');
+      break;
+    case 'FORBIDDEN_SUPERADMIN_DELETE':
+      message.error('Samo SuperAdmin može da obriše SuperAdmin nalog.');
+      break;
+    case 'CHANGE_PASSWORD_NOT_SELF':
+      message.error('Možete menjati samo sopstvenu lozinku.');
       break;
     default:
       message.error('Vaša uloga nema dozvolu za ovu akciju.');
