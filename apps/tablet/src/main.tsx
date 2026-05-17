@@ -12,9 +12,14 @@ initSentry();
 
 setOnForceLogout(() => useAuthStore.getState().logout());
 
-// Register service worker only in production (vite build outputs sw.js)
+// Register service worker only in production (vite build outputs sw.js).
+// SW powers offline + push; failure is non-critical and often device-specific
+// (Safari private mode, iOS PWA quirks). Catch so it doesn't surface as an
+// unhandled promise rejection in Sentry — the app works without the SW.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js', { scope: '/' });
+  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((err) => {
+    console.warn('[SW] registration failed:', err);
+  });
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
