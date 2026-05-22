@@ -28,7 +28,7 @@ export type ExportColumn<T> = {
 export type ExportOptions = {
   /** File name without extension. */
   fileName: string;
-  /** Title row at top of file (e.g. "Algreen MES — Orders"). */
+  /** Title row at top of file (e.g. "Alblue MES — Orders"). */
   title?: string;
   /** Filter context lines shown under the title. */
   filters?: Array<{ label: string; value: string }>;
@@ -71,50 +71,25 @@ function escapeCsv(s: string): string {
 
 // ─── XLSX ────────────────────────────────────────────────
 
-export async function exportToXlsx<T>(
+/**
+ * Extra sheet spec for multi-sheet XLSX exports. The first/main sheet still
+ * carries title + filter context; extra sheets get only their own header row
+ * and data (kept minimal so the second sheet reads as a clean reference table).
+ */
+export type ExtraSheet<S> = {
+  name: string;
+  rows: S[];
+  columns: ExportColumn<S>[];
+};
+
+function writeSheetData<T>(
+  sheet: ExcelJS.Worksheet,
   rows: T[],
   columns: ExportColumn<T>[],
-  options: ExportOptions,
-): Promise<void> {
-  const workbook = new ExcelJS.Workbook();
-  workbook.created = new Date();
-  workbook.creator = 'Algreen MES';
-  const sheet = workbook.addWorksheet(options.sheetName ?? 'Sheet1');
-
-  const colCount = columns.length;
-  let currentRow = 1;
-
-  // Title row
-  if (options.title) {
-    sheet.mergeCells(currentRow, 1, currentRow, colCount);
-    const cell = sheet.getCell(currentRow, 1);
-    cell.value = options.title;
-    cell.font = { bold: true, size: 14, color: { argb: TITLE_FONT } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TITLE_FILL } };
-    cell.alignment = { vertical: 'middle', horizontal: 'left' };
-    sheet.getRow(currentRow).height = 22;
-    currentRow++;
-  }
-
-  // Generated timestamp
-  sheet.mergeCells(currentRow, 1, currentRow, colCount);
-  const tsCell = sheet.getCell(currentRow, 1);
-  tsCell.value = `${options.generatedLabel ?? 'Generated'}: ${formatTimestamp(new Date())}`;
-  tsCell.font = { italic: true, color: { argb: 'FF595959' } };
-  currentRow++;
-
-  // Filter context
-  if (options.filters?.length) {
-    for (const filter of options.filters) {
-      sheet.mergeCells(currentRow, 1, currentRow, colCount);
-      const fCell = sheet.getCell(currentRow, 1);
-      fCell.value = `${filter.label}: ${filter.value}`;
-      fCell.font = { italic: true, color: { argb: 'FF595959' } };
-      currentRow++;
-    }
-  }
-
-  // Header row — always left-aligned for consistency, regardless of body align.
+  startRow: number,
+): number {
+  let currentRow = startRow;
+  // Header row
   const headerRow = sheet.getRow(currentRow);
   let maxHeaderLines = 1;
   columns.forEach((col, i) => {
@@ -175,12 +150,68 @@ export async function exportToXlsx<T>(
     currentRow++;
   }
 
-  // Column widths — at minimum fit the header text + small padding so headers
-  // never clip on a single line; respect any explicit width that's larger.
+  // Column widths
   columns.forEach((col, i) => {
     const headerWidth = col.header.length + 2;
     sheet.getColumn(i + 1).width = Math.max(col.width ?? 18, headerWidth);
   });
+
+  return currentRow;
+}
+
+export async function exportToXlsx<T>(
+  rows: T[],
+  columns: ExportColumn<T>[],
+  options: ExportOptions,
+  extraSheets?: ExtraSheet<unknown>[],
+): Promise<void> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.created = new Date();
+  workbook.creator = 'Algreen MES';
+  const sheet = workbook.addWorksheet(options.sheetName ?? 'Sheet1');
+
+  const colCount = columns.length;
+  let currentRow = 1;
+
+  // Title row
+  if (options.title) {
+    sheet.mergeCells(currentRow, 1, currentRow, colCount);
+    const cell = sheet.getCell(currentRow, 1);
+    cell.value = options.title;
+    cell.font = { bold: true, size: 14, color: { argb: TITLE_FONT } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TITLE_FILL } };
+    cell.alignment = { vertical: 'middle', horizontal: 'left' };
+    sheet.getRow(currentRow).height = 22;
+    currentRow++;
+  }
+
+  // Generated timestamp
+  sheet.mergeCells(currentRow, 1, currentRow, colCount);
+  const tsCell = sheet.getCell(currentRow, 1);
+  tsCell.value = `${options.generatedLabel ?? 'Generated'}: ${formatTimestamp(new Date())}`;
+  tsCell.font = { italic: true, color: { argb: 'FF595959' } };
+  currentRow++;
+
+  // Filter context
+  if (options.filters?.length) {
+    for (const filter of options.filters) {
+      sheet.mergeCells(currentRow, 1, currentRow, colCount);
+      const fCell = sheet.getCell(currentRow, 1);
+      fCell.value = `${filter.label}: ${filter.value}`;
+      fCell.font = { italic: true, color: { argb: 'FF595959' } };
+      currentRow++;
+    }
+  }
+
+  writeSheetData(sheet, rows, columns, currentRow);
+
+  // Extra sheets (no title / filter context — just header + data)
+  if (extraSheets?.length) {
+    for (const extra of extraSheets) {
+      const extraSheet = workbook.addWorksheet(extra.name);
+      writeSheetData(extraSheet, extra.rows, extra.columns as ExportColumn<unknown>[], 1);
+    }
+  }
 
   const buf = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buf], {

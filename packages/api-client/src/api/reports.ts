@@ -1,15 +1,25 @@
 import type {
-  ProcessAverageDto,
+  ProcessTimeItemDto,
   TimeTrackingResponseDto,
   WorkerHoursDto,
 } from '@algreen/shared-types';
 import { apiClient } from '../axios-instance';
 
+export interface ProcessTimesQuery {
+  from?: string;
+  to?: string;
+  productCategoryIds?: string[];
+  orderTypes?: string[];
+}
+
 export interface TimeTrackingQuery {
-  from: string;
-  to: string;
+  from?: string;
+  to?: string;
   processId?: string;
   complexity?: string;
+  orderNumber?: string;
+  productCategoryIds?: string[];
+  orderTypes?: string[];
 }
 
 export interface WorkerHoursQuery {
@@ -18,13 +28,27 @@ export interface WorkerHoursQuery {
   userId?: string;
 }
 
+// Axios serializes array params as `?key[]=` by default; ASP.NET Core expects
+// repeated keys (`?key=a&key=b`). This helper forces the repeat-key form.
+const repeatArraySerializer = {
+  paramsSerializer: {
+    indexes: null,
+  },
+};
+
 export const reportsApi = {
-  getProcessAverages() {
-    return apiClient.get<{ processes: ProcessAverageDto[] }>('/reports/process-averages');
+  getProcessTimes(params?: ProcessTimesQuery) {
+    return apiClient.get<{ processes: ProcessTimeItemDto[] }>('/reports/process-times', {
+      params,
+      ...repeatArraySerializer,
+    });
   },
 
   getTimeTracking(params: TimeTrackingQuery) {
-    return apiClient.get<TimeTrackingResponseDto>('/reports/time-tracking', { params });
+    return apiClient.get<TimeTrackingResponseDto>('/reports/time-tracking', {
+      params,
+      ...repeatArraySerializer,
+    });
   },
 
   getWorkerHours(params: WorkerHoursQuery) {

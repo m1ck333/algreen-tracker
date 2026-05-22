@@ -494,17 +494,43 @@ export interface ProcessGroupDto<T> {
 
 // ─── Reports ───────────────────────────────────────────
 
-export interface ProcessAverageDto {
+/**
+ * Per-complexity time stats. Values are decimal MINUTES (BE divides the raw
+ * seconds-storing-as-minutes column by 60). Format for display as h:mm:ss
+ * (multiply minutes × 60 → seconds → format).
+ *
+ * Trimmed metric uses a 1-sigma window per the Excel formulas (Tab 1):
+ *   trimmedMeanMinutes = AVERAGE of samples within [μ - σ, μ + σ]   ("Realni prosek")
+ * min/max are full-population, not window-clamped.
+ */
+export interface ComplexityStatsDto {
+  count: number;
+  avgMinutes: number;
+  minMinutes: number;
+  maxMinutes: number;
+  stdevMinutes: number;
+  trimmedMeanMinutes: number;
+}
+
+export interface ProcessTimeItemDto {
   processId: string;
   processCode: string;
   processName: string;
-  averages: Record<string, { avgMinutes: number; count: number }>;
+  stats: Record<string, ComplexityStatsDto>;
+}
+
+export interface SubProcessTimeDto {
+  subProcessId: string;
+  name: string;
+  /** SECONDS — same legacy column as TimeTrackingItemDto.durationSeconds (no ÷60). */
+  durationSeconds: number;
 }
 
 export interface TimeTrackingItemDto {
   orderItemProcessId: string;
   orderNumber: string;
-  productName: string;
+  productCategoryName: string;
+  orderType: string;
   processId: string;
   processCode: string;
   processName: string;
@@ -512,20 +538,13 @@ export interface TimeTrackingItemDto {
   status: string;
   startedAt: string | null;
   completedAt: string | null;
-  totalDurationMinutes: number;
-}
-
-export interface TimeTrackingSummaryDto {
-  totalRecords: number;
-  avgDurationMinutes: number;
-  totalDurationMinutes: number;
-  minDurationMinutes: number;
-  maxDurationMinutes: number;
+  /** SECONDS. Format with h:mm:ss. */
+  durationSeconds: number;
+  subProcesses: SubProcessTimeDto[];
 }
 
 export interface TimeTrackingResponseDto {
   items: TimeTrackingItemDto[];
-  summary: TimeTrackingSummaryDto;
 }
 
 export interface WorkerDailyBreakdownDto {
