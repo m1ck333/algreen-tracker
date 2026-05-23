@@ -4,6 +4,8 @@ import type {
   WorkerHoursDto,
   DeliveryComplianceReportDto,
   ReportGranularity,
+  ProcessTimeTrendDto,
+  ActiveProcessFunnelDto,
 } from '@algreen/shared-types';
 import { apiClient } from '../axios-instance';
 
@@ -37,6 +39,19 @@ export interface DeliveryComplianceQuery {
   orderTypes?: string[];
 }
 
+export interface ProcessTimeTrendQuery {
+  processId: string;
+  complexity: string;
+  granularity: ReportGranularity;
+  from?: string;
+  to?: string;
+}
+
+export interface ActiveProcessFunnelQuery {
+  orderTypes?: string[];
+  complexity?: string;
+}
+
 // Axios serializes array params as `?key[]=` by default; ASP.NET Core expects
 // repeated keys (`?key=a&key=b`). This helper forces the repeat-key form.
 const repeatArraySerializer = {
@@ -66,6 +81,17 @@ export const reportsApi = {
 
   getDeliveryCompliance(params: DeliveryComplianceQuery) {
     return apiClient.get<DeliveryComplianceReportDto>('/reports/delivery-compliance', {
+      params,
+      ...repeatArraySerializer,
+    });
+  },
+
+  getProcessTimeTrend(params: ProcessTimeTrendQuery) {
+    return apiClient.get<ProcessTimeTrendDto>('/reports/process-time-trend', { params });
+  },
+
+  getActiveProcessFunnel(params: ActiveProcessFunnelQuery) {
+    return apiClient.get<ActiveProcessFunnelDto>('/reports/active-process-funnel', {
       params,
       ...repeatArraySerializer,
     });

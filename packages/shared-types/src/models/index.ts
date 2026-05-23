@@ -586,6 +586,39 @@ export interface TimeTrackingResponseDto {
   items: TimeTrackingItemDto[];
 }
 
+export interface ProcessTimeTrendBucketDto {
+  /** ISO date (week → Monday, month → first day). */
+  bucketStart: string;
+  count: number;
+  /** Realni prosek (trimmed mean) of this bucket's samples, in minutes. */
+  trimmedMeanMinutes: number;
+  /** Smallest sample inside μ±σ window, in minutes. */
+  minMinutes: number;
+  /** Largest sample inside μ±σ window, in minutes. */
+  maxMinutes: number;
+}
+
+export interface ProcessTimeTrendDto {
+  buckets: ProcessTimeTrendBucketDto[];
+  /** 85% of trimmed mean across the whole filtered period (constant target
+   *  line). Null when no samples. */
+  normativMinutes: number | null;
+}
+
+export interface ActiveProcessFunnelBucketDto {
+  processId: string;
+  processCode: string;
+  processName: string;
+  sequenceOrder: number;
+  inProgressCount: number;
+  readyCount: number;
+  blockedCount: number;
+}
+
+export interface ActiveProcessFunnelDto {
+  processes: ActiveProcessFunnelBucketDto[];
+}
+
 export interface DeliveryComplianceBucketDto {
   /** ISO date of bucket start (week → Monday, month → first day). */
   bucketStart: string;

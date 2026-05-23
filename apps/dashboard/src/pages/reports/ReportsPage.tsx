@@ -45,6 +45,9 @@ import {
   Bar,
   LineChart,
   Line,
+  ComposedChart,
+  Area,
+  ReferenceLine,
   XAxis,
   YAxis,
   Tooltip as RechartsTooltip,
@@ -457,57 +460,70 @@ function ProcessAveragesTab() {
         )}
       </Card>
 
-      <WeeklyTrendChart />
+      <ProcessTimeTrendChart />
       <DeliveryComplianceChart />
+      <ActiveProcessFunnelChart />
     </>
   );
 }
 
-// ─── Chart #2: Trend prosečnog vremena po nedelji ──────
+// ─── Chart: Trend prosečnog vremena po nedelji ──────────
 //
-// Preview-quality. Reuses the /reports/time-tracking endpoint and groups
-// completed rows client-side by ISO week. No process / complexity filter
-// yet — that's "next doings". No Normativ (cilj) line either — we don't
-// have a source for the target value (per-tenant setting? per-process?).
+// Per Sale/Bojan spec 22.05.2026 + clarification 23.05.2026:
+//   • Green zone = MIN/MAX per period bucket (window-clamped — same
+//     formula as the Vremena table: smallest sample ≥ μ-σ, largest
+//     ≤ μ+σ). Plotted as an Area between minMinutes/maxMinutes.
+//   • Blue line = Realni prosek (trimmed mean) per bucket.
+//   • Red dashed = Normativ = 85% of trimmed mean across the WHOLE
+//     filtered period (constant horizontal target).
+// Filters: Proces (single), Kompleksnost (single), Granul (week/month).
+// Chart is empty until both Proces + Kompleksnost are picked, since the
+// trend has no meaning across mixed (process × complexity) populations.
 
-function WeeklyTrendChart() {
+function ProcessTimeTrendChart() {
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['reports-weekly-trend', tenantId],
-    queryFn: () =>
-      reportsApi
-        .getTimeTracking({
-          from: dayjs().subtract(90, 'day').format('YYYY-MM-DD'),
-          to: dayjs().format('YYYY-MM-DD'),
-        })
-        .then((r) => r.data.items),
+  const [processId, setProcessId] = useState<string | undefined>(undefined);
+  const [complexity, setComplexity] = useState<ComplexityType | undefined>(undefined);
+  const [granularity, setGranularity] = useState<'Week' | 'Month'>('Week');
+
+  const { data: processes } = useQuery({
+    queryKey: ['processes-for-reports', tenantId],
+    queryFn: () => processesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
     enabled: !!tenantId,
   });
 
-  // Group by ISO week of completedAt, average durationSeconds → minutes.
-  const trendData = useMemo(() => {
-    if (!data) return [];
-    const byWeek = new Map<string, { sum: number; count: number; start: dayjs.Dayjs }>();
-    for (const item of data) {
-      if (!item.completedAt) continue;
-      const d = dayjs(item.completedAt);
-      const start = d.startOf('isoWeek');
-      const key = start.format('YYYY-MM-DD');
-      const entry = byWeek.get(key) ?? { sum: 0, count: 0, start };
-      entry.sum += item.durationSeconds;
-      entry.count += 1;
-      byWeek.set(key, entry);
-    }
-    return Array.from(byWeek.values())
-      .sort((a, b) => a.start.valueOf() - b.start.valueOf())
-      .map((e) => ({
-        week: e.start.format('DD.MM'),
-        avgMinutes: Number((e.sum / e.count / 60).toFixed(2)),
-      }));
-  }, [data]);
+  const { data, isLoading } = useQuery({
+    queryKey: ['reports-process-time-trend', tenantId, processId, complexity, granularity],
+    queryFn: () =>
+      reportsApi
+        .getProcessTimeTrend({
+          processId: processId!,
+          complexity: complexity!,
+          granularity,
+          from: dayjs().subtract(180, 'day').format('YYYY-MM-DD'),
+          to: dayjs().format('YYYY-MM-DD'),
+        })
+        .then((r) => r.data),
+    enabled: !!tenantId && !!processId && !!complexity,
+  });
+
+  const chartData = useMemo(
+    () =>
+      (data?.buckets ?? []).map((b) => ({
+        bucket: dayjs(b.bucketStart).format(granularity === 'Week' ? 'DD.MM' : 'MM.YYYY'),
+        min: Number(b.minMinutes.toFixed(2)),
+        max: Number(b.maxMinutes.toFixed(2)),
+        avg: Number(b.trimmedMeanMinutes.toFixed(2)),
+        _count: b.count,
+      })),
+    [data, granularity],
+  );
+
+  const normativ = data?.normativMinutes ?? null;
+  const filtersReady = !!processId && !!complexity;
 
   return (
     <Card
@@ -516,20 +532,70 @@ function WeeklyTrendChart() {
       title={t('reports.chartWeeklyTrend')}
       loading={isLoading}
     >
-      {trendData.length === 0 ? (
+      <Space style={{ marginBottom: 12 }} wrap>
+        <Select
+          placeholder={t('reports.allProcesses')}
+          value={processId}
+          onChange={setProcessId}
+          style={{ width: 220 }}
+          showSearch
+          optionFilterProp="label"
+          options={processes?.map((p: ProcessDto) => ({
+            label: `${p.code} — ${p.name}`,
+            value: p.id,
+          }))}
+        />
+        <Select
+          placeholder={t('reports.allComplexities')}
+          value={complexity}
+          onChange={setComplexity}
+          style={{ width: 180 }}
+          options={[
+            { label: t('reports.complexityT'), value: ComplexityType.T },
+            { label: t('reports.complexityS'), value: ComplexityType.S },
+            { label: t('reports.complexityL'), value: ComplexityType.L },
+          ]}
+        />
+        <Select
+          value={granularity}
+          onChange={setGranularity}
+          style={{ width: 140 }}
+          options={[
+            { label: t('reports.granularityWeek'), value: 'Week' },
+            { label: t('reports.granularityMonth'), value: 'Month' },
+          ]}
+        />
+      </Space>
+      {!filtersReady ? (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={t('reports.trendPickFilters')}
+        />
+      ) : chartData.length === 0 ? (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('reports.noData')} />
       ) : (
-        <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={trendData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+        <ResponsiveContainer width="100%" height={320}>
+          <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="week" />
+            <XAxis dataKey="bucket" />
             <YAxis
               label={{ value: t('reports.minutesUnit'), angle: -90, position: 'insideLeft' }}
             />
             <RechartsTooltip
-              formatter={(value) =>
-                formatMinutes(typeof value === 'number' ? value : Number(value))
-              }
+              formatter={(value, name) => {
+                const formatted = formatMinutes(
+                  typeof value === 'number' ? value : Number(value),
+                );
+                const label =
+                  name === 'min'
+                    ? t('reports.min')
+                    : name === 'max'
+                    ? t('reports.max')
+                    : name === 'avg'
+                    ? t('reports.trimmedAvg')
+                    : String(name);
+                return [formatted, label];
+              }}
               contentStyle={{
                 backgroundColor: token.colorBgElevated,
                 border: `1px solid ${token.colorBorderSecondary}`,
@@ -540,15 +606,59 @@ function WeeklyTrendChart() {
               itemStyle={{ color: token.colorText }}
               cursor={{ stroke: token.colorBorderSecondary }}
             />
+            <Legend
+              formatter={(v) =>
+                v === 'avg'
+                  ? t('reports.trimmedAvg')
+                  : v === 'minMaxBand'
+                  ? t('reports.minMaxBand')
+                  : v === 'normativ'
+                  ? t('reports.normativ')
+                  : v
+              }
+            />
+            {/* Green band: render two stacked areas; bottom (transparent) up
+                to `min`, second (visible green fill) up to `max`. Recharts
+                stacks them so the visible swath is between min and max. */}
+            <Area
+              type="monotone"
+              dataKey="min"
+              stackId="band"
+              stroke="none"
+              fill="transparent"
+              legendType="none"
+            />
+            <Area
+              type="monotone"
+              dataKey={(d: { min: number; max: number }) => d.max - d.min}
+              name="minMaxBand"
+              stackId="band"
+              stroke="none"
+              fill="#52c41a"
+              fillOpacity={0.2}
+            />
             <Line
               type="monotone"
-              dataKey="avgMinutes"
-              name={t('reports.avg')}
+              dataKey="avg"
+              name="avg"
               stroke="#1890ff"
               strokeWidth={2}
               dot={{ r: 4 }}
             />
-          </LineChart>
+            {normativ != null && (
+              <ReferenceLine
+                y={normativ}
+                stroke="#ff4d4f"
+                strokeDasharray="5 5"
+                label={{
+                  value: `${t('reports.normativ')}: ${formatMinutes(normativ)}`,
+                  fill: token.colorText,
+                  fontSize: 11,
+                  position: 'insideTopRight',
+                }}
+              />
+            )}
+          </ComposedChart>
         </ResponsiveContainer>
       )}
     </Card>
@@ -663,6 +773,148 @@ function DeliveryComplianceChart() {
             />
             <Bar dataKey="OnTime" stackId="compliance" fill="#52c41a" />
             <Bar dataKey="Late" stackId="compliance" fill="#ff4d4f" />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </Card>
+  );
+}
+
+// ─── Chart: Napredak aktivnih narudžbina (funnel po fazama) ──
+//
+// Horizontal bar per process, with three stacked segments:
+//   • U toku (blue)            — InProgress
+//   • Spreman za izvršavanje (gray) — Pending + all deps complete
+//   • Blokirano (red)          — Blocked
+// Sale/Bojan clarified 23.05.2026: the gray "Na čekanju" label in the
+// mock was wrong; the gray boldirani kvadratić in live order tracking
+// represents "spreman za izvršavanje", and that's what the gray here is.
+// Pending-but-waiting-on-deps rows are excluded — the chart only shows
+// rows that are actively in the pipeline for that process.
+
+function ActiveProcessFunnelChart() {
+  const tenantId = useAuthStore((s) => s.tenantId);
+  const { t } = useTranslation('dashboard');
+  const { token } = theme.useToken();
+
+  const [orderTypes, setOrderTypes] = useState<string[]>([]);
+  const [complexity, setComplexity] = useState<ComplexityType | undefined>(undefined);
+
+  const { data: orderTypeList } = useQuery({
+    queryKey: ['order-types-for-reports', tenantId],
+    queryFn: () =>
+      orderTypesApi.getAll({ isActive: true, pageSize: 200 }).then((r) => r.data.items),
+    enabled: !!tenantId,
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['reports-active-funnel', tenantId, orderTypes, complexity],
+    queryFn: () =>
+      reportsApi
+        .getActiveProcessFunnel({
+          orderTypes: orderTypes.length ? orderTypes : undefined,
+          complexity,
+        })
+        .then((r) => r.data.processes),
+    enabled: !!tenantId,
+  });
+
+  // Map to chart-friendly rows. Each process is one row; segments stack.
+  const chartData = useMemo(
+    () =>
+      (data ?? []).map((p) => ({
+        process: p.processCode,
+        processName: p.processName,
+        InProgress: p.inProgressCount,
+        Ready: p.readyCount,
+        Blocked: p.blockedCount,
+      })),
+    [data],
+  );
+
+  return (
+    <Card
+      size="small"
+      style={{ marginTop: 16 }}
+      title={t('reports.chartActiveFunnel')}
+      loading={isLoading}
+    >
+      <Space style={{ marginBottom: 12 }} wrap>
+        <Select
+          mode="multiple"
+          placeholder={t('reports.allTypes')}
+          value={orderTypes}
+          onChange={setOrderTypes}
+          allowClear
+          style={{ minWidth: 200 }}
+          options={orderTypeList?.map((ot) => ({ label: ot.name, value: ot.code }))}
+        />
+        <Select
+          placeholder={t('reports.allComplexities')}
+          value={complexity}
+          onChange={setComplexity}
+          allowClear
+          style={{ width: 180 }}
+          options={[
+            { label: t('reports.complexityT'), value: ComplexityType.T },
+            { label: t('reports.complexityS'), value: ComplexityType.S },
+            { label: t('reports.complexityL'), value: ComplexityType.L },
+          ]}
+        />
+      </Space>
+      {chartData.every((d) => d.InProgress + d.Ready + d.Blocked === 0) ? (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('reports.noData')} />
+      ) : (
+        <ResponsiveContainer width="100%" height={Math.max(280, chartData.length * 36 + 80)}>
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 8, right: 16, left: 24, bottom: 8 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis type="number" allowDecimals={false} />
+            <YAxis type="category" dataKey="process" width={36} />
+            <RechartsTooltip
+              contentStyle={{
+                backgroundColor: token.colorBgElevated,
+                border: `1px solid ${token.colorBorderSecondary}`,
+                borderRadius: token.borderRadiusLG,
+                color: token.colorText,
+              }}
+              labelStyle={{ color: token.colorText, fontWeight: 600 }}
+              itemStyle={{ color: token.colorText }}
+              cursor={{ fill: token.colorFillTertiary }}
+              labelFormatter={(label, payload) => {
+                const row = payload?.[0]?.payload as
+                  | { process: string; processName: string }
+                  | undefined;
+                return row ? `${row.process} — ${row.processName}` : String(label);
+              }}
+              formatter={(value, name) => [
+                value,
+                name === 'InProgress'
+                  ? t('reports.funnelInProgress')
+                  : name === 'Ready'
+                  ? t('reports.funnelReady')
+                  : name === 'Blocked'
+                  ? t('reports.funnelBlocked')
+                  : String(name),
+              ]}
+            />
+            <Legend
+              formatter={(v) =>
+                v === 'InProgress'
+                  ? t('reports.funnelInProgress')
+                  : v === 'Ready'
+                  ? t('reports.funnelReady')
+                  : v === 'Blocked'
+                  ? t('reports.funnelBlocked')
+                  : v
+              }
+            />
+            <Bar dataKey="InProgress" stackId="funnel" fill="#1890ff" />
+            <Bar dataKey="Ready" stackId="funnel" fill="#8c8c8c" />
+            <Bar dataKey="Blocked" stackId="funnel" fill="#ff4d4f" />
           </BarChart>
         </ResponsiveContainer>
       )}
