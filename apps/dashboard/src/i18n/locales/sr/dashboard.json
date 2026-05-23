@@ -434,6 +434,11 @@
     "date": "Datum",
     "chartAvgByProcess": "Prosečno vreme po procesu",
     "chartWeeklyTrend": "Trend prosečnog vremena — po nedelji",
+    "chartDeliveryCompliance": "Analiza kašnjenja i poštovanja rokova",
+    "onTime": "Na vreme",
+    "late": "Kasni",
+    "granularityWeek": "Nedelja",
+    "granularityMonth": "Mesec",
     "filterAll": "Sve",
     "minutesUnit": "min",
     "noData": "Nema podataka"

@@ -72,6 +72,17 @@ export interface OrderDto {
   itemCount: number;
 }
 
+export interface OrderManualProcessDto {
+  processId: string;
+  sequenceOrder: number;
+  defaultComplexity: ComplexityType | null;
+}
+
+export interface OrderManualDependencyDto {
+  processId: string;
+  dependsOnProcessId: string;
+}
+
 export interface OrderDetailDto {
   id: string;
   tenantId: string;
@@ -87,6 +98,8 @@ export interface OrderDetailDto {
   attachments: OrderAttachmentDto[];
   completedAt: string | null;
   isInvoiced: boolean;
+  manualProcesses: OrderManualProcessDto[];
+  manualProcessDependencies: OrderManualDependencyDto[];
 }
 
 export interface OrderItemDto {
@@ -157,6 +170,13 @@ export interface OrderMasterViewDto {
    * when sibling items are still mid-pipeline.
    */
   processReady: Record<string, boolean>;
+  /**
+   * Per-item readiness: itemId → (processId → ready). The FE per-item
+   * ItemProcessBar uses this directly — it can't compute it locally because
+   * the flat processDependencies map merges deps across categories and gives
+   * wrong answers for multi-item orders with different categories.
+   */
+  itemProcessReady: Record<string, Record<string, boolean>>;
   /** Map of processId → list of processIds it depends on */
   processDependencies: Record<string, string[]>;
   attachmentCount: number;
@@ -291,6 +311,21 @@ export interface ProductCategoryDependencyDto {
   processCode: string | null;
   dependsOnProcessId: string;
   dependsOnProcessCode: string | null;
+}
+
+export interface OrderTypeDto {
+  id: string;
+  code: string;
+  name: string;
+  allowsManualProcesses: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface DeleteOrderTypeResult {
+  hardDeleted: boolean;
+  deactivated: boolean;
 }
 
 export interface SpecialRequestTypeDto {
@@ -540,12 +575,32 @@ export interface TimeTrackingItemDto {
   completedAt: string | null;
   /** SECONDS. Format with h:mm:ss. */
   durationSeconds: number;
+  /** Sale/Bojan's per-row exclusion toggle (persisted server-side). When
+   * true, this row is filtered out of /reports/process-times aggregation
+   * and from the Praćenje XLSX/CSV export. */
+  isExcludedFromReports: boolean;
   subProcesses: SubProcessTimeDto[];
 }
 
 export interface TimeTrackingResponseDto {
   items: TimeTrackingItemDto[];
 }
+
+export interface DeliveryComplianceBucketDto {
+  /** ISO date of bucket start (week → Monday, month → first day). */
+  bucketStart: string;
+  onTimeCount: number;
+  lateCount: number;
+  totalCount: number;
+  onTimePercent: number;
+  latePercent: number;
+}
+
+export interface DeliveryComplianceReportDto {
+  buckets: DeliveryComplianceBucketDto[];
+}
+
+export type ReportGranularity = 'Week' | 'Month';
 
 export interface WorkerDailyBreakdownDto {
   date: string;

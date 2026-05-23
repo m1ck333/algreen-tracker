@@ -6,6 +6,7 @@ export { usersApi } from './api/users';
 export { shiftsApi } from './api/shifts';
 export { ordersApi } from './api/orders';
 export type { OrdersQuery } from './api/orders';
+export { orderTypesApi } from './api/order-types';
 export { blockRequestsApi } from './api/block-requests';
 export { changeRequestsApi } from './api/change-requests';
 export { dashboardApi } from './api/dashboard';

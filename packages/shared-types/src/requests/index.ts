@@ -287,3 +287,17 @@ export interface UpdateTenantSettingsRequest {
   warningColor: string;
   criticalColor: string;
 }
+
+// ─── Order Types ─────────────────────────────────────────
+
+export interface CreateOrderTypeRequest {
+  code?: string;
+  name: string;
+  allowsManualProcesses: boolean;
+}
+
+export interface UpdateOrderTypeRequest {
+  name: string;
+  allowsManualProcesses: boolean;
+  isActive: boolean;
+}

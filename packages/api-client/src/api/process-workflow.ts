@@ -44,4 +44,13 @@ export const processWorkflowApi = {
   resumeStation(data: { processId: string; userId: string }) {
     return apiClient.post('/order-item-processes/resume-station', data);
   },
+
+  /**
+   * Toggle whether this process is excluded from /reports statistics + export.
+   * Persisted server-side so the choice survives sessions and is visible
+   * across users in the tenant (Sale/Bojan's "manuelno isključenje").
+   */
+  setExcludedFromReports(id: string, excluded: boolean) {
+    return apiClient.patch(`/order-item-processes/${id}/excluded-from-reports`, { excluded });
+  },
 };

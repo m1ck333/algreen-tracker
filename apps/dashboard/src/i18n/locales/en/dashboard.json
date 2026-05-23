@@ -432,6 +432,11 @@
     "date": "Date",
     "chartAvgByProcess": "Average time per process",
     "chartWeeklyTrend": "Average time trend — by week",
+    "chartDeliveryCompliance": "Delivery compliance & delay analysis",
+    "onTime": "On time",
+    "late": "Late",
+    "granularityWeek": "Week",
+    "granularityMonth": "Month",
     "filterAll": "All",
     "minutesUnit": "min",
     "noData": "No data"

@@ -17,3 +17,11 @@
 .ant-picker-ranges .ant-picker-ok {
   margin-inline-start: 0 !important;
 }
+/* /reports → Praćenje vremena tab: rows manually marked Isključi (Uključi
+ * switch off) are visible in the table but visually faded so Sale/Bojan
+ * can spot them at a glance. They're filtered out of /reports/process-times
+ * aggregation server-side and from the XLSX/CSV export. */
+.ant-table-tbody > tr.report-row-excluded > td {
+  opacity: 0.4;
+  font-style: italic;
+}

@@ -2,6 +2,8 @@ import type {
   ProcessTimeItemDto,
   TimeTrackingResponseDto,
   WorkerHoursDto,
+  DeliveryComplianceReportDto,
+  ReportGranularity,
 } from '@algreen/shared-types';
 import { apiClient } from '../axios-instance';
 
@@ -26,6 +28,13 @@ export interface WorkerHoursQuery {
   from: string;
   to: string;
   userId?: string;
+}
+
+export interface DeliveryComplianceQuery {
+  from?: string;
+  to?: string;
+  granularity: ReportGranularity;
+  orderTypes?: string[];
 }
 
 // Axios serializes array params as `?key[]=` by default; ASP.NET Core expects
@@ -53,5 +62,12 @@ export const reportsApi = {
 
   getWorkerHours(params: WorkerHoursQuery) {
     return apiClient.get<{ workers: WorkerHoursDto[] }>('/reports/worker-hours', { params });
+  },
+
+  getDeliveryCompliance(params: DeliveryComplianceQuery) {
+    return apiClient.get<DeliveryComplianceReportDto>('/reports/delivery-compliance', {
+      params,
+      ...repeatArraySerializer,
+    });
   },
 };

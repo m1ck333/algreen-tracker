@@ -15,7 +15,7 @@ import {
 } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@algreen/auth';
 import { useTranslation, useEnumTranslation } from '@algreen/i18n';
 import { TableExportButton } from '../../components/TableExportButton';
@@ -25,6 +25,8 @@ import {
   processesApi,
   usersApi,
   productCategoriesApi,
+  orderTypesApi,
+  processWorkflowApi,
 } from '@algreen/api-client';
 import type {
   ProcessTimeItemDto,
@@ -33,8 +35,9 @@ import type {
   ProcessDto,
   UserDto,
   ProductCategoryDto,
+  OrderTypeDto,
 } from '@algreen/shared-types';
-import { UserRole, ComplexityType, OrderType } from '@algreen/shared-types';
+import { UserRole, ComplexityType } from '@algreen/shared-types';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import {
@@ -94,6 +97,15 @@ function ProcessAveragesTab() {
     enabled: !!tenantId,
   });
 
+  // Per-tenant order types (Sale/Bojan can rename these). Filter values use
+  // the immutable .code; UI labels use the configurable .name.
+  const { data: orderTypeList } = useQuery({
+    queryKey: ['order-types-for-reports', tenantId],
+    queryFn: () =>
+      orderTypesApi.getAll({ isActive: true, pageSize: 200 }).then((r) => r.data.items),
+    enabled: !!tenantId,
+  });
+
   const { data, isLoading } = useQuery({
     queryKey: [
       'reports-process-times',
@@ -126,12 +138,20 @@ function ProcessAveragesTab() {
   // narudžbine columns echo the active filter value per Tab 1 spec
   // (same value on every row — it's filter context, not per-row data).
   const filterLabelAll = t('reports.filterAll');
+  // Resolve OrderType code → configurable per-tenant name (Sale/Bojan can
+  // rename in Admin → Order Types; reports must always show the saved name).
+  const orderTypeNameByCode = useMemo(() => {
+    const map = new Map<string, string>();
+    orderTypeList?.forEach((ot) => map.set(ot.code, ot.name));
+    return map;
+  }, [orderTypeList]);
+  const resolveOrderTypeName = (code: string) => orderTypeNameByCode.get(code) ?? code;
   const categoryFilterLabel = categoryIds.length === 0
     ? filterLabelAll
     : categories?.filter((c) => categoryIds.includes(c.id)).map((c) => c.name).join(', ') ?? '';
   const orderTypeFilterLabel = orderTypes.length === 0
     ? filterLabelAll
-    : orderTypes.join(', ');
+    : orderTypes.map(resolveOrderTypeName).join(', ');
 
   const columns: ColumnsType<ProcessTimeItemDto> = useMemo(() => {
     const cols: ColumnsType<ProcessTimeItemDto> = [
@@ -161,15 +181,35 @@ function ProcessAveragesTab() {
         render: () => orderTypeFilterLabel,
       },
     ];
+    // Each complexity group (Teško/Srednje/Lako) gets a 2px left+right
+    // border to mimic the Excel "uokvirivanje" Sale/Bojan asked for.
+    // First inner column gets the bold left edge, last gets the bold right.
+    const groupLeftEdge = {
+      onHeaderCell: () => ({ style: { borderLeft: `2px solid ${token.colorBorder}` } }),
+      onCell: () => ({ style: { borderLeft: `2px solid ${token.colorBorder}` } }),
+    };
+    const groupRightEdge = {
+      onHeaderCell: () => ({ style: { borderRight: `2px solid ${token.colorBorder}` } }),
+      onCell: () => ({ style: { borderRight: `2px solid ${token.colorBorder}` } }),
+    };
     for (const c of COMPLEXITY_ORDER) {
       cols.push({
         title: complexityLabels[c],
+        // Bold border on the group's header cell too (the merged title row).
+        onHeaderCell: () => ({
+          style: {
+            borderLeft: `2px solid ${token.colorBorder}`,
+            borderRight: `2px solid ${token.colorBorder}`,
+            fontWeight: 600,
+          },
+        }),
         children: [
           {
             title: t('reports.avg'),
             key: `avg-${c}`,
             width: 90,
             align: 'right',
+            ...groupLeftEdge,
             render: (_: unknown, record: ProcessTimeItemDto) => {
               const v = record.stats[c]?.avgMinutes;
               return v != null ? formatMinutes(v) : '—';
@@ -210,6 +250,7 @@ function ProcessAveragesTab() {
             key: `stdev-${c}`,
             width: 100,
             align: 'right',
+            ...groupRightEdge,
             render: (_: unknown, record: ProcessTimeItemDto) => {
               const v = record.stats[c]?.stdevMinutes;
               return v != null ? formatMinutes(v) : '—';
@@ -219,12 +260,14 @@ function ProcessAveragesTab() {
       });
     }
     return cols;
-  }, [t, categoryFilterLabel, orderTypeFilterLabel]);
+  }, [t, categoryFilterLabel, orderTypeFilterLabel, token]);
 
-  // Chart #1 from Sale/Bojan's Excel cover page: "Prosečno vreme po
-  // procesu" — one grouped bar per process showing the plain mean per
-  // complexity (NOT trimmed). Excel uses T=blue, S=green, L=orange.
-  // Values are in minutes (BE-side unit).
+  // Chart "Prosečno vreme po procesu" — one grouped bar per process showing
+  // Realni prosek (trimmed mean) per complexity. Sale/Bojan feedback
+  // 22.05.2026 wanted the trimmed value here, not plain Prosek, because
+  // it filters outliers (e.g., abandoned-process 48h sessions) the same
+  // way the Realni prosek column does. Excel colors: T=blue, S=green,
+  // L=orange. Values are in minutes (BE-side unit).
   const chartData = useMemo(() => {
     if (!data) return [];
     return data
@@ -234,9 +277,9 @@ function ProcessAveragesTab() {
       .map((p) => ({
         process: p.processCode,
         name: p.processName,
-        Teško: Number((p.stats[ComplexityType.T]?.avgMinutes ?? 0).toFixed(2)),
-        Srednje: Number((p.stats[ComplexityType.S]?.avgMinutes ?? 0).toFixed(2)),
-        Lako: Number((p.stats[ComplexityType.L]?.avgMinutes ?? 0).toFixed(2)),
+        Teško: Number((p.stats[ComplexityType.T]?.trimmedMeanMinutes ?? 0).toFixed(2)),
+        Srednje: Number((p.stats[ComplexityType.S]?.trimmedMeanMinutes ?? 0).toFixed(2)),
+        Lako: Number((p.stats[ComplexityType.L]?.trimmedMeanMinutes ?? 0).toFixed(2)),
       }));
   }, [data]);
 
@@ -323,7 +366,10 @@ function ProcessAveragesTab() {
           onChange={setOrderTypes}
           allowClear
           style={{ minWidth: 200 }}
-          options={Object.values(OrderType).map((ot) => ({ label: ot, value: ot }))}
+          options={orderTypeList?.map((ot: OrderTypeDto) => ({
+            label: ot.name,
+            value: ot.code,
+          }))}
         />
       </Space>
 
@@ -351,7 +397,7 @@ function ProcessAveragesTab() {
                   ]
                 : []),
               ...(orderTypes.length
-                ? [{ label: t('reports.orderType'), value: orderTypes.join(', ') }]
+                ? [{ label: t('reports.orderType'), value: orderTypes.map(resolveOrderTypeName).join(', ') }]
                 : []),
             ],
           }}
@@ -412,6 +458,7 @@ function ProcessAveragesTab() {
       </Card>
 
       <WeeklyTrendChart />
+      <DeliveryComplianceChart />
     </>
   );
 }
@@ -508,6 +555,121 @@ function WeeklyTrendChart() {
   );
 }
 
+// ─── Chart: Analiza kašnjenja i poštovanja rokova ──────
+//
+// 100% stacked bar per period bucket (week/month): green = % completed
+// on time (CompletedAt ≤ DeliveryDate, day-precision), red = % completed
+// late. Per-tenant order-type filter. Sale/Bojan spec 22.05.2026.
+
+function DeliveryComplianceChart() {
+  const tenantId = useAuthStore((s) => s.tenantId);
+  const { t } = useTranslation('dashboard');
+  const { token } = theme.useToken();
+
+  const [granularity, setGranularity] = useState<'Week' | 'Month'>('Week');
+  const [orderTypes, setOrderTypes] = useState<string[]>([]);
+
+  const { data: orderTypeList } = useQuery({
+    queryKey: ['order-types-for-reports', tenantId],
+    queryFn: () =>
+      orderTypesApi.getAll({ isActive: true, pageSize: 200 }).then((r) => r.data.items),
+    enabled: !!tenantId,
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['reports-delivery-compliance', tenantId, granularity, orderTypes],
+    queryFn: () =>
+      reportsApi
+        .getDeliveryCompliance({
+          from: dayjs().subtract(180, 'day').format('YYYY-MM-DD'),
+          to: dayjs().format('YYYY-MM-DD'),
+          granularity,
+          orderTypes: orderTypes.length ? orderTypes : undefined,
+        })
+        .then((r) => r.data.buckets),
+    enabled: !!tenantId,
+  });
+
+  const chartData = useMemo(
+    () =>
+      (data ?? []).map((b) => ({
+        bucket: dayjs(b.bucketStart).format(granularity === 'Week' ? 'DD.MM' : 'MM.YYYY'),
+        OnTime: b.onTimePercent,
+        Late: b.latePercent,
+        // Raw counts surface in tooltip for context.
+        _onTimeCount: b.onTimeCount,
+        _lateCount: b.lateCount,
+        _total: b.totalCount,
+      })),
+    [data, granularity],
+  );
+
+  return (
+    <Card
+      size="small"
+      style={{ marginTop: 16 }}
+      title={t('reports.chartDeliveryCompliance')}
+      loading={isLoading}
+    >
+      <Space style={{ marginBottom: 12 }} wrap>
+        <Select
+          value={granularity}
+          onChange={(v) => setGranularity(v)}
+          style={{ width: 140 }}
+          options={[
+            { label: t('reports.granularityWeek'), value: 'Week' },
+            { label: t('reports.granularityMonth'), value: 'Month' },
+          ]}
+        />
+        <Select
+          mode="multiple"
+          placeholder={t('reports.allTypes')}
+          value={orderTypes}
+          onChange={setOrderTypes}
+          allowClear
+          style={{ minWidth: 200 }}
+          options={orderTypeList?.map((ot) => ({ label: ot.name, value: ot.code }))}
+        />
+      </Space>
+      {chartData.length === 0 ? (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('reports.noData')} />
+      ) : (
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="bucket" />
+            <YAxis domain={[0, 100]} unit="%" />
+            <RechartsTooltip
+              contentStyle={{
+                backgroundColor: token.colorBgElevated,
+                border: `1px solid ${token.colorBorderSecondary}`,
+                borderRadius: token.borderRadiusLG,
+                color: token.colorText,
+              }}
+              labelStyle={{ color: token.colorText, fontWeight: 600 }}
+              itemStyle={{ color: token.colorText }}
+              cursor={{ fill: token.colorFillTertiary }}
+              formatter={(value, name, item) => {
+                const payload = item?.payload as
+                  | { _onTimeCount: number; _lateCount: number; _total: number }
+                  | undefined;
+                if (!payload) return [`${value}%`, name];
+                const count = name === 'OnTime' ? payload._onTimeCount : payload._lateCount;
+                return [`${value}% (${count}/${payload._total})`, name];
+              }}
+            />
+            <Legend
+              formatter={(v) => (v === 'OnTime' ? t('reports.onTime') : t('reports.late'))}
+            />
+            <Bar dataKey="OnTime" stackId="compliance" fill="#52c41a" />
+            <Bar dataKey="Late" stackId="compliance" fill="#ff4d4f" />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </Card>
+  );
+}
+
 // ─── Praćenje vremena tab ─────────────────────────────────
 
 function TimeTrackingTab() {
@@ -522,9 +684,10 @@ function TimeTrackingTab() {
   const [orderNumber, setOrderNumber] = useState<string>('');
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [orderTypes, setOrderTypes] = useState<string[]>([]);
-  // Per-row exclusion is purely client-side state. Sale/Bojan want to be able
-  // to remove individual rows from the running totals without affecting the BE.
-  const [exclusions, setExclusions] = useState<Record<string, boolean>>({});
+  // Per-row exclusion is now server-side (Sale/Bojan feedback 22.05.2026):
+  // toggling writes through to the BE so the choice persists across
+  // sessions/users and is reflected in /reports/process-times aggregation.
+  const queryClient = useQueryClient();
 
   const { data: processes } = useQuery({
     queryKey: ['processes-for-reports', tenantId],
@@ -538,6 +701,21 @@ function TimeTrackingTab() {
       productCategoriesApi.getAll({ pageSize: 200 }).then((r) => r.data.items),
     enabled: !!tenantId,
   });
+
+  // Same per-tenant order types as Vremena tab — react-query caches it.
+  const { data: orderTypeList } = useQuery({
+    queryKey: ['order-types-for-reports', tenantId],
+    queryFn: () =>
+      orderTypesApi.getAll({ isActive: true, pageSize: 200 }).then((r) => r.data.items),
+    enabled: !!tenantId,
+  });
+
+  const orderTypeNameByCode = useMemo(() => {
+    const map = new Map<string, string>();
+    orderTypeList?.forEach((ot) => map.set(ot.code, ot.name));
+    return map;
+  }, [orderTypeList]);
+  const resolveOrderTypeName = (code: string) => orderTypeNameByCode.get(code) ?? code;
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -568,8 +746,51 @@ function TimeTrackingTab() {
 
   const items = data?.items ?? [];
 
-  const toggleExclude = (id: string) =>
-    setExclusions((prev) => ({ ...prev, [id]: !prev[id] }));
+  // Mutation: write the new exclusion state to BE. Optimistic — update the
+  // cached items array immediately, rollback on error. The BE filters the
+  // Vremena (process-times) aggregation by this flag, so we also invalidate
+  // that query so Sale/Bojan see the recomputed averages on the other tab.
+  const setExcludedMutation = useMutation({
+    mutationFn: ({ id, excluded }: { id: string; excluded: boolean }) =>
+      processWorkflowApi.setExcludedFromReports(id, excluded),
+    onMutate: async ({ id, excluded }) => {
+      const queryKeyMatches = (qk: unknown) =>
+        Array.isArray(qk) && qk[0] === 'reports-time-tracking';
+      await queryClient.cancelQueries({ predicate: (q) => queryKeyMatches(q.queryKey) });
+      const previous = queryClient.getQueriesData({ predicate: (q) => queryKeyMatches(q.queryKey) });
+      queryClient.setQueriesData<{ items: TimeTrackingItemDto[] }>(
+        { predicate: (q) => queryKeyMatches(q.queryKey) },
+        (old) =>
+          old
+            ? {
+                ...old,
+                items: old.items.map((i) =>
+                  i.orderItemProcessId === id ? { ...i, isExcludedFromReports: excluded } : i,
+                ),
+              }
+            : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      ctx?.previous?.forEach(([key, value]) => queryClient.setQueryData(key, value));
+    },
+    onSuccess: () => {
+      // Recompute Vremena averages on the next render of that tab.
+      queryClient.invalidateQueries({ queryKey: ['reports-process-times'] });
+    },
+  });
+
+  const toggleExclude = (id: string, currentlyExcluded: boolean) =>
+    setExcludedMutation.mutate({ id, excluded: !currentlyExcluded });
+
+  const bulkSetExcluded = async (excluded: boolean) => {
+    const targets = items.filter((i) => i.isExcludedFromReports !== excluded);
+    if (targets.length === 0) return;
+    await Promise.all(
+      targets.map((i) => setExcludedMutation.mutateAsync({ id: i.orderItemProcessId, excluded })),
+    );
+  };
 
   const columns: ColumnsType<TimeTrackingItemDto> = useMemo(
     () => [
@@ -583,7 +804,7 @@ function TimeTrackingTab() {
         title: t('reports.orderType'),
         dataIndex: 'orderType',
         width: 110,
-        render: (v: string) => tEnum('OrderType', v),
+        render: (v: string) => resolveOrderTypeName(v),
       },
       {
         title: t('reports.processName'),
@@ -619,7 +840,7 @@ function TimeTrackingTab() {
       {
         title: () => {
           const allIncluded =
-            items.length > 0 && items.every((i) => !exclusions[i.orderItemProcessId]);
+            items.length > 0 && items.every((i) => !i.isExcludedFromReports);
           return (
             <Space size={6} wrap style={{ justifyContent: 'center' }}>
               <span>{t('reports.include')}</span>
@@ -631,15 +852,7 @@ function TimeTrackingTab() {
                   size="small"
                   checked={allIncluded}
                   disabled={items.length === 0}
-                  onChange={(checked) => {
-                    if (checked) {
-                      setExclusions({});
-                    } else {
-                      const next: Record<string, boolean> = {};
-                      for (const item of items) next[item.orderItemProcessId] = true;
-                      setExclusions(next);
-                    }
-                  }}
+                  onChange={(checked) => bulkSetExcluded(!checked)}
                 />
               </Tooltip>
             </Space>
@@ -651,13 +864,15 @@ function TimeTrackingTab() {
         render: (_: unknown, record: TimeTrackingItemDto) => (
           <Switch
             size="small"
-            checked={!exclusions[record.orderItemProcessId]}
-            onChange={() => toggleExclude(record.orderItemProcessId)}
+            checked={!record.isExcludedFromReports}
+            onChange={() =>
+              toggleExclude(record.orderItemProcessId, record.isExcludedFromReports)
+            }
           />
         ),
       },
     ],
-    [t, tEnum, exclusions, items],
+    [t, tEnum, items, resolveOrderTypeName],
   );
 
   // Sub-process columns mirror only Proces + Trajanje from the parent table.
@@ -682,7 +897,7 @@ function TimeTrackingTab() {
   // Uključi toggle gates which rows are included in the XLSX export.
   // The totals (ukupno stavki / ukupno vreme / prosečno vreme) used to be
   // shown in a header strip; Sale/Bojan asked to delete them entirely.
-  const includedItems = items.filter((i) => !exclusions[i.orderItemProcessId]);
+  const includedItems = items.filter((i) => !i.isExcludedFromReports);
   // Hide antd's reserved expand-chevron column when no row in the current
   // view has sub-processes — otherwise it shows as an empty first column.
   const hasAnyExpandable = items.some((i) => i.subProcesses.length > 0);
@@ -746,7 +961,10 @@ function TimeTrackingTab() {
           onChange={setOrderTypes}
           allowClear
           style={{ minWidth: 180 }}
-          options={Object.values(OrderType).map((ot) => ({ label: ot, value: ot }))}
+          options={orderTypeList?.map((ot: OrderTypeDto) => ({
+            label: ot.name,
+            value: ot.code,
+          }))}
         />
       </Space>
 
@@ -756,7 +974,7 @@ function TimeTrackingTab() {
           columns={[
             { header: t('reports.orderNumber'), value: (i: TimeTrackingItemDto) => i.orderNumber, width: 16 },
             { header: t('reports.productCategory'), value: (i: TimeTrackingItemDto) => i.productCategoryName, width: 20 },
-            { header: t('reports.orderType'), value: (i: TimeTrackingItemDto) => i.orderType, width: 14 },
+            { header: t('reports.orderType'), value: (i: TimeTrackingItemDto) => resolveOrderTypeName(i.orderType), width: 14 },
             { header: t('reports.processCode'), value: (i: TimeTrackingItemDto) => i.processCode, width: 12 },
             { header: t('reports.processName'), value: (i: TimeTrackingItemDto) => i.processName, width: 22 },
             { header: t('reports.complexity'), value: (i: TimeTrackingItemDto) => i.complexity ?? '', width: 14 },
@@ -782,7 +1000,7 @@ function TimeTrackingTab() {
                     value: categories?.filter((c) => categoryIds.includes(c.id)).map((c) => c.name).join(', ') ?? '',
                   }]
                 : []),
-              ...(orderTypes.length ? [{ label: t('reports.orderType'), value: orderTypes.join(', ') }] : []),
+              ...(orderTypes.length ? [{ label: t('reports.orderType'), value: orderTypes.map(resolveOrderTypeName).join(', ') }] : []),
             ],
           }}
           xlsxExtraSheets={[
@@ -819,7 +1037,7 @@ function TimeTrackingTab() {
                   rowType: t('reports.rowTypeProcess'),
                   orderNumber: i.orderNumber,
                   productCategoryName: i.productCategoryName,
-                  orderType: i.orderType,
+                  orderType: resolveOrderTypeName(i.orderType),
                   processCode: i.processCode,
                   processName: i.processName,
                   complexity: i.complexity ?? '',
@@ -862,9 +1080,16 @@ function TimeTrackingTab() {
         dataSource={items}
         rowKey="orderItemProcessId"
         loading={isLoading}
-        pagination={{ pageSize: 20, showSizeChanger: true }}
+        pagination={{
+          defaultPageSize: 20,
+          showSizeChanger: true,
+          pageSizeOptions: [10, 20, 50, 100],
+        }}
         size="small"
         bordered
+        rowClassName={(record) =>
+          record.isExcludedFromReports ? 'report-row-excluded' : ''
+        }
         scroll={{ x: 'max-content' }}
         expandable={
           hasAnyExpandable
@@ -1033,7 +1258,11 @@ function WorkerHoursTab() {
         dataSource={data}
         rowKey="userId"
         loading={isLoading}
-        pagination={{ pageSize: 20, showSizeChanger: true }}
+        pagination={{
+          defaultPageSize: 20,
+          showSizeChanger: true,
+          pageSizeOptions: [10, 20, 50, 100],
+        }}
         size="small"
         bordered
         expandable={{
