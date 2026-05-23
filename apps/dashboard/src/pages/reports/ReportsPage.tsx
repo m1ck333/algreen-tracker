@@ -452,9 +452,9 @@ function ProcessAveragesTab() {
                   heaviest-first convention. */}
               <Legend wrapperStyle={{ direction: 'rtl' }} />
               {/* Colors match Sale/Bojan's Excel cover page chart. */}
-              <Bar dataKey="Teško" fill="#1890ff" />
-              <Bar dataKey="Srednje" fill="#52c41a" />
-              <Bar dataKey="Lako" fill="#fa8c16" />
+              <Bar dataKey="Teško" fill="#1890ff" maxBarSize={40} />
+              <Bar dataKey="Srednje" fill="#52c41a" maxBarSize={40} />
+              <Bar dataKey="Lako" fill="#fa8c16" maxBarSize={40} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -771,8 +771,11 @@ function DeliveryComplianceChart() {
             <Legend
               formatter={(v) => (v === 'OnTime' ? t('reports.onTime') : t('reports.late'))}
             />
-            <Bar dataKey="OnTime" stackId="compliance" fill="#52c41a" />
-            <Bar dataKey="Late" stackId="compliance" fill="#ff4d4f" />
+            {/* maxBarSize caps width so two-bucket views don't look like
+                wallpaper. Recharts otherwise stretches bars to fill the
+                available width per category. */}
+            <Bar dataKey="OnTime" stackId="compliance" fill="#52c41a" maxBarSize={60} />
+            <Bar dataKey="Late" stackId="compliance" fill="#ff4d4f" maxBarSize={60} />
           </BarChart>
         </ResponsiveContainer>
       )}
@@ -912,9 +915,9 @@ function ActiveProcessFunnelChart() {
                   : v
               }
             />
-            <Bar dataKey="InProgress" stackId="funnel" fill="#1890ff" />
-            <Bar dataKey="Ready" stackId="funnel" fill="#8c8c8c" />
-            <Bar dataKey="Blocked" stackId="funnel" fill="#ff4d4f" />
+            <Bar dataKey="InProgress" stackId="funnel" fill="#1890ff" maxBarSize={28} />
+            <Bar dataKey="Ready" stackId="funnel" fill="#8c8c8c" maxBarSize={28} />
+            <Bar dataKey="Blocked" stackId="funnel" fill="#ff4d4f" maxBarSize={28} />
           </BarChart>
         </ResponsiveContainer>
       )}
