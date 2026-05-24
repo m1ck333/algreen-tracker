@@ -11,6 +11,7 @@ import {
   Switch,
   Empty,
   Tooltip,
+  App,
   theme,
 } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
@@ -1005,10 +1006,23 @@ function TimeTrackingTab() {
   // cached items array immediately, rollback on error. The BE filters the
   // Vremena (process-times) aggregation by this flag, so we also invalidate
   // that query so Sale/Bojan see the recomputed averages on the other tab.
+  // Track in-flight exclusion PATCHes per row so the switch can show a
+  // spinner. Without this the optimistic update masks the network round
+  // trip — if the BE fails (network blip, 500), the row would silently
+  // revert with no visible feedback. The spinner makes the save visible.
+  const [pendingExclusionIds, setPendingExclusionIds] = useState<Set<string>>(new Set());
+
+  const { message } = App.useApp();
+
   const setExcludedMutation = useMutation({
     mutationFn: ({ id, excluded }: { id: string; excluded: boolean }) =>
       processWorkflowApi.setExcludedFromReports(id, excluded),
     onMutate: async ({ id, excluded }) => {
+      setPendingExclusionIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
       const queryKeyMatches = (qk: unknown) =>
         Array.isArray(qk) && qk[0] === 'reports-time-tracking';
       await queryClient.cancelQueries({ predicate: (q) => queryKeyMatches(q.queryKey) });
@@ -1029,10 +1043,18 @@ function TimeTrackingTab() {
     },
     onError: (_err, _vars, ctx) => {
       ctx?.previous?.forEach(([key, value]) => queryClient.setQueryData(key, value));
+      message.error(t('reports.includeSaveFailed'));
     },
     onSuccess: () => {
       // Recompute Vremena averages on the next render of that tab.
       queryClient.invalidateQueries({ queryKey: ['reports-process-times'] });
+    },
+    onSettled: (_data, _err, vars) => {
+      setPendingExclusionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(vars.id);
+        return next;
+      });
     },
   });
 
@@ -1120,6 +1142,7 @@ function TimeTrackingTab() {
           <Switch
             size="small"
             checked={!record.isExcludedFromReports}
+            loading={pendingExclusionIds.has(record.orderItemProcessId)}
             onChange={() =>
               toggleExclude(record.orderItemProcessId, record.isExcludedFromReports)
             }
@@ -1127,7 +1150,7 @@ function TimeTrackingTab() {
         ),
       },
     ],
-    [t, tEnum, items, resolveOrderTypeName],
+    [t, tEnum, items, resolveOrderTypeName, pendingExclusionIds],
   );
 
   // Sub-process columns mirror only Proces + Trajanje from the parent table.

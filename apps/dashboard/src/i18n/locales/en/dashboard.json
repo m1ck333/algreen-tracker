@@ -416,6 +416,7 @@
     "include": "Include",
     "includeHelp": "Controls which items are included in the export (Izvezi). Excluded rows stay visible in the table but are skipped on download.",
     "includeBulkHelp": "Include/exclude all currently loaded items",
+    "includeSaveFailed": "Could not save include/exclude state. Try again.",
     "exclude": "Exclude",
     "allProcesses": "All processes",
     "allComplexities": "All complexities",

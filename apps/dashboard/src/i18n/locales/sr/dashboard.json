@@ -418,6 +418,7 @@
     "include": "Uključi",
     "includeHelp": "Određuje koje stavke se uključuju u izvoz (Izvezi). Isključeni redovi ostaju vidljivi u tabeli ali se preskaču pri preuzimanju.",
     "includeBulkHelp": "Uključi/isključi sve trenutno učitane stavke",
+    "includeSaveFailed": "Nije moguće sačuvati Uključi/Isključi stanje. Pokušajte ponovo.",
     "exclude": "Isključi",
     "allProcesses": "Svi procesi",
     "allComplexities": "Sve kompleksnosti",
