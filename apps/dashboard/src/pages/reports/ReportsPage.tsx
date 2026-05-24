@@ -144,12 +144,18 @@ function ProcessAveragesTab() {
   const filterLabelAll = t('reports.filterAll');
   // Resolve OrderType code → configurable per-tenant name (Sale/Bojan can
   // rename in Admin → Order Types; reports must always show the saved name).
+  // Case-insensitive lookup: the BE's /api/order-types returns `code`
+  // upper-cased (STANDARD/REPAIR/etc.) but /api/reports/* returns the C#
+  // enum identifier as ToString() (Standard/Repair/etc.). Without lowercase
+  // normalization the lookup misses and the table shows the raw enum code
+  // instead of the per-tenant configured name (Bojan feedback 24.05.2026).
   const orderTypeNameByCode = useMemo(() => {
     const map = new Map<string, string>();
-    orderTypeList?.forEach((ot) => map.set(ot.code, ot.name));
+    orderTypeList?.forEach((ot) => map.set(ot.code.toLowerCase(), ot.name));
     return map;
   }, [orderTypeList]);
-  const resolveOrderTypeName = (code: string) => orderTypeNameByCode.get(code) ?? code;
+  const resolveOrderTypeName = (code: string) =>
+    orderTypeNameByCode.get(code.toLowerCase()) ?? code;
   const categoryFilterLabel = categoryIds.length === 0
     ? filterLabelAll
     : categories?.filter((c) => categoryIds.includes(c.id)).map((c) => c.name).join(', ') ?? '';
@@ -511,15 +517,26 @@ function ProcessTimeTrendChart() {
     enabled: !!tenantId && !!processId && !!complexity,
   });
 
+  // Precompute `range = max - min` so the stacked Area can reference it as
+  // a string dataKey. Recharts' Area accepts a function dataKey in some
+  // versions but stacking breaks (the green band silently doesn't render —
+  // Bojan feedback 24.05.2026). String dataKey + precomputed value is the
+  // reliable path. We keep a 0.05-min floor on range so single-sample
+  // buckets (min == max) still draw a visible tick instead of a 0-px band.
   const chartData = useMemo(
     () =>
-      (data?.buckets ?? []).map((b) => ({
-        bucket: dayjs(b.bucketStart).format(granularity === 'Week' ? 'DD.MM' : 'MM.YYYY'),
-        min: Number(b.minMinutes.toFixed(2)),
-        max: Number(b.maxMinutes.toFixed(2)),
-        avg: Number(b.trimmedMeanMinutes.toFixed(2)),
-        _count: b.count,
-      })),
+      (data?.buckets ?? []).map((b) => {
+        const min = Number(b.minMinutes.toFixed(2));
+        const max = Number(b.maxMinutes.toFixed(2));
+        return {
+          bucket: dayjs(b.bucketStart).format(granularity === 'Week' ? 'DD.MM' : 'MM.YYYY'),
+          min,
+          max,
+          range: Math.max(max - min, 0.05),
+          avg: Number(b.trimmedMeanMinutes.toFixed(2)),
+          _count: b.count,
+        };
+      }),
     [data, granularity],
   );
 
@@ -583,19 +600,26 @@ function ProcessTimeTrendChart() {
               label={{ value: t('reports.minutesUnit'), angle: -90, position: 'insideLeft' }}
             />
             <RechartsTooltip
-              formatter={(value, name) => {
-                const formatted = formatMinutes(
-                  typeof value === 'number' ? value : Number(value),
-                );
-                const label =
-                  name === 'min'
-                    ? t('reports.min')
-                    : name === 'max'
-                    ? t('reports.max')
-                    : name === 'avg'
-                    ? t('reports.trimmedAvg')
-                    : String(name);
-                return [formatted, label];
+              formatter={(value, name, item) => {
+                // The "range" series is the green band height (max - min);
+                // in the tooltip we want to show the actual MAX value, not
+                // the difference. Look up the original bucket from payload.
+                const payload = item?.payload as
+                  | { min: number; max: number; avg: number }
+                  | undefined;
+                if (name === 'range' && payload) {
+                  return [formatMinutes(payload.max), t('reports.max')];
+                }
+                if (name === 'min' && payload) {
+                  return [formatMinutes(payload.min), t('reports.min')];
+                }
+                if (name === 'avg' && payload) {
+                  return [formatMinutes(payload.avg), t('reports.trimmedAvg')];
+                }
+                return [
+                  formatMinutes(typeof value === 'number' ? value : Number(value)),
+                  String(name),
+                ];
               }}
               contentStyle={{
                 backgroundColor: token.colorBgElevated,
@@ -611,16 +635,18 @@ function ProcessTimeTrendChart() {
               formatter={(v) =>
                 v === 'avg'
                   ? t('reports.trimmedAvg')
-                  : v === 'minMaxBand'
+                  : v === 'minMaxBand' || v === 'range'
                   ? t('reports.minMaxBand')
                   : v === 'normativ'
                   ? t('reports.normativ')
                   : v
               }
             />
-            {/* Green band: render two stacked areas; bottom (transparent) up
-                to `min`, second (visible green fill) up to `max`. Recharts
-                stacks them so the visible swath is between min and max. */}
+            {/* Green band between MIN and MAX. Two stacked areas:
+                  1) baseline-to-min (transparent — invisible spacer)
+                  2) min-to-(min+range) = min-to-max (visible green fill)
+                Both use string dataKeys (function dataKey is unreliable in
+                recharts when stacked — was silently failing 24.05.2026). */}
             <Area
               type="monotone"
               dataKey="min"
@@ -628,15 +654,18 @@ function ProcessTimeTrendChart() {
               stroke="none"
               fill="transparent"
               legendType="none"
+              isAnimationActive={false}
             />
             <Area
               type="monotone"
-              dataKey={(d: { min: number; max: number }) => d.max - d.min}
+              dataKey="range"
               name="minMaxBand"
               stackId="band"
-              stroke="none"
+              stroke="#52c41a"
+              strokeWidth={1}
               fill="#52c41a"
-              fillOpacity={0.2}
+              fillOpacity={0.25}
+              isAnimationActive={false}
             />
             <Line
               type="monotone"
@@ -966,12 +995,18 @@ function TimeTrackingTab() {
     enabled: !!tenantId,
   });
 
+  // Case-insensitive lookup: the BE's /api/order-types returns `code`
+  // upper-cased (STANDARD/REPAIR/etc.) but /api/reports/* returns the C#
+  // enum identifier as ToString() (Standard/Repair/etc.). Without lowercase
+  // normalization the lookup misses and the table shows the raw enum code
+  // instead of the per-tenant configured name (Bojan feedback 24.05.2026).
   const orderTypeNameByCode = useMemo(() => {
     const map = new Map<string, string>();
-    orderTypeList?.forEach((ot) => map.set(ot.code, ot.name));
+    orderTypeList?.forEach((ot) => map.set(ot.code.toLowerCase(), ot.name));
     return map;
   }, [orderTypeList]);
-  const resolveOrderTypeName = (code: string) => orderTypeNameByCode.get(code) ?? code;
+  const resolveOrderTypeName = (code: string) =>
+    orderTypeNameByCode.get(code.toLowerCase()) ?? code;
 
   const { data, isLoading } = useQuery({
     queryKey: [
