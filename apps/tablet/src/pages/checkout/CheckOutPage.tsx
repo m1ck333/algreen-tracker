@@ -32,7 +32,7 @@ export function CheckOutPage() {
         if (user.processes?.length) {
           await Promise.allSettled(
             user.processes.map((p) =>
-              processWorkflowApi.pauseStation({ processId: p.processId, userId: user.id })
+              processWorkflowApi.pauseOnLogout({ processId: p.processId, userId: user.id })
             )
           );
         }

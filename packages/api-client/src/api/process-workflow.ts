@@ -37,12 +37,12 @@ export const processWorkflowApi = {
     return apiClient.post(`/order-item-processes/${id}/unblock`, data);
   },
 
-  pauseStation(data: { processId: string; userId: string }) {
-    return apiClient.post('/order-item-processes/pause-station', data);
+  pauseOnLogout(data: { processId: string; userId: string }) {
+    return apiClient.post('/order-item-processes/pause-on-logout', data);
   },
 
-  resumeStation(data: { processId: string; userId: string }) {
-    return apiClient.post('/order-item-processes/resume-station', data);
+  resumeOnLogin(data: { processId: string; userId: string }) {
+    return apiClient.post('/order-item-processes/resume-on-login', data);
   },
 
   /**

@@ -36,14 +36,14 @@ export function TabletLoginPage() {
         // Non-critical — proceed even if check-in fails
       }
 
-      // Resume any processes that were auto-paused at the last station
-      // logout. BE only resumes items marked PausedByStationAt — so manual
-      // pauses stay paused. Failures are non-critical: worker can still
-      // start work manually.
+      // Resume any processes that were auto-paused at the last logout.
+      // BE only resumes items marked PausedOnLogoutAt — so manual pauses
+      // stay paused. Failures are non-critical: worker can still start
+      // work manually.
       if (user.processes?.length) {
         await Promise.allSettled(
           user.processes.map((p) =>
-            processWorkflowApi.resumeStation({ processId: p.processId, userId: user.id }),
+            processWorkflowApi.resumeOnLogin({ processId: p.processId, userId: user.id }),
           ),
         );
       }
