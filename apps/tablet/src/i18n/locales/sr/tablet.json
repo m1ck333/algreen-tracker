@@ -12,7 +12,8 @@
     "password": "Lozinka",
     "signingIn": "Prijavljivanje...",
     "signIn": "PRIJAVI SE",
-    "failed": "Prijava nije uspela"
+    "failed": "Prijava nije uspela",
+    "overtimeExhausted": "Maksimalno dozvoljeno prekovremeno radno vreme za danas je iskorišćeno. Prijava nije moguća."
   },
   "queue": {
     "title": "Red narudžbina",
@@ -85,6 +86,13 @@
   },
   "offline": {
     "message": "Niste povezani. Neke funkcije možda neće biti dostupne."
+  },
+  "autoLogout": {
+    "warning": "Vaša smena ističe za {{minutes}} min. Odjavite se.",
+    "expired": "Vaša smena je istekla. Odjavite se.",
+    "loggedOutTitle": "Automatski ste odjavljeni",
+    "loggedOutBody": "Vaša radna sesija je automatski zatvorena jer je dostignuto vreme za odjavu. Za prekovremeni rad prijavite se ponovo.",
+    "loginAgain": "Prijavi se ponovo"
   },
   "notifications": {
     "prompt": "Uključite obaveštenja za nove narudžbine i blokade",

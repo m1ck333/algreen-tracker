@@ -8,16 +8,18 @@ import { subscribeToPush } from '../../services/push';
 
 export function TabletLoginPage() {
   const navigate = useNavigate();
-  const { login, isLoading, error } = useAuthStore();
+  const { login, logout, isLoading, error } = useAuthStore();
   const setCheckInTime = useWorkSessionStore((s) => s.setCheckInTime);
   const [tenantCode, setTenantCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [settingUp, setSettingUp] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const { t } = useTranslation('tablet');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError(null);
     try {
       await login(email, password, tenantCode);
 
@@ -29,11 +31,22 @@ export function TabletLoginPage() {
 
       setSettingUp(true);
 
-      // Check in (tenant derived from JWT)
+      // Check in (tenant derived from JWT). If the worker has used up
+      // their MaxOvertimeHours for today, BE returns 400 OVERTIME_EXHAUSTED
+      // — block the login and clear the JWT so the worker can't proceed to
+      // the queue. Saša 08.06.2026 (Bug 1).
       try {
         await workSessionsApi.checkIn({ userId: user.id });
-      } catch {
-        // Non-critical — proceed even if check-in fails
+      } catch (checkInErr) {
+        const code = (checkInErr as { response?: { data?: { error?: { code?: string } } } })
+          ?.response?.data?.error?.code;
+        if (code === 'OVERTIME_EXHAUSTED') {
+          setLocalError(t('login.overtimeExhausted'));
+          logout();
+          setSettingUp(false);
+          return;
+        }
+        // Other failures: non-critical, proceed
       }
 
       // Resume any processes that were auto-paused at the last logout.
@@ -76,9 +89,9 @@ export function TabletLoginPage() {
           {t('login.subtitle')}
         </p>
 
-        {error && (
+        {(localError || error) && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-tablet-sm">
-            {t(`common:errors.${error === 'NOT_FOUND' ? 'INVALID_CREDENTIALS' : error}`, { defaultValue: '' }) || t('login.failed')}
+            {localError ?? (t(`common:errors.${error === 'NOT_FOUND' ? 'INVALID_CREDENTIALS' : error}`, { defaultValue: '' }) || t('login.failed'))}
           </div>
         )}
 
