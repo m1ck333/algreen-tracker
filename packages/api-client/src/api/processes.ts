@@ -1,10 +1,10 @@
-import type { ProcessDto, PagedResult } from '@algreen/shared-types';
+import type { ProcessDto, PagedResult } from '@alblue/shared-types';
 import type {
   CreateProcessRequest,
   UpdateProcessRequest,
   AddSubProcessRequest,
   UpdateSubProcessRequest,
-} from '@algreen/shared-types';
+} from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const processesApi = {

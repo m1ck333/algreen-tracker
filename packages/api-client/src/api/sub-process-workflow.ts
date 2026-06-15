@@ -1,8 +1,8 @@
-import type { OrderItemSubProcessDto } from '@algreen/shared-types';
+import type { OrderItemSubProcessDto } from '@alblue/shared-types';
 import type {
   StartSubProcessRequest,
   CompleteSubProcessRequest,
-} from '@algreen/shared-types';
+} from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const subProcessWorkflowApi = {

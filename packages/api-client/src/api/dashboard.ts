@@ -4,7 +4,7 @@ import type {
   LiveViewProcessDto,
   WorkerStatusDto,
   PendingBlockRequestDto,
-} from '@algreen/shared-types';
+} from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const dashboardApi = {

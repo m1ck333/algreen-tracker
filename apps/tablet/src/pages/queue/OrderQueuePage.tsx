@@ -1,16 +1,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
-import { tabletApi, processWorkflowApi, subProcessWorkflowApi, processesApi, blockRequestsApi } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
-import { ProcessStatus, SubProcessStatus } from '@algreen/shared-types';
-import { useSignalREvent, SignalREvents } from '@algreen/signalr-client';
-import type { TabletQueueItemDto, TabletActiveWorkDto, TabletSubProcessDto } from '@algreen/shared-types';
+import { tabletApi, processWorkflowApi, subProcessWorkflowApi, processesApi, blockRequestsApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
+import { ProcessStatus, SubProcessStatus } from '@alblue/shared-types';
+import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
+import type { TabletQueueItemDto, TabletActiveWorkDto, TabletSubProcessDto } from '@alblue/shared-types';
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { AttachmentIndicator } from '../../components/AttachmentIndicator';
-import { useTranslation, useEnumTranslation } from '@algreen/i18n';
+import { useTranslation, useEnumTranslation } from '@alblue/i18n';
 
 function formatDuration(totalSeconds: number): string {
   if (totalSeconds < 60) return `${totalSeconds}s`;
@@ -56,10 +56,18 @@ export function OrderQueuePage() {
     refetchInterval: 60_000,
   });
 
-  useSignalREvent(SignalREvents.ProcessUnblocked, () => {
+  // Any event that can shift work into/out of this worker's queue invalidates
+  // both lists. ProcessReadyForQueue covers new arrivals; the started/completed/
+  // blocked/unblocked events cover state changes on existing items.
+  const invalidateTabletViews = () => {
     queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
     queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
-  });
+  };
+  useSignalREvent(SignalREvents.ProcessReadyForQueue, invalidateTabletViews);
+  useSignalREvent(SignalREvents.ProcessStarted, invalidateTabletViews);
+  useSignalREvent(SignalREvents.ProcessCompleted, invalidateTabletViews);
+  useSignalREvent(SignalREvents.ProcessBlocked, invalidateTabletViews);
+  useSignalREvent(SignalREvents.ProcessUnblocked, invalidateTabletViews);
 
   const { data: activeGroups } = useQuery({
     queryKey: ['tablet-active', userId, tenantId],
@@ -68,18 +76,15 @@ export function OrderQueuePage() {
     refetchInterval: 120_000,
   });
 
-  // Fetch process definitions for all assigned processes to get sub-process names
-  const allProcessIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const g of queueGroups ?? []) ids.add(g.processId);
-    for (const g of activeGroups ?? []) ids.add(g.processId);
-    return Array.from(ids);
-  }, [queueGroups, activeGroups]);
-
+  // Fetch process definitions ONCE for the whole tenant — replaces the
+  // per-processId N+1 (Sentry digest 06.06.2026 flagged ~22/wk hits).
+  // ProcessDto already includes its sub-processes inline; we just need the
+  // names + sequenceOrder for display, so getAll(pageSize=200, isActive=true)
+  // gets everything in a single request.
   const { data: processDefinitions } = useQuery({
-    queryKey: ['processes-batch', ...allProcessIds],
-    queryFn: () => Promise.all(allProcessIds.map((id) => processesApi.getById(id).then((r) => r.data))),
-    enabled: allProcessIds.length > 0,
+    queryKey: ['tablet-process-definitions', tenantId],
+    queryFn: () => processesApi.getAll({ isActive: true, pageSize: 200 }).then((r) => r.data.items),
+    enabled: !!tenantId,
     staleTime: 5 * 60_000,
   });
 

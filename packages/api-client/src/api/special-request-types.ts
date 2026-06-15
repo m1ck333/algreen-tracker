@@ -1,8 +1,8 @@
-import type { SpecialRequestTypeDto, PagedResult } from '@algreen/shared-types';
+import type { SpecialRequestTypeDto, PagedResult } from '@alblue/shared-types';
 import type {
   CreateSpecialRequestTypeRequest,
   UpdateSpecialRequestTypeRequest,
-} from '@algreen/shared-types';
+} from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const specialRequestTypesApi = {

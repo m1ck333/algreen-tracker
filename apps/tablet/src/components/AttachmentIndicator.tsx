@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ordersApi } from '@algreen/api-client';
+import { ordersApi } from '@alblue/api-client';
 
 export function AttachmentIndicator({ orderId, orderItemId }: { orderId: string; orderItemId?: string }) {
   const { data: allAttachments } = useQuery({

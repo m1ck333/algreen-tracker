@@ -1,6 +1,6 @@
 import { Tag } from 'antd';
-import { OrderStatus, ProcessStatus, RequestStatus } from '@algreen/shared-types';
-import { useEnumTranslation } from '@algreen/i18n';
+import { OrderStatus, ProcessStatus, RequestStatus } from '@alblue/shared-types';
+import { useEnumTranslation } from '@alblue/i18n';
 
 const orderStatusColors: Record<OrderStatus, string> = {
   [OrderStatus.Draft]: 'default',

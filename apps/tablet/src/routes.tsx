@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { RequireAuth } from '@algreen/auth';
+import { RequireAuth } from '@alblue/auth';
 import { TabletLayout } from './layouts/TabletLayout';
 import { TabletLoginPage } from './pages/login/TabletLoginPage';
 import { OrderQueuePage } from './pages/queue/OrderQueuePage';

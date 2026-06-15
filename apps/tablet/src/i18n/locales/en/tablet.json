@@ -1,4 +1,14 @@
 {
+  "errorBoundary": {
+    "bootFallback": "An error occurred. Please try again."
+  },
+  "attachments": {
+    "loading": "Loading...",
+    "close": "Close",
+    "loadingPdf": "Loading PDF...",
+    "pdfPageAlt": "Page {{n}}",
+    "pdfLoadError": "Failed to load PDF"
+  },
   "nav": {
     "queue": "Queue",
     "incoming": "Incoming",
@@ -105,7 +115,71 @@
     "noUnread": "No unread notifications",
     "markAllRead": "Mark all read",
     "tabAll": "All",
-    "tabUnread": "Unread"
+    "tabUnread": "Unread",
+    "timeAgo": {
+      "now": "now",
+      "min": "{{count}}m ago",
+      "hour": "{{count}}h ago",
+      "day": "{{count}}d ago"
+    },
+    "templates": {
+      "materialLowStock": {
+        "title": "Material below minimum: {{code}} — {{name}}",
+        "message": "Stock of material \"{{code}} — {{name}}\" has fallen below minimum ({{onHand}} {{unit}}, min {{min}} {{unit}})."
+      },
+      "orderActivated": {
+        "title": "New order",
+        "message": "Order #{{orderNumber}} has been activated",
+        "title_readyForQueue": "New order in queue",
+        "message_readyForQueue": "Order #{{orderNumber}} is ready for your process"
+      },
+      "processCompleted": {
+        "title": "Process completed",
+        "message": "Order #{{orderNumber}} — process completed"
+      },
+      "processBlocked": {
+        "title": "Process blocked",
+        "message": "Order #{{orderNumber}} — process blocked: {{reason}}"
+      },
+      "blockRequest": {
+        "title": "New block request",
+        "message": "A new block request awaits review"
+      },
+      "blockRequestApproved": {
+        "title": "Request approved",
+        "message": "The block request has been approved"
+      },
+      "blockRequestRejected": {
+        "title": "Request denied",
+        "message": "Your block request was denied",
+        "message_withNote": "Your block request was denied: {{rejectionNote}}"
+      },
+      "workerAutoLoggedOut": {
+        "title": "Auto-logout",
+        "message": "Worker {{workerName}} has been automatically logged out."
+      },
+      "deadlineWarning": {
+        "title": "Deadline — Warning",
+        "message": "Order #{{orderNumber}} — {{daysRemaining}} days remaining"
+      },
+      "deadlineCritical": {
+        "title": "Deadline — Critical",
+        "message": "Order #{{orderNumber}} — {{daysRemaining}} days remaining"
+      },
+      "changeRequest": {
+        "title": "New change request",
+        "message": "Order #{{orderNumber}} — new change request"
+      },
+      "changeRequestApproved": {
+        "title": "Change request approved",
+        "message": "Your change request for order #{{orderNumber}} has been approved."
+      },
+      "changeRequestRejected": {
+        "title": "Change request denied",
+        "message": "Your change request for order #{{orderNumber}} has been denied.",
+        "message_withNote": "Your change request for order #{{orderNumber}} has been denied: {{rejectionNote}}"
+      }
+    }
   },
   "common": {
     "loadMore": "Load more ({{remaining}} remaining)",

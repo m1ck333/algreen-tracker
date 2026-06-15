@@ -55,6 +55,11 @@ export enum NotificationType {
   ProcessCompleted = 'ProcessCompleted',
   ProcessBlocked = 'ProcessBlocked',
   OrderActivated = 'OrderActivated',
+  WorkerAutoLoggedOut = 'WorkerAutoLoggedOut',
+  MaterialLowStock = 'MaterialLowStock',
+  ChangeRequest = 'ChangeRequest',
+  ChangeRequestApproved = 'ChangeRequestApproved',
+  ChangeRequestRejected = 'ChangeRequestRejected',
 }
 
 export enum HistoryAction {
@@ -77,4 +82,16 @@ export enum UserRole {
   Coordinator = 'Coordinator',
   SalesManager = 'SalesManager',
   Department = 'Department',
+  Magacioner = 'Magacioner',
+}
+
+export enum StockMovementType {
+  Inflow = 'Inflow',
+  Outflow = 'Outflow',
+}
+
+export enum StockStatus {
+  Ok = 'Ok',
+  BelowMin = 'BelowMin',
+  AboveMax = 'AboveMax',
 }

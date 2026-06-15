@@ -1,5 +1,5 @@
-const TOKEN_KEY = 'algreen_token';
-const REFRESH_TOKEN_KEY = 'algreen_refresh_token';
+const TOKEN_KEY = 'alblue_token';
+const REFRESH_TOKEN_KEY = 'alblue_refresh_token';
 
 export const tokenManager = {
   getToken(): string | null {

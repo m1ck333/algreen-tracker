@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ordersApi } from '@algreen/api-client';
-import type { OrderAttachmentDto } from '@algreen/shared-types';
+import { ordersApi } from '@alblue/api-client';
+import type { OrderAttachmentDto } from '@alblue/shared-types';
+import { useTranslation } from '@alblue/i18n';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
@@ -27,6 +28,7 @@ interface AttachmentViewerProps {
 }
 
 export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps) {
+  const { t } = useTranslation('tablet');
   const [expanded, setExpanded] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<OrderAttachmentDto | null>(null);
   const [viewingPdf, setViewingPdf] = useState<OrderAttachmentDto | null>(null);
@@ -47,7 +49,7 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
   if (isLoading) {
     return (
       <div className="mt-3 text-center text-gray-400 text-tablet-xs">
-        Učitavanje...
+        {t('attachments.loading')}
       </div>
     );
   }
@@ -145,7 +147,7 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
           <div className="flex justify-between items-center p-3 bg-black/80">
             <span className="text-white text-tablet-sm truncate max-w-[70%]">{viewingAttachment.originalFileName}</span>
             <button onClick={() => setViewingAttachment(null)} className="text-white bg-red-600 rounded-xl px-5 py-3 text-tablet-base font-bold active:bg-red-700 min-w-[80px]">
-              Zatvori
+              {t('attachments.close')}
             </button>
           </div>
           <div className="flex-1 flex items-center justify-center overflow-auto p-2">
@@ -160,23 +162,23 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
           <div className="flex justify-between items-center p-3 bg-black/80">
             <span className="text-white text-tablet-sm truncate max-w-[70%]">{viewingPdf.originalFileName}</span>
             <button onClick={closePdf} className="text-white bg-red-600 rounded-xl px-5 py-3 text-tablet-base font-bold active:bg-red-700 min-w-[80px]">
-              Zatvori
+              {t('attachments.close')}
             </button>
           </div>
           <div className="flex-1 overflow-auto bg-gray-800 p-2">
             {pdfLoading ? (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-white text-tablet-base">Učitavanje PDF...</span>
+                <span className="text-white text-tablet-base">{t('attachments.loadingPdf')}</span>
               </div>
             ) : pdfPages.length > 0 ? (
               <div className="space-y-2">
                 {pdfPages.map((dataUrl, i) => (
-                  <img key={i} src={dataUrl} alt={`Strana ${i + 1}`} className="w-full rounded" />
+                  <img key={i} src={dataUrl} alt={t('attachments.pdfPageAlt', { n: i + 1 })} className="w-full rounded" />
                 ))}
               </div>
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-white text-tablet-base">Greška pri učitavanju PDF-a</span>
+                <span className="text-white text-tablet-base">{t('attachments.pdfLoadError')}</span>
               </div>
             )}
           </div>

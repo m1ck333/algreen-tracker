@@ -1,7 +1,7 @@
-import { pushApi } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
+import { pushApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
 
-const VAPID_KEY_STORAGE = 'algreen_vapid_public_key';
+const VAPID_KEY_STORAGE = 'alblue_vapid_public_key';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);

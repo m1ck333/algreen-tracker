@@ -1,11 +1,11 @@
-import type { OrderItemProcessDto } from '@algreen/shared-types';
+import type { OrderItemProcessDto } from '@alblue/shared-types';
 import type {
   StartProcessWorkRequest,
   StopProcessWorkRequest,
   ResumeProcessWorkRequest,
   BlockProcessRequest,
   UnblockProcessRequest,
-} from '@algreen/shared-types';
+} from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const processWorkflowApi = {

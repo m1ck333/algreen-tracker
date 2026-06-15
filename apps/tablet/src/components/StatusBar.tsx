@@ -1,5 +1,5 @@
-import { useAuthStore } from '@algreen/auth';
-import { useTranslation } from '@algreen/i18n';
+import { useAuthStore } from '@alblue/auth';
+import { useTranslation } from '@alblue/i18n';
 
 export function StatusBar() {
   const user = useAuthStore((s) => s.user);
@@ -14,7 +14,7 @@ export function StatusBar() {
   return (
     <div className="bg-primary-500 text-white px-4 py-3 flex items-center justify-between">
       <div className="flex items-center gap-3 min-w-0">
-        <img src="/algreen-logo-text.png" alt="AlGreen" className="h-6 object-contain flex-shrink-0" />
+        <img src="/mpms-logo-text.png" alt="MPMS" className="h-6 object-contain flex-shrink-0" />
       </div>
       <div className="flex items-center gap-3 flex-shrink-0">
         {user && (

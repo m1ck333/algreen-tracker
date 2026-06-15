@@ -1,40 +1,22 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
-import { Typography, Table, Button, Drawer, Form, Input, Select, Tag, Space, App, Popconfirm, Divider, DatePicker } from 'antd';
+import { Typography, Table, Button, Drawer, Form, Input, Select, Tag, App, Popconfirm, Divider, DatePicker } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { specialRequestTypesApi, processesApi } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
-import type { SpecialRequestTypeDto, ProcessDto } from '@algreen/shared-types';
-import { useTranslation } from '@algreen/i18n';
+import { specialRequestTypesApi, processesApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
+import type { SpecialRequestTypeDto } from '@alblue/shared-types';
+import { useTranslation } from '@alblue/i18n';
 import dayjs from 'dayjs';
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
+import { PageHeader } from '../../components/PageHeader';
+import { getTranslatedError } from '../../utils/errors';
 
-const { Title, Text } = Typography;
-
-function getApiErrorCode(error: unknown): string | undefined {
-  return (error as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
-}
-
-function getTranslatedError(error: unknown, t: (key: string, opts?: Record<string, string>) => string, fallback: string): string {
-  const resp = (error as { response?: { data?: { error?: { code?: string; message?: string } } } })?.response?.data?.error;
-  if (resp?.code) {
-    const translated = t(`common:errors.${resp.code}`, { defaultValue: '' });
-    if (translated) return translated;
-  }
-  return resp?.message || fallback;
-}
+const { Text } = Typography;
 
 export function SpecialRequestTypesPage() {
   const tenantId = useAuthStore((s) => s.tenantId);
@@ -48,7 +30,7 @@ export function SpecialRequestTypesPage() {
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
   const { guardedClose: guardedCreateClose, onValuesChange: onCreateValuesChange } = useUnsavedChanges(createOpen);
-  const { guardedClose: guardedEditClose, onValuesChange: onEditValuesChange } = useUnsavedChanges(!!detailItem);
+  const { guardedClose: guardedEditClose, onValuesChange: onEditValuesChange, markClean: markEditClean } = useUnsavedChanges(!!detailItem);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
@@ -84,12 +66,6 @@ export function SpecialRequestTypesPage() {
     queryFn: () => processesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
     enabled: !!tenantId && (!!detailItem || createOpen),
   });
-
-  const processMap = useMemo(() => {
-    const map = new Map<string, ProcessDto>();
-    (processes ?? []).forEach((p) => map.set(p.id, p));
-    return map;
-  }, [processes]);
 
   const processOptions = (processes ?? []).map((p) => ({ label: `${p.code} — ${p.name}`, value: p.id }));
 
@@ -130,6 +106,7 @@ export function SpecialRequestTypesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['special-request-types'] });
       message.success(t('admin.specialRequestTypes.updated'));
+      markEditClean();
     },
     onError: (err) => message.error(getTranslatedError(err, t, t('admin.specialRequestTypes.updateFailed'))),
   });
@@ -171,30 +148,22 @@ export function SpecialRequestTypesPage() {
     }
   }, [currentDetail, editForm]);
 
-  const renderProcessTags = (ids: string[]) => {
-    if (!ids || ids.length === 0) return <Text type="secondary">—</Text>;
-    return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        {ids.map((id) => {
-          const proc = processMap.get(id);
-          return <Tag key={id} color="blue">{proc ? `${proc.code} — ${proc.name}` : id.slice(0, 8)}</Tag>;
-        })}
-      </div>
-    );
-  };
-
   const columns = [
     {
       title: t('common:labels.code'),
       dataIndex: 'code',
       sorter: true,
       sortOrder: sortBy === 'code' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
+      fixed: 'left' as const,
+      width: 120,
     },
     {
       title: t('common:labels.name'),
       dataIndex: 'name',
       sorter: true,
       sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
+      fixed: 'left' as const,
+      width: 240,
     },
     { title: t('common:labels.description'), dataIndex: 'description', ellipsis: true },
     {
@@ -264,9 +233,9 @@ export function SpecialRequestTypesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>{t('admin.specialRequestTypes.title')}</Title>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <PageHeader
+        title={t('admin.specialRequestTypes.title')}
+        actions={<><div style={{ display: 'flex', gap: 8 }}>
           <TableExportButton
             onFetchAll={fetchAllSrt}
             columns={exportColumns}
@@ -280,10 +249,10 @@ export function SpecialRequestTypesPage() {
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             {t('admin.specialRequestTypes.addType')}
           </Button>
-        </div>
-      </div>
+        </div></>}
+      />
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 , flexWrap: 'wrap' }}>
         <Input.Search
           placeholder={t('common:actions.search')}
           allowClear

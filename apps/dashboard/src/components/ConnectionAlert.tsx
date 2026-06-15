@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert } from 'antd';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from '@algreen/i18n';
+import { useTranslation } from '@alblue/i18n';
 
 function isNetworkError(error: unknown): boolean {
   if (!error) return false;
@@ -34,8 +34,20 @@ export function ConnectionAlert() {
     // Check on mount
     checkErrors();
 
-    // Subscribe to cache changes
-    const unsubscribe = cache.subscribe(checkErrors);
+    // Subscribe to cache changes. Defer the actual check to a microtask
+    // so we don't call setState while another component (the page that
+    // triggered the query state change) is mid-render — React 18 logs
+    // that as a "Cannot update a component while rendering a different
+    // component" warning, even though it's harmless here.
+    let pending = false;
+    const unsubscribe = cache.subscribe(() => {
+      if (pending) return;
+      pending = true;
+      queueMicrotask(() => {
+        pending = false;
+        checkErrors();
+      });
+    });
     return unsubscribe;
   }, [queryClient]);
 

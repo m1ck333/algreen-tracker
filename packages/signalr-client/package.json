@@ -1,5 +1,5 @@
 {
-  "name": "@algreen/signalr-client",
+  "name": "@alblue/signalr-client",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@algreen/shared-types": "workspace:*",
+    "@alblue/shared-types": "workspace:*",
     "@microsoft/signalr": "^8.0.0"
   },
   "peerDependencies": {

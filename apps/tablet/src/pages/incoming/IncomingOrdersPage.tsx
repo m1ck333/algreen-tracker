@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
-import { tabletApi, processesApi } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
-import type { TabletIncomingDto } from '@algreen/shared-types';
-import { useTranslation, useEnumTranslation } from '@algreen/i18n';
+import { tabletApi, processesApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
+import type { TabletIncomingDto } from '@alblue/shared-types';
+import { useTranslation, useEnumTranslation } from '@alblue/i18n';
+import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
 import { AttachmentIndicator } from '../../components/AttachmentIndicator';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 
@@ -21,12 +22,22 @@ export function IncomingOrdersPage() {
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
 
+  const queryClient = useQueryClient();
   const { data: incomingGroups, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['tablet-incoming', userId, tenantId],
     queryFn: () => tabletApi.getIncoming(userId!).then((r) => r.data),
     enabled: !!tenantId && !!userId,
-    refetchInterval: 60_000,
+    refetchInterval: 120_000,
   });
+
+  // SignalR push: an upstream process completing or a new order activating
+  // means this worker's "incoming" list could have new arrivals. Invalidate so
+  // the cards refresh within ~1s.
+  const invalidateIncoming = () => {
+    queryClient.invalidateQueries({ queryKey: ['tablet-incoming'] });
+  };
+  useSignalREvent(SignalREvents.ProcessCompleted, invalidateIncoming);
+  useSignalREvent(SignalREvents.OrderActivated, invalidateIncoming);
 
   // Build sorted tabs
   const processTabs = useMemo(() => {

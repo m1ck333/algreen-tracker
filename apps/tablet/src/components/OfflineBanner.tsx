@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from '@algreen/i18n';
+import { useTranslation } from '@alblue/i18n';
 
 export function OfflineBanner() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);

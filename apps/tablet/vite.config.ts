@@ -11,12 +11,12 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['favicon.png', 'algreen-logo.png', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.png', 'mpms-logo.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Algreen MES - Tablet',
-        short_name: 'Algreen',
-        description: 'Factory floor tablet app for Algreen MES',
-        theme_color: '#2e7d32',
+        name: 'MPMS - Tablet',
+        short_name: 'MPMS',
+        description: 'Factory floor tablet app for MPMS',
+        theme_color: '#1677ff',
         background_color: '#f5f5f5',
         display: 'standalone',
         orientation: 'portrait',
@@ -43,6 +43,6 @@ export default defineConfig({
     }),
   ],
   server: {
-    port: 5932,
+    port: 5942,
   },
 });

@@ -1,8 +1,8 @@
-import type { ChangeRequestDto, PagedResult, RequestStatus } from '@algreen/shared-types';
+import type { ChangeRequestDto, PagedResult, RequestStatus } from '@alblue/shared-types';
 import type {
   CreateChangeRequestRequest,
   HandleChangeRequestRequest,
-} from '@algreen/shared-types';
+} from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const changeRequestsApi = {

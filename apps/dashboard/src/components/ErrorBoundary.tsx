@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import { Button, Typography, Result, theme } from 'antd';
+import { useTranslation } from '@alblue/i18n';
 
 const { Paragraph, Text } = Typography;
 
@@ -13,6 +14,39 @@ function DevErrorDetails({ error }: { error: Error }) {
         {error.stack}
       </pre>
     </Paragraph>
+  );
+}
+
+// Class component can't use hooks, so the i18n-aware UI lives in this
+// child function component. Switching locale re-renders it without
+// reloading the page.
+function ErrorBoundaryUI({ error }: { error: Error | null }) {
+  const { t } = useTranslation('dashboard');
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 24 }}>
+      <Result
+        status="500"
+        title={t('errorBoundary.title')}
+        subTitle={t('errorBoundary.subtitle')}
+        extra={[
+          <Button
+            type="primary"
+            key="reload"
+            onClick={() => window.location.reload()}
+          >
+            {t('errorBoundary.reload')}
+          </Button>,
+          <Button
+            key="home"
+            onClick={() => { window.location.href = '/'; }}
+          >
+            {t('errorBoundary.home')}
+          </Button>,
+        ]}
+      >
+        {import.meta.env.DEV && error && <DevErrorDetails error={error} />}
+      </Result>
+    </div>
   );
 }
 
@@ -41,32 +75,6 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.hasError) return this.props.children;
-
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 24 }}>
-        <Result
-          status="500"
-          title="Došlo je do greške"
-          subTitle="Nešto je pošlo po zlu. Pokušajte ponovo ili se vratite na početnu stranicu."
-          extra={[
-            <Button
-              type="primary"
-              key="reload"
-              onClick={() => window.location.reload()}
-            >
-              Ponovo učitaj
-            </Button>,
-            <Button
-              key="home"
-              onClick={() => { window.location.href = '/'; }}
-            >
-              Početna
-            </Button>,
-          ]}
-        >
-          {import.meta.env.DEV && this.state.error && <DevErrorDetails error={this.state.error} />}
-        </Result>
-      </div>
-    );
+    return <ErrorBoundaryUI error={this.state.error} />;
   }
 }

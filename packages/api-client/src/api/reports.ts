@@ -6,7 +6,10 @@ import type {
   ReportGranularity,
   ProcessTimeTrendDto,
   ActiveProcessFunnelDto,
-} from '@algreen/shared-types';
+  BlocksPerProcessReportDto,
+  ProductManufacturingTimeReportDto,
+  WorkEfficiencyReportDto,
+} from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export interface ProcessTimesQuery {
@@ -52,6 +55,24 @@ export interface ActiveProcessFunnelQuery {
   complexity?: string;
 }
 
+export interface BlocksPerProcessQuery {
+  from?: string;
+  to?: string;
+}
+
+export interface ProductManufacturingTimeQuery {
+  from?: string;
+  to?: string;
+  orderTypes?: string[];
+  productCategoryIds?: string[];
+}
+
+export interface WorkEfficiencyQuery {
+  from: string;
+  to: string;
+  userId?: string;
+}
+
 // Axios serializes array params as `?key[]=` by default; ASP.NET Core expects
 // repeated keys (`?key=a&key=b`). This helper forces the repeat-key form.
 const repeatArraySerializer = {
@@ -95,5 +116,20 @@ export const reportsApi = {
       params,
       ...repeatArraySerializer,
     });
+  },
+
+  getBlocksPerProcess(params: BlocksPerProcessQuery) {
+    return apiClient.get<BlocksPerProcessReportDto>('/reports/blocks-per-process', { params });
+  },
+
+  getProductManufacturingTime(params: ProductManufacturingTimeQuery) {
+    return apiClient.get<ProductManufacturingTimeReportDto>(
+      '/reports/product-manufacturing-time',
+      { params, ...repeatArraySerializer }
+    );
+  },
+
+  getWorkEfficiency(params: WorkEfficiencyQuery) {
+    return apiClient.get<WorkEfficiencyReportDto>('/reports/work-efficiency', { params });
   },
 };

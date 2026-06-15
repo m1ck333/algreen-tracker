@@ -2,8 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import * as Sentry from '@sentry/react';
 import { message } from 'antd';
-import { setOnForceLogout, setOnForbidden } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
+import { i18n, useTranslation } from '@alblue/i18n';
+import { setOnForceLogout, setOnForbidden } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
 import './i18n';
 import './styles/global.css';
 import { App } from './App';
@@ -18,34 +19,39 @@ setOnForceLogout(() => useAuthStore.getState().logout());
 // RequireRole/canManage predicates; this is the safety net for cases
 // the FE can't catch (race, stale session, programmatic call, BE-only
 // guards like self-demotion). Specific error codes from the BE map to
-// specific messages; everything else gets the generic line.
+// specific messages; everything else gets the generic line. i18n.t
+// resolves at call time, so the toast follows the active locale.
+const FORBIDDEN_MESSAGE_KEY: Record<string, string> = {
+  FORBIDDEN_ROLE_ASSIGNMENT: 'errors.forbiddenRoleChange',
+  FORBIDDEN_ROLE_CHANGE: 'errors.forbiddenRoleChange',
+  LAST_ADMIN_REMOVAL: 'errors.lastAdminRemoval',
+  SELF_DELETE_FORBIDDEN: 'errors.selfDeleteForbidden',
+  FORBIDDEN_SUPERADMIN_DELETE: 'errors.superAdminDeleteForbidden',
+  CHANGE_PASSWORD_NOT_SELF: 'errors.changePasswordNotSelf',
+};
 setOnForbidden((code) => {
-  switch (code) {
-    case 'FORBIDDEN_ROLE_ASSIGNMENT':
-    case 'FORBIDDEN_ROLE_CHANGE':
-      message.error('Samo SuperAdmin može da menja ulogu korisnika.');
-      break;
-    case 'LAST_ADMIN_REMOVAL':
-      message.error('Nije moguće ukloniti poslednjeg aktivnog Admina u tenant-u.');
-      break;
-    case 'SELF_DELETE_FORBIDDEN':
-      message.error('Ne možete obrisati sopstveni nalog.');
-      break;
-    case 'FORBIDDEN_SUPERADMIN_DELETE':
-      message.error('Samo SuperAdmin može da obriše SuperAdmin nalog.');
-      break;
-    case 'CHANGE_PASSWORD_NOT_SELF':
-      message.error('Možete menjati samo sopstvenu lozinku.');
-      break;
-    default:
-      message.error('Vaša uloga nema dozvolu za ovu akciju.');
+  // If the code already has a per-form translation in common:errors, the
+  // page-level mutation onError will surface it via getTranslatedError —
+  // staying silent here prevents the duplicate toast (Milos 15.06.2026,
+  // two stacked toasts for READ_ONLY_CROSS_TENANT in different locales).
+  if (code && i18n.t(`common:errors.${code}`, { defaultValue: '' })) {
+    return;
   }
+  const key = (code && FORBIDDEN_MESSAGE_KEY[code]) ?? 'errors.forbiddenGeneric';
+  message.error(i18n.t(key));
 });
+
+// Sentry's fallback prop is a React element, not a render function — making
+// it a real component lets useTranslation react to language changes.
+function BootErrorFallback() {
+  const { t } = useTranslation();
+  return <div style={{ padding: 24 }}>{t('errorBoundary.bootFallback')}</div>;
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Sentry.ErrorBoundary
-      fallback={<div style={{ padding: 24 }}>Došlo je do greške. Pokušajte ponovo.</div>}
+      fallback={<BootErrorFallback />}
       showDialog={false}
     >
       <ErrorBoundary>

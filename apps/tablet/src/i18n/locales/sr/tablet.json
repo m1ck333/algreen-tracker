@@ -1,4 +1,14 @@
 {
+  "errorBoundary": {
+    "bootFallback": "Došlo je do greške. Pokušajte ponovo."
+  },
+  "attachments": {
+    "loading": "Učitavanje...",
+    "close": "Zatvori",
+    "loadingPdf": "Učitavanje PDF-a...",
+    "pdfPageAlt": "Strana {{n}}",
+    "pdfLoadError": "Greška pri učitavanju PDF-a"
+  },
   "nav": {
     "queue": "Red",
     "incoming": "Dolazne",
@@ -105,7 +115,71 @@
     "noUnread": "Nema nepročitanih obaveštenja",
     "markAllRead": "Označi sve kao pročitano",
     "tabAll": "Sve",
-    "tabUnread": "Nepročitano"
+    "tabUnread": "Nepročitano",
+    "timeAgo": {
+      "now": "sada",
+      "min": "pre {{count}} min",
+      "hour": "pre {{count}}h",
+      "day": "pre {{count}}d"
+    },
+    "templates": {
+      "materialLowStock": {
+        "title": "Materijal ispod minimuma: {{code}} — {{name}}",
+        "message": "Stanje materijala „{{code}} — {{name}}\" je palo ispod minimuma ({{onHand}} {{unit}}, min {{min}} {{unit}})."
+      },
+      "orderActivated": {
+        "title": "Nova narudžbina",
+        "message": "Narudžbina #{{orderNumber}} je aktivirana",
+        "title_readyForQueue": "Nova narudžbina u redu",
+        "message_readyForQueue": "Narudžbina #{{orderNumber}} je spremna za vaš proces"
+      },
+      "processCompleted": {
+        "title": "Proces završen",
+        "message": "Narudžbina #{{orderNumber}} — proces je završen"
+      },
+      "processBlocked": {
+        "title": "Proces blokiran",
+        "message": "Narudžbina #{{orderNumber}} — proces blokiran: {{reason}}"
+      },
+      "blockRequest": {
+        "title": "Novi zahtev za blokadu",
+        "message": "Novi zahtev za blokadu je poslat na pregled"
+      },
+      "blockRequestApproved": {
+        "title": "Zahtev odobren",
+        "message": "Zahtev za blokadu je odobren"
+      },
+      "blockRequestRejected": {
+        "title": "Zahtev odbijen",
+        "message": "Vaš zahtev za blokadu je odbijen",
+        "message_withNote": "Vaš zahtev za blokadu je odbijen: {{rejectionNote}}"
+      },
+      "workerAutoLoggedOut": {
+        "title": "Auto-odjava",
+        "message": "Radnik {{workerName}} automatski je odjavljen."
+      },
+      "deadlineWarning": {
+        "title": "Rok — Upozorenje",
+        "message": "Narudžbina #{{orderNumber}} — još {{daysRemaining}} dana"
+      },
+      "deadlineCritical": {
+        "title": "Rok — Kritično",
+        "message": "Narudžbina #{{orderNumber}} — još {{daysRemaining}} dana"
+      },
+      "changeRequest": {
+        "title": "Novi zahtev za izmenu",
+        "message": "Narudžbina #{{orderNumber}} — novi zahtev za izmenu"
+      },
+      "changeRequestApproved": {
+        "title": "Zahtev za izmenu odobren",
+        "message": "Vaš zahtev za izmenu narudžbine #{{orderNumber}} je odobren."
+      },
+      "changeRequestRejected": {
+        "title": "Zahtev za izmenu odbijen",
+        "message": "Vaš zahtev za izmenu narudžbine #{{orderNumber}} je odbijen.",
+        "message_withNote": "Vaš zahtev za izmenu narudžbine #{{orderNumber}} je odbijen: {{rejectionNote}}"
+      }
+    }
   },
   "common": {
     "loadMore": "Prikaži još ({{remaining}} preostalo)",

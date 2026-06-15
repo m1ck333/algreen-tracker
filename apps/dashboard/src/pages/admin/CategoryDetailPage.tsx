@@ -2,8 +2,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Typography, Card, Descriptions, Table, Button, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { productCategoriesApi } from '@algreen/api-client';
-import { useTranslation } from '@algreen/i18n';
+import { productCategoriesApi } from '@alblue/api-client';
+import { useTranslation } from '@alblue/i18n';
 
 const { Title } = Typography;
 

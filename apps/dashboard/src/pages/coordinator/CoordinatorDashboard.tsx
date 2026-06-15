@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Row, Col, Card, Typography, Table, Alert, Statistic, List, Tag, Badge, Tooltip, Button, Drawer, theme } from 'antd';
+import { Row, Col, Card, Typography, Table, Alert, Statistic, List, Tag, Badge, Button, Drawer, theme } from 'antd';
 import {
   WarningOutlined,
   ClockCircleOutlined,
   StopOutlined,
   BarChartOutlined,
   SwapOutlined,
+  ArrowRightOutlined,
 } from '@ant-design/icons';
 import type {
   DashboardStatisticsDto,
@@ -16,7 +17,7 @@ import type {
   WorkerStatusDto,
   PendingBlockRequestDto,
   ChangeRequestDto,
-} from '@algreen/shared-types';
+} from '@alblue/shared-types';
 import {
   useDashboardWarnings,
   useDashboardLiveView,
@@ -24,10 +25,15 @@ import {
   useDashboardPendingBlocks,
   useDashboardStatistics,
   usePendingChangeRequests,
+  useDashboardSignalRSync,
 } from '../../hooks/useDashboard';
-import { useTranslation, useEnumTranslation } from '@algreen/i18n';
+import { useTranslation, useEnumTranslation } from '@alblue/i18n';
+import { useQuery } from '@tanstack/react-query';
+import { warehouseApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
+import { PageHeader } from '../../components/PageHeader';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -48,44 +54,158 @@ export function CoordinatorDashboard() {
   const navigate = useNavigate();
   const { token } = theme.useToken();
   const [activeOrdersProcess, setActiveOrdersProcess] = useState<LiveViewProcessDto | null>(null);
+  useDashboardSignalRSync();
   const warnings = useDashboardWarnings();
   const liveView = useDashboardLiveView();
   const workers = useDashboardWorkersStatus();
   const pendingBlocks = useDashboardPendingBlocks();
   const statistics = useDashboardStatistics();
   const changeRequests = usePendingChangeRequests();
+  const tenantId = useAuthStore((s) => s.tenantId);
+  const stockBalances = useQuery({
+    queryKey: ['warehouse-stock', tenantId],
+    queryFn: () => warehouseApi.getStockBalances().then((r) => r.data),
+    enabled: !!tenantId,
+    refetchInterval: 60_000,
+  });
+  const lowStockCount = (stockBalances.data ?? []).filter((b) => b.status === 'BelowMin').length;
   const { t } = useTranslation('dashboard');
   const { tEnum } = useEnumTranslation();
 
   return (
     <div>
-      <Title level={4}>{t('coordinator.title')}</Title>
+      <PageHeader title={t('coordinator.title')} />
 
-      <Row gutter={[16, 16]}>
+      <Row gutter={[16, 16]} align="stretch">
         {/* Statistics */}
-        <Col xs={24} lg={12}>
-          <Card title={<><BarChartOutlined /> {t('coordinator.statistics')}</>} loading={statistics.isLoading}>
+        <Col xs={24} lg={12} style={{ display: 'flex' }}>
+          <Card
+            title={<><BarChartOutlined /> {t('coordinator.statistics')}</>}
+            loading={statistics.isLoading}
+            style={{ width: '100%' }}
+          >
             {statistics.data ? (() => {
               const s = statistics.data as DashboardStatisticsDto;
-              const items: { title: string; value: number; suffix?: string; color?: string }[] = [
-                { title: t('coordinator.stats.ordersActive'), value: s.today?.ordersActive ?? 0 },
-                { title: t('coordinator.stats.ordersCompleted'), value: s.today?.ordersCompleted ?? 0 },
-                { title: t('coordinator.stats.processesCompleted'), value: s.today?.processesCompleted ?? 0 },
-                { title: t('coordinator.stats.avgProcessTime'), value: Math.round(s.today?.averageProcessTimeMinutes ?? 0), suffix: t('coordinator.stats.min') },
-                { title: t('coordinator.stats.criticalWarnings'), value: s.warnings?.criticalCount ?? 0, color: s.warnings?.criticalCount ? token.colorError : undefined },
-                { title: t('coordinator.stats.warnings'), value: s.warnings?.warningCount ?? 0, color: s.warnings?.warningCount ? token.colorWarning : undefined },
-                { title: t('coordinator.stats.pendingBlockRequests'), value: s.pendingBlockRequests ?? 0 },
+              type StatItem = { title: string; value: number; suffix?: string; color?: string; onClick?: () => void };
+              // Three semantic groups, each rendered in its own 3-column row
+              // with a small muted header above. Groups: Narudžbine (order
+              // overview + pending block requests), Upozorenja (alarm cells
+              // — deadline + low-stock), Aktivnost danas (today-only
+              // output info, no navigation).
+              const orderGroup: StatItem[] = [
+                {
+                  title: t('coordinator.stats.ordersActive'),
+                  value: s.today?.ordersActive ?? 0,
+                  onClick: () => navigate('/orders'),
+                },
+                {
+                  title: t('coordinator.stats.ordersCompletedToday'),
+                  value: s.today?.ordersCompleted ?? 0,
+                  onClick: () => navigate('/orders'),
+                },
+                {
+                  title: t('coordinator.stats.pendingBlockRequests'),
+                  value: s.pendingBlockRequests ?? 0,
+                  color: (s.pendingBlockRequests ?? 0) > 0 ? token.colorWarning : undefined,
+                  onClick: () => navigate('/block-requests'),
+                },
+              ];
+              const alarmGroup: StatItem[] = [
+                {
+                  title: t('coordinator.stats.criticalWarnings'),
+                  value: s.warnings?.criticalCount ?? 0,
+                  color: s.warnings?.criticalCount ? token.colorError : undefined,
+                  onClick: () => navigate('/orders'),
+                },
+                {
+                  title: t('coordinator.stats.warnings'),
+                  value: s.warnings?.warningCount ?? 0,
+                  color: s.warnings?.warningCount ? token.colorWarning : undefined,
+                  onClick: () => navigate('/orders'),
+                },
+                {
+                  title: t('coordinator.stats.lowStock'),
+                  value: lowStockCount,
+                  color: lowStockCount > 0 ? token.colorError : undefined,
+                  onClick: lowStockCount > 0 ? () => navigate('/warehouse/stock?status=BelowMin') : undefined,
+                },
+              ];
+              const activityGroup: StatItem[] = [
+                {
+                  title: t('coordinator.stats.processesCompletedToday'),
+                  value: s.today?.processesCompleted ?? 0,
+                },
+                {
+                  title: t('coordinator.stats.avgProcessTimeToday'),
+                  value: Math.round(s.today?.averageProcessTimeMinutes ?? 0),
+                  suffix: t('coordinator.stats.min'),
+                },
+              ];
+              const groups: { title: string; items: StatItem[] }[] = [
+                { title: t('coordinator.stats.groupOrders'), items: orderGroup },
+                { title: t('coordinator.stats.groupAlarms'), items: alarmGroup },
+                { title: t('coordinator.stats.groupActivityToday'), items: activityGroup },
               ];
               return (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px 16px' }}>
-                  {items.map((item) => (
-                    <div key={item.title} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 64 }}>
-                      <div style={{ fontSize: 13, color: token.colorTextSecondary, lineHeight: 1.3, marginBottom: 4 }}>{item.title}</div>
-                      <Statistic
-                        value={item.value}
-                        suffix={item.suffix}
-                        valueStyle={{ fontSize: 24, ...(item.color ? { color: item.color } : {}) }}
-                      />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {groups.map((group, gi) => (
+                    <div key={group.title}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          letterSpacing: 0.6,
+                          textTransform: 'uppercase',
+                          color: token.colorTextSecondary,
+                          marginBottom: 10,
+                          paddingBottom: 6,
+                          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                        }}
+                      >
+                        {group.title}
+                      </div>
+                      <div className="stats-grid">
+                        {group.items.map((item) => (
+                          <div
+                            key={item.title}
+                            onClick={item.onClick}
+                            className={item.onClick ? 'stats-clickable-cell' : undefined}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              minHeight: 64,
+                              cursor: item.onClick ? 'pointer' : undefined,
+                              padding: item.onClick ? '4px 8px' : undefined,
+                              margin: item.onClick ? '-4px -8px' : undefined,
+                              borderRadius: 6,
+                              transition: 'background-color 0.15s ease',
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 13,
+                                color: item.onClick ? token.colorPrimary : token.colorTextSecondary,
+                                lineHeight: 1.3,
+                                marginBottom: 4,
+                              }}
+                            >
+                              {item.title}
+                              {item.onClick && (
+                                <ArrowRightOutlined
+                                  style={{ fontSize: 10, marginLeft: 4, verticalAlign: 'middle' }}
+                                />
+                              )}
+                            </div>
+                            <Statistic
+                              value={item.value}
+                              suffix={item.suffix}
+                              valueStyle={{ fontSize: 24, ...(item.color ? { color: item.color } : {}) }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      {gi < groups.length - 1 && null}
                     </div>
                   ))}
                 </div>
@@ -97,13 +217,14 @@ export function CoordinatorDashboard() {
         </Col>
 
         {/* Deadline Warnings */}
-        <Col xs={24} lg={12}>
+        <Col xs={24} lg={12} style={{ display: 'flex' }}>
           <Card
             title={<><WarningOutlined /> {t('coordinator.deadlineWarnings')}</>}
             loading={warnings.isLoading}
+            style={{ width: '100%' }}
           >
             {Array.isArray(warnings.data) && warnings.data.length > 0 ? (
-              <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+              <div style={{ maxHeight: 360, overflowY: 'auto' }}>
               <List
                 size="small"
                 dataSource={warnings.data as DeadlineWarningDto[]}

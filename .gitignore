@@ -23,3 +23,5 @@ packages/**/*.d.ts.map
 !apps/**/tailwind.config.js
 !apps/**/postcss.config.js
 TESTING_CHECKLIST.md
+!CLAUDE.md
+!HANDOFF.md

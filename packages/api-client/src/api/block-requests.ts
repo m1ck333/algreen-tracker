@@ -1,8 +1,8 @@
-import type { BlockRequestDto, PagedResult, RequestStatus } from '@algreen/shared-types';
+import type { BlockRequestDto, PagedResult, RequestStatus } from '@alblue/shared-types';
 import type {
   CreateBlockRequestRequest,
   HandleBlockRequestRequest,
-} from '@algreen/shared-types';
+} from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const blockRequestsApi = {

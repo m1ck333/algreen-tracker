@@ -1,50 +1,39 @@
 import { useState, useEffect } from 'react';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import {
-  Typography, Table, Button, Drawer, Form, Input, InputNumber, Tag, App,
-  Divider, ColorPicker, Popconfirm, Spin, Select, DatePicker,
+  Table, Button, Drawer, Form, Input, Tag, App,
+  Divider, Popconfirm, Select, DatePicker,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { tenantsApi } from '@algreen/api-client';
-import type { TenantDto } from '@algreen/shared-types';
-import { useTranslation } from '@algreen/i18n';
+import { tenantsApi, usersApi } from '@alblue/api-client';
+import { UserRole } from '@alblue/shared-types';
+import type { TenantDto } from '@alblue/shared-types';
+import { useTranslation } from '@alblue/i18n';
+import { passwordRules } from '../../utils/password';
 import dayjs from 'dayjs';
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
+import { PageHeader } from '../../components/PageHeader';
+import { getTranslatedError } from '../../utils/errors';
 
-const { Title } = Typography;
+// Defaults for warning / critical days seeded at tenant creation time so
+// the new tenant's Admin has something sensible until they tune them via
+// Profil firme (Milos 15.06.2026 — those numbers are the tenant's own
+// settings, not Skysoft's concern).
+const DEFAULT_WARNING_DAYS = 7;
+const DEFAULT_CRITICAL_DAYS = 3;
 
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
+interface TenantsPageProps {
+  /** When true, suppress the top PageHeader — used when embedding this
+   *  component as a tab panel inside FirmaPage so the parent owns the
+   *  header. */
+  hideHeader?: boolean;
 }
 
-function getApiErrorCode(error: unknown): string | undefined {
-  return (error as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
-}
-
-function getTranslatedError(error: unknown, t: (key: string, opts?: Record<string, string>) => string, fallback: string): string {
-  const resp = (error as { response?: { data?: { error?: { code?: string; message?: string } } } })?.response?.data?.error;
-  if (resp?.code) {
-    const translated = t(`common:errors.${resp.code}`, { defaultValue: '' });
-    if (translated) return translated;
-  }
-  return resp?.message || fallback;
-}
-
-function resolveColor(value: unknown, fallback: string): string {
-  if (typeof value === 'string') return value;
-  if (value && typeof value === 'object' && 'toHexString' in value) return (value as { toHexString: () => string }).toHexString();
-  return fallback;
-}
-
-export function TenantsPage() {
+export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
   const queryClient = useQueryClient();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editTenant, setEditTenant] = useState<TenantDto | null>(null);
@@ -53,7 +42,7 @@ export function TenantsPage() {
   const { t } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
-  const { guardedClose: guardedDrawerClose, onValuesChange: onDrawerValuesChange } = useUnsavedChanges(drawerOpen);
+  const { guardedClose: guardedDrawerClose, onValuesChange: onDrawerValuesChange, markClean: markDrawerClean } = useUnsavedChanges(drawerOpen);
 
   // ─── Filter & Pagination State ──────────────────────────
   const [search, setSearch] = useState('');
@@ -88,34 +77,37 @@ export function TenantsPage() {
 
   const currentDetail = editTenant ? data?.find((item) => item.id === editTenant.id) ?? editTenant : null;
 
-  const { data: settings, isLoading: settingsLoading } = useQuery({
-    queryKey: ['tenant-settings', currentDetail?.id],
-    queryFn: () => tenantsApi.getSettings(currentDetail!.id).then((r) => r.data),
-    enabled: !!currentDetail,
-  });
-
-  // Populate form when settings load for edit
-  useEffect(() => {
-    if (settings && editTenant) {
-      form.setFieldsValue({
-        defaultWarningDays: settings.defaultWarningDays,
-        defaultCriticalDays: settings.defaultCriticalDays,
-        warningColor: settings.warningColor,
-        criticalColor: settings.criticalColor,
-      });
-    }
-  }, [settings, editTenant, form]);
-
+  // Tenant creation is a two-step server-side flow because tenant + user
+  // live in different modules with different DbContexts (no shared
+  // transaction). On admin-creation failure the tenant exists but is
+  // adminless — we surface a clear error so Skysoft can recover from DB,
+  // and a future commit will add a "create Admin for tenant X" button.
   const createMutation = useMutation({
-    mutationFn: (values: Record<string, unknown>) =>
-      tenantsApi.create({
+    mutationFn: async (values: Record<string, unknown>) => {
+      const tenant = await tenantsApi.create({
         name: values.name as string,
         code: values.code as string,
-        defaultWarningDays: values.defaultWarningDays as number,
-        defaultCriticalDays: values.defaultCriticalDays as number,
-        warningColor: resolveColor(values.warningColor, '#FFA500'),
-        criticalColor: resolveColor(values.criticalColor, '#FF0000'),
-      }),
+        defaultWarningDays: DEFAULT_WARNING_DAYS,
+        defaultCriticalDays: DEFAULT_CRITICAL_DAYS,
+        warningColor: '#FFA500',
+        criticalColor: '#FF0000',
+      });
+      try {
+        await usersApi.create({
+          tenantId: tenant.data.id,
+          email: values.adminEmail as string,
+          firstName: values.adminFirstName as string,
+          lastName: values.adminLastName as string,
+          password: values.adminPassword as string,
+          role: UserRole.Admin,
+        });
+      } catch (adminErr) {
+        throw new Error(t('admin.tenants.adminCreateFailed', {
+          defaultValue: 'Firma kreirana, ali inicijalni Admin nije. Kreiraj Admina ručno za ovu firmu.',
+        }) + ' (' + ((adminErr as { message?: string })?.message ?? '') + ')');
+      }
+      return tenant.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       closeDrawer();
@@ -129,15 +121,11 @@ export function TenantsPage() {
       tenantsApi.update(id, {
         name: values.name as string,
         isActive: currentDetail!.isActive,
-        defaultWarningDays: values.defaultWarningDays as number,
-        defaultCriticalDays: values.defaultCriticalDays as number,
-        warningColor: resolveColor(values.warningColor, '#faad14'),
-        criticalColor: resolveColor(values.criticalColor, '#cf1322'),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
       message.success(t('admin.tenants.updated'));
+      markDrawerClean();
     },
     onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.updateFailed'))),
   });
@@ -153,14 +141,19 @@ export function TenantsPage() {
     onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.updateFailed'))),
   });
 
+  const activateMutation = useMutation({
+    mutationFn: (tenant: TenantDto) =>
+      tenantsApi.update(tenant.id, { name: tenant.name, isActive: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      closeDrawer();
+      message.success(t('admin.tenants.activated', { defaultValue: 'Firma aktivirana' }));
+    },
+    onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.updateFailed'))),
+  });
+
   const openCreate = () => {
     form.resetFields();
-    form.setFieldsValue({
-      defaultWarningDays: 7,
-      defaultCriticalDays: 3,
-      warningColor: '#FFA500',
-      criticalColor: '#FF0000',
-    });
     setEditTenant(null);
     setDrawerOpen(true);
   };
@@ -193,6 +186,8 @@ export function TenantsPage() {
       dataIndex: 'name',
       sorter: true,
       sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
+      fixed: 'left' as const,
+      width: 240,
     },
     {
       title: t('common:labels.code'),
@@ -251,9 +246,30 @@ export function TenantsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>{t('admin.tenants.title')}</Title>
-        <div style={{ display: 'flex', gap: 8 }}>
+      {!hideHeader && (
+        <PageHeader
+          title={t('admin.tenants.title')}
+          actions={<><div style={{ display: 'flex', gap: 8 }}>
+            <TableExportButton
+              onFetchAll={fetchAllTenants}
+              columns={exportColumns}
+              options={{
+                fileName: `tenants-${dayjs().format('YYYY-MM-DD')}`,
+                title: `${t('common:appName')} — ${t('admin.tenants.title')}`,
+                filters: exportFilters,
+                sheetName: t('admin.tenants.title'),
+              }}
+            />
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              {t('admin.tenants.addTenant')}
+            </Button>
+          </div></>}
+        />
+      )}
+      {hideHeader && (
+        // When embedded as a tab panel, render the action row alone so the
+        // user still has Export + Add Tenant CTAs without doubling page titles.
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 16 }}>
           <TableExportButton
             onFetchAll={fetchAllTenants}
             columns={exportColumns}
@@ -268,9 +284,9 @@ export function TenantsPage() {
             {t('admin.tenants.addTenant')}
           </Button>
         </div>
-      </div>
+      )}
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 , flexWrap: 'wrap' }}>
         <Input.Search
           placeholder={t('common:actions.search')}
           allowClear
@@ -359,6 +375,16 @@ export function TenantsPage() {
                 <Button danger loading={deactivateMutation.isPending}>{t('admin.tenants.deactivate')}</Button>
               </Popconfirm>
             )}
+            {!isCreating && currentDetail && !currentDetail.isActive && (
+              <Popconfirm
+                title={t('admin.tenants.activateConfirm', { defaultValue: 'Aktivirati ovu firmu?' })}
+                onConfirm={() => activateMutation.mutate(currentDetail)}
+                okText={t('common:actions.confirm')}
+                cancelText={t('common:actions.cancel')}
+              >
+                <Button loading={activateMutation.isPending}>{t('admin.tenants.activate', { defaultValue: 'Aktiviraj' })}</Button>
+              </Popconfirm>
+            )}
             <Button
               type="primary"
               onClick={() => form.submit()}
@@ -369,35 +395,37 @@ export function TenantsPage() {
           </div>
         }
       >
-        {!isCreating && settingsLoading ? (
-          <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
-        ) : (
-          <Form form={form} layout="vertical" scrollToFirstError={{ behavior: "smooth", block: "center" }} onFinish={handleFinish} onValuesChange={onDrawerValuesChange}>
-            <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
-              <Input />
-            </Form.Item>
-            <Form.Item name="code" label={t('common:labels.code')} rules={[{ required: true }]}>
-              <Input disabled={!isCreating} />
-            </Form.Item>
-            <Divider />
-            <div style={{ display: 'flex', gap: 12 }}>
-              <Form.Item name="defaultWarningDays" label={t('admin.tenants.defaultWarningDays')} rules={[{ required: true }]} style={{ flex: 1 }}>
-                <InputNumber min={1} precision={0} style={{ width: '100%' }} />
+        <Form form={form} layout="vertical" scrollToFirstError={{ behavior: 'smooth', block: 'center' }} onFinish={handleFinish} onValuesChange={onDrawerValuesChange}>
+          <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="code" label={t('common:labels.code')} rules={[{ required: true }]}>
+            <Input disabled={!isCreating} />
+          </Form.Item>
+          {/* Initial Admin user — only on creation. Skysoft (SuperAdmin)
+              creates the tenant + first Admin in one drawer; the new
+              Admin then manages everything else (warning/critical days,
+              theme colors, later logo) from Profil firme. */}
+          {isCreating && (
+            <>
+              <Divider>{t('admin.tenants.initialAdmin', { defaultValue: 'Inicijalni Admin firme' })}</Divider>
+              <Form.Item name="adminEmail" label={t('common:labels.email')} rules={[{ required: true, type: 'email' }]}>
+                <Input />
               </Form.Item>
-              <Form.Item name="defaultCriticalDays" label={t('admin.tenants.defaultCriticalDays')} rules={[{ required: true }]} style={{ flex: 1 }}>
-                <InputNumber min={1} precision={0} style={{ width: '100%' }} />
+              <div style={{ display: 'flex', gap: 12 }}>
+                <Form.Item name="adminFirstName" label={t('common:labels.firstName')} rules={[{ required: true }]} style={{ flex: 1 }}>
+                  <Input />
+                </Form.Item>
+                <Form.Item name="adminLastName" label={t('common:labels.lastName')} rules={[{ required: true }]} style={{ flex: 1 }}>
+                  <Input />
+                </Form.Item>
+              </div>
+              <Form.Item name="adminPassword" label={t('common:labels.password')} rules={passwordRules(t)}>
+                <Input.Password />
               </Form.Item>
-            </div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <Form.Item name="warningColor" label={t('admin.tenants.warningColor')}>
-                <ColorPicker />
-              </Form.Item>
-              <Form.Item name="criticalColor" label={t('admin.tenants.criticalColor')}>
-                <ColorPicker />
-              </Form.Item>
-            </div>
-          </Form>
-        )}
+            </>
+          )}
+        </Form>
       </Drawer>
     </div>
   );

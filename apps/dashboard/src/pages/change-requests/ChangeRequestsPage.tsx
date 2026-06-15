@@ -1,41 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useTableHeight } from '../../hooks/useTableHeight';
+import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
 import { Typography, Table, Space, Button, App, Popconfirm, Tag, Input, Select, DatePicker } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { changeRequestsApi } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
-import { RequestStatus, ChangeRequestType } from '@algreen/shared-types';
-import type { ChangeRequestDto } from '@algreen/shared-types';
+import { changeRequestsApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
+import { RequestStatus } from '@alblue/shared-types';
+import type { ChangeRequestDto } from '@alblue/shared-types';
 import { StatusBadge } from '../../components/StatusBadge';
-import { useTranslation, useEnumTranslation } from '@algreen/i18n';
+import { useTranslation, useEnumTranslation } from '@alblue/i18n';
 import dayjs from 'dayjs';
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
-
-const { Title } = Typography;
-
-function getApiErrorCode(error: unknown): string | undefined {
-  return (error as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
-}
-
-function getTranslatedError(error: unknown, t: (key: string, opts?: Record<string, string>) => string, fallback: string): string {
-  const resp = (error as { response?: { data?: { error?: { code?: string; message?: string } } } })?.response?.data?.error;
-  if (resp?.code) {
-    const translated = t(`common:errors.${resp.code}`, { defaultValue: '' });
-    if (translated) return translated;
-  }
-  return resp?.message || fallback;
-}
+import { PageHeader } from '../../components/PageHeader';
+import { getTranslatedError } from '../../utils/errors';
 
 export function ChangeRequestsPage() {
   const tenantId = useAuthStore((s) => s.tenantId);
@@ -58,6 +39,16 @@ export function ChangeRequestsPage() {
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
 
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, dateFrom, dateTo]);
+
+  // SignalR push: refresh the list within ~1s of any change-request event.
+  // Approve/Reject from another tab + new submissions from sales managers
+  // are caught via NotificationCreated (every change-request flow writes
+  // a notification), Created has its own type-specific event too.
+  const invalidateChangeRequests = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['change-requests'] });
+  }, [queryClient]);
+  useSignalREvent(SignalREvents.ChangeRequestCreated, invalidateChangeRequests);
+  useSignalREvent(SignalREvents.NotificationCreated, invalidateChangeRequests);
 
   const { data: pagedResult, isLoading } = useQuery({
     queryKey: ['change-requests', tenantId, statusFilter, debouncedSearch, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
@@ -99,12 +90,14 @@ export function ChangeRequestsPage() {
       title: t('common:labels.status'),
       dataIndex: 'status',
       width: 110,
+      fixed: 'left' as const,
       render: (s: RequestStatus) => <StatusBadge status={s} />,
     },
     {
       title: t('common:labels.orderNumber'),
       dataIndex: 'orderNumber',
       width: 140,
+      fixed: 'left' as const,
       render: (orderNumber: string | null, record: ChangeRequestDto) =>
         orderNumber ? (
           <Button type="link" size="small" style={{ padding: 0 }} onClick={(e) => { e.stopPropagation(); navigate(`/orders?detail=${record.orderId}`); }}>
@@ -233,9 +226,9 @@ export function ChangeRequestsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>{t('changeRequests.title')}</Title>
-        <TableExportButton
+      <PageHeader
+        title={t('changeRequests.title')}
+        actions={<><TableExportButton
           onFetchAll={fetchAllChanges}
           columns={exportColumns}
           options={{
@@ -244,10 +237,10 @@ export function ChangeRequestsPage() {
             filters: exportFilters,
             sheetName: t('changeRequests.title'),
           }}
-        />
-      </div>
+        /></>}
+      />
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 , flexWrap: 'wrap' }}>
         <Input.Search
           placeholder={t('common:actions.search')}
           allowClear

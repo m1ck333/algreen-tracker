@@ -1,10 +1,16 @@
-import type { UserDto, PagedResult } from '@algreen/shared-types';
-import type { CreateUserRequest, UpdateUserRequest, ChangePasswordRequest } from '@algreen/shared-types';
+import type { UserDto, PagedResult, UserRoleChangeEntryDto, LoginAttemptDto } from '@alblue/shared-types';
+import type { CreateUserRequest, UpdateUserRequest, ChangePasswordRequest } from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const usersApi = {
   getAll(params: { role?: string; isActive?: boolean; search?: string; page?: number; pageSize?: number; createdFrom?: string; createdTo?: string; sortBy?: string; sortDirection?: string }) {
     return apiClient.get<PagedResult<UserDto>>('/users', { params });
+  },
+
+  // SuperAdmin-only: every SuperAdmin across every tenant. BE returns a
+  // plain list (not paged) — SA count is small (<20 expected).
+  getSuperAdmins() {
+    return apiClient.get<UserDto[]>('/users/super-admins');
   },
 
   getById(id: string) {
@@ -29,5 +35,13 @@ export const usersApi = {
 
   delete(id: string) {
     return apiClient.delete(`/users/${id}`);
+  },
+
+  getRoleHistory(id: string) {
+    return apiClient.get<UserRoleChangeEntryDto[]>(`/users/${id}/role-history`);
+  },
+
+  getLoginHistory(id: string, limit = 20) {
+    return apiClient.get<LoginAttemptDto[]>(`/users/${id}/login-history`, { params: { limit } });
   },
 };

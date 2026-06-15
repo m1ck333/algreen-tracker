@@ -8,7 +8,7 @@ import {
   type ExportOptions,
   type ExtraSheet,
 } from '../utils/exportTable';
-import { useTranslation } from '@algreen/i18n';
+import { useTranslation } from '@alblue/i18n';
 
 /** Optional second-sheet (XLSX) — built from the main rows. */
 type XlsxExtraSheet<T> = {

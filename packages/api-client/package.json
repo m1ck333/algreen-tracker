@@ -1,5 +1,5 @@
 {
-  "name": "@algreen/api-client",
+  "name": "@alblue/api-client",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@algreen/shared-types": "workspace:*",
+    "@alblue/shared-types": "workspace:*",
     "axios": "^1.7.0"
   },
   "devDependencies": {

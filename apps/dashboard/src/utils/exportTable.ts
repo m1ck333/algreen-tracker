@@ -28,7 +28,7 @@ export type ExportColumn<T> = {
 export type ExportOptions = {
   /** File name without extension. */
   fileName: string;
-  /** Title row at top of file (e.g. "Alblue MES — Orders"). */
+  /** Title row at top of file (e.g. "MPMS — Orders"). */
   title?: string;
   /** Filter context lines shown under the title. */
   filters?: Array<{ label: string; value: string }>;

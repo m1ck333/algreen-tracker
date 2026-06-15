@@ -1,10 +1,11 @@
 {
-  "appName": "Algreen MES",
+  "appName": "MPMS",
   "actions": {
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",
     "confirm": "Confirm",
+    "yes": "Yes",
     "no": "No",
     "create": "Create",
     "back": "Back",
@@ -64,7 +65,12 @@
     "enterTenantCode": "Please enter tenant code",
     "enterEmail": "Please enter your email",
     "enterPassword": "Please enter your password",
-    "enterValidEmail": "Please enter a valid email"
+    "enterValidEmail": "Please enter a valid email",
+    "passwordRequired": "Password is required",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordTooLong": "Password must be at most 100 characters",
+    "passwordNeedsLetter": "Password must contain at least one letter",
+    "passwordNeedsDigit": "Password must contain at least one digit"
   },
   "messages": {
     "noDataAvailable": "No data available",
@@ -82,6 +88,10 @@
     "ALREADY_ENDED": "Log already ended",
     "INVALID_STATUS": "This action is not allowed in the current status",
     "INVALID_CREDENTIALS": "Invalid email or password",
+    "ACCOUNT_LOCKED": "Account temporarily locked due to too many failed attempts. Try again in 15 minutes.",
+    "TENANT_INACTIVE": "Company is not active. Contact support.",
+    "USER_INACTIVE": "Your account is not active. Contact your administrator.",
+    "RATE_LIMITED": "Too many attempts. Please wait a few minutes and try again.",
     "INVALID_PRIORITY": "Priority must be a positive number",
     "INVALID_DATE": "Delivery date must be in the future",
     "INVALID_ORDER_NUMBER": "Order number is required",
@@ -91,6 +101,8 @@
     "INVALID_NAME": "Name is required",
     "INVALID_CURRENT_PASSWORD": "Current password is incorrect",
     "INVALID_REFRESH_TOKEN": "Session expired, please sign in again",
+    "READ_ONLY_CROSS_TENANT": "Read-only access — you can't modify another tenant's data.",
+    "FORBIDDEN_PEER_SUPERADMIN": "Super Administrator accounts can't be edited, deleted, or have their password reset — the owner must do it through their own profile.",
     "NOT_FOUND": "The requested item was not found",
     "PROCESS_NOT_STARTED": "The parent process must be started first",
     "PROCESS_NOT_IN_CATEGORY": "Process is not in this category",
@@ -183,7 +195,7 @@
       "PriorityChange": "Priority Change"
     },
     "UserRole": {
-      "SuperAdmin": "Super Admin",
+      "SuperAdmin": "Super Administrator",
       "Admin": "Admin",
       "Manager": "Manager",
       "Coordinator": "Coordinator",

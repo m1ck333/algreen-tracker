@@ -1,5 +1,5 @@
-import type { ShiftDto, PagedResult } from '@algreen/shared-types';
-import type { CreateShiftRequest, UpdateShiftRequest } from '@algreen/shared-types';
+import type { ShiftDto, PagedResult } from '@alblue/shared-types';
+import type { CreateShiftRequest, UpdateShiftRequest } from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const shiftsApi = {

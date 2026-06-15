@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '@algreen/auth';
-import { UserRole } from '@algreen/shared-types';
+import { useAuthStore } from '@alblue/auth';
+import { UserRole } from '@alblue/shared-types';
 
 export function RoleRedirect() {
   const user = useAuthStore((s) => s.user);

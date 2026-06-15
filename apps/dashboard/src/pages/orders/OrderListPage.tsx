@@ -7,25 +7,28 @@ import {
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined, UndoOutlined, UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, CopyOutlined, FullscreenOutlined, FullscreenExitOutlined, QuestionCircleOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { useAuthStore } from '@algreen/auth';
-import { OrderStatus, OrderType, ProcessStatus, ComplexityType, UserRole } from '@algreen/shared-types';
-import type { OrderMasterViewDto, OrderDetailDto, OrderItemDto, OrderItemProcessDto, OrderItemSubProcessDto, ProcessDto, ProductCategoryDto, SpecialRequestTypeDto, AddOrderItemRequest } from '@algreen/shared-types';
+import { useAuthStore } from '@alblue/auth';
+import { OrderStatus, OrderType, ProcessStatus, ComplexityType, UserRole } from '@alblue/shared-types';
+import type { OrderMasterViewDto, OrderDetailDto, OrderItemDto, OrderItemSubProcessDto, ProcessDto, ProductCategoryDto, SpecialRequestTypeDto, AddOrderItemRequest, OrderTypeDto, ManualProcessInput, ManualDependencyInput } from '@alblue/shared-types';
 import {
   useCreateOrder, useOrder, useActivateOrder,
   useUpdateOrder, useCancelOrder, usePauseOrder, useResumeOrder, useReopenOrder,
 } from '../../hooks/useOrders';
-import { productCategoriesApi, processesApi, ordersApi, specialRequestTypesApi, processWorkflowApi, blockRequestsApi, changeRequestsApi } from '@algreen/api-client';
+import { productCategoriesApi, processesApi, ordersApi, specialRequestTypesApi, processWorkflowApi, blockRequestsApi, changeRequestsApi, orderTypesApi } from '@alblue/api-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { StatusBadge } from '../../components/StatusBadge';
 import { OrderAttachments, type OrderAttachmentsHandle } from '../../components/OrderAttachments';
 import { compressFile } from '../../utils/compressImage';
 import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
-import { useTranslation, useEnumTranslation } from '@algreen/i18n';
+import { useTranslation, useEnumTranslation } from '@alblue/i18n';
 import { useLayoutStore } from '../../stores/layout-store';
 import dayjs from 'dayjs';
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
+import { PageHeader } from '../../components/PageHeader';
+import { getTranslatedError } from '../../utils/errors';
+import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
 
 const { Title, Text } = Typography;
 
@@ -70,19 +73,6 @@ const orderStatusTextColors: Record<OrderStatus, string> = {
 
 // ─── Helpers ─────────────────────────────────────────────
 
-function getApiErrorCode(error: unknown): string | undefined {
-  return (error as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
-}
-
-function getTranslatedError(error: unknown, t: (key: string, opts?: Record<string, string>) => string, fallback: string): string {
-  const resp = (error as { response?: { data?: { error?: { code?: string; message?: string } } } })?.response?.data?.error;
-  if (resp?.code) {
-    const translated = t(`common:errors.${resp.code}`, { defaultValue: '' });
-    if (translated) return translated;
-  }
-  return resp?.message || fallback;
-}
-
 /** Aggregate process status across all items in an order for a given processId (used in detail drawer) */
 type AggregateState = {
   status: ProcessStatus | null;
@@ -90,49 +80,38 @@ type AggregateState = {
   isPaused: boolean; // subset of isReady - show "Pauzirano" text
 };
 
+/**
+ * Sourced directly from the master-view row (BE-computed):
+ *   - processStatuses[processId] — aggregated status string
+ *   - processReady[processId]    — true if any item has it Pending + deps satisfied
+ *   - processPaused[processId]   — true if any item has it paused
+ *
+ * Previously this was recomputed on the FE from a flattened processDependencies
+ * dict, which was wrong for multi-item orders with different categories: deps
+ * from item A's category were applied to item B and vice-versa, giving false
+ * negatives/positives. The BE already does the right per-item computation —
+ * just consume it.
+ */
+type MasterRowFields = {
+  processStatuses?: Record<string, string>;
+  processReady?: Record<string, boolean>;
+  processPaused?: Record<string, boolean>;
+};
+
 function getAggregateProcessState(
-  order: OrderDetailDto,
+  masterRow: MasterRowFields | undefined,
   processId: string,
-  processDependencies?: Record<string, string[]>,
 ): AggregateState {
-  const procs = order.items
-    .map((item) => item.processes.find((p) => p.processId === processId))
-    .filter(Boolean) as OrderItemProcessDto[];
-
-  if (procs.length === 0) return { status: null, isReady: false, isPaused: false };
-
-  // Priority: Blocked > InProgress (running) > Paused/PendingReady > PendingNotReady > Completed
-  const hasBlocked = procs.some((p) => p.status === ProcessStatus.Blocked);
-  if (hasBlocked) return { status: ProcessStatus.Blocked, isReady: false, isPaused: false };
-
-  const hasRunning = procs.some((p) => p.status === ProcessStatus.InProgress && !isPaused(p));
-  if (hasRunning) return { status: ProcessStatus.InProgress, isReady: false, isPaused: false };
-
-  const hasPaused = procs.some((p) => isPaused(p));
-  const hasPendingReady = procs.some((p) => {
-    if (p.status !== ProcessStatus.Pending) return false;
-    const allDeps = processDependencies ?? {};
-    const hasDeps = Object.keys(allDeps).length > 0;
-    const deps = allDeps[processId];
-    if (deps && deps.length > 0) {
-      const item = order.items.find((it) => it.processes.some((ip) => ip.id === p.id));
-      if (!item) return false;
-      return deps.every((depId) => {
-        const depProc = item.processes.find((ip) => ip.processId === depId);
-        return depProc && (depProc.status === ProcessStatus.Completed || depProc.isWithdrawn);
-      });
-    }
-    return hasDeps; // no deps in a dependency system = independent = ready
-  });
-  if (hasPaused || hasPendingReady) return { status: ProcessStatus.Pending, isReady: true, isPaused: hasPaused };
-
-  const hasPending = procs.some((p) => p.status === ProcessStatus.Pending);
-  if (hasPending) return { status: ProcessStatus.Pending, isReady: false, isPaused: false };
-
-  if (procs.every((p) => p.status === ProcessStatus.Completed || p.isWithdrawn))
-    return { status: ProcessStatus.Completed, isReady: false, isPaused: false };
-
-  return { status: ProcessStatus.Completed, isReady: false, isPaused: false };
+  if (!masterRow?.processStatuses || !(processId in masterRow.processStatuses)) {
+    return { status: null, isReady: false, isPaused: false };
+  }
+  const status = masterRow.processStatuses[processId] as ProcessStatus;
+  const isPausedAgg = masterRow.processPaused?.[processId] ?? false;
+  const isReady = masterRow.processReady?.[processId] ?? false;
+  // BE already enforces the priority (Blocked/InProgress beat Ready), so we
+  // just forward what it says — the only twist is when paused, the bold ring
+  // is replaced with the orange "paused" visual.
+  return { status, isReady, isPaused: isPausedAgg };
 }
 
 /** Count completed vs total processes across all items (used in detail drawer) */
@@ -315,12 +294,12 @@ function ProcessTimeline({
   order,
   processes,
   tEnum,
-  processDependencies,
+  masterRow,
 }: {
   order: OrderDetailDto;
   processes: ProcessDto[];
   tEnum: (enumName: string, value: string) => string;
-  processDependencies?: Record<string, string[]>;
+  masterRow?: MasterRowFields;
 }) {
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -328,8 +307,8 @@ function ProcessTimeline({
   const CIRCLE = 24;
   const totalWidth = processes.length * STEP;
 
-  // Pre-compute aggregate states
-  const states = processes.map((proc) => getAggregateProcessState(order, proc.id, processDependencies));
+  // Pre-compute aggregate states from BE-supplied per-process fields.
+  const states = processes.map((proc) => getAggregateProcessState(masterRow, proc.id));
 
   return (
     <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
@@ -424,14 +403,15 @@ function ItemProcessBar({
   tEnum,
   onRestart,
   canRestart,
-  processDependencies,
+  itemProcessReady,
 }: {
   item: OrderItemDto;
   processMap: Map<string, ProcessDto>;
   tEnum: (enumName: string, value: string) => string;
   onRestart?: (orderItemProcessId: string, resetTime: boolean) => void;
   canRestart?: boolean;
-  processDependencies?: Record<string, string[]>;
+  /** Per-item readiness map keyed by processId. Source of truth from BE. */
+  itemProcessReady?: Record<string, boolean>;
 }) {
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -445,33 +425,13 @@ function ItemProcessBar({
 
   return (
     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-      {sorted.map((proc, idx) => {
+      {sorted.map((proc) => {
         const process = processMap.get(proc.processId);
         const procPaused = isPaused(proc);
-        // Check if this Pending process is ready to start (using dependencies if available).
-        // IMPORTANT: look up dependencies in the UNFILTERED `item.processes`, not in
-        // `sorted` (which strips Withdrawn). If a dep is Withdrawn for this item it
-        // counts as satisfied — strip-then-lookup made every such case look "not ready".
-        let isReady = false;
-        if (proc.status === ProcessStatus.Pending) {
-          const allDeps = processDependencies ?? {};
-          const hasDependencySystem = Object.keys(allDeps).length > 0;
-          const deps = allDeps[proc.processId];
-          if (deps && deps.length > 0) {
-            isReady = deps.every((depId) => {
-              const depProc = item.processes.find((p) => p.processId === depId);
-              if (!depProc) return true; // dep doesn't exist on this item → effectively withdrawn
-              return depProc.status === ProcessStatus.Completed || depProc.isWithdrawn;
-            });
-          } else if (hasDependencySystem) {
-            isReady = true;
-          } else if (idx === 0) {
-            isReady = true;
-          } else {
-            const prev = sorted[idx - 1];
-            isReady = prev.status === ProcessStatus.Completed || prev.isWithdrawn;
-          }
-        }
+        // Trust BE's per-item readiness. Was previously recomputed from a flat
+        // processDependencies dict which unioned deps across categories and
+        // gave wrong answers for multi-item orders.
+        const isReady = !!itemProcessReady?.[proc.processId];
         const color = procPaused ? '#FFAA00' : processStatusColors[proc.status];
         const statusLabel = tEnum('ProcessStatus', proc.status);
         return (
@@ -534,6 +494,7 @@ export function OrderListPage() {
   const { token } = theme.useToken();
   const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>(undefined);
   const [orderTypeFilter, setOrderTypeFilter] = useState<OrderType | undefined>(undefined);
+  const [isInvoicedFilter, setIsInvoicedFilter] = useState<boolean | undefined>(undefined);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [dateFrom, setDateFrom] = useState<dayjs.Dayjs | null>(null);
@@ -551,13 +512,14 @@ export function OrderListPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, orderTypeFilter, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, orderTypeFilter, isInvoicedFilter, dateFrom, dateTo]);
 
   const { data: masterResult, isLoading } = useQuery({
-    queryKey: ['orders-master-view', tenantId, statusFilter, orderTypeFilter, debouncedSearch, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
+    queryKey: ['orders-master-view', tenantId, statusFilter, orderTypeFilter, isInvoicedFilter, debouncedSearch, dateFrom?.format('YYYY-MM-DD'), dateTo?.format('YYYY-MM-DD'), page, pageSize, sortBy, sortDirection],
     queryFn: () => ordersApi.getMasterView({
       status: statusFilter,
       orderType: orderTypeFilter,
+      isInvoiced: isInvoicedFilter,
       search: debouncedSearch || undefined,
       dateFrom: dateFrom?.format('YYYY-MM-DD'),
       dateTo: dateTo?.format('YYYY-MM-DD'),
@@ -567,19 +529,27 @@ export function OrderListPage() {
       sortDirection,
     }).then((r) => r.data),
     enabled: !!tenantId,
-    refetchInterval: 30_000,
+    // SignalR push handles most order-state changes within ~1s. Polling is
+    // the safety net for missed events (hub reconnect, etc.).
+    refetchInterval: 120_000,
   });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [isCreating, setIsCreating] = useState(false);
   const [detailOrderId, setDetailOrderId] = useState<string | null>(() => searchParams.get('detail'));
 
-  // Clear detail param from URL after reading it
+  // Open the drawer whenever ?detail=<id> appears in the URL, then strip the
+  // param so the URL stays clean. Runs on mount AND on every later URL change,
+  // so clicking a notification while already on /orders also works (the
+  // useState initializer above only fires once).
   useEffect(() => {
-    if (searchParams.has('detail')) {
+    const detail = searchParams.get('detail');
+    if (detail) {
+      setDetailOrderId(detail);
       searchParams.delete('detail');
       setSearchParams(searchParams, { replace: true });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams]);
   const [addingItem, setAddingItem] = useState(false);
   const [createPendingItems, setCreatePendingItems] = useState<AddOrderItemRequest[]>([]);
   const [pendingFiles, setPendingFiles] = useState<Map<number, File[]>>(new Map()); // key: item index, -1 for order-level
@@ -605,7 +575,7 @@ export function OrderListPage() {
   const [editForm] = Form.useForm();
   const [itemForm] = Form.useForm();
   const { guardedClose: guardedDrawerClose, onValuesChange: onCreateValuesChange } = useUnsavedChanges(isCreating);
-  const { guardedClose: guardedEditClose, onValuesChange: onEditValuesChange } = useUnsavedChanges(!!detailOrderId);
+  const { guardedClose: guardedEditClose, onValuesChange: onEditValuesChange, markClean: markEditClean } = useUnsavedChanges(!!detailOrderId);
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
   const fullscreen = useLayoutStore((s) => s.fullscreen);
@@ -633,17 +603,25 @@ export function OrderListPage() {
   const pauseOrder = usePauseOrder();
   const resumeOrder = useResumeOrder();
   const { data: detailOrder, isLoading: detailLoading } = useOrder(detailOrderId ?? undefined);
-  // Fetch processDependencies for the detail order independently from paginated master view
-  const { data: detailDeps } = useQuery({
-    queryKey: ['order-detail-deps', tenantId, detailOrderId],
+  // Fetch the master-view row for this order so the drawer can reuse the
+  // BE-computed processStatuses / processReady / processPaused / processDependencies
+  // instead of recomputing on the FE. Re-doing readiness on the FE was buggy
+  // for multi-item orders with different categories — the flattened deps dict
+  // cross-pollinated edges between items. BE already does this correctly
+  // per-item; we just trust the row.
+  const { data: detailMasterRow } = useQuery({
+    queryKey: ['order-detail-master-row', tenantId, detailOrderId],
     queryFn: () =>
-      ordersApi.getMasterView({ search: detailOrder!.orderNumber, page: 1, pageSize: 1 }).then((r) => {
-        const entry = r.data.items.find((o) => o.id === detailOrderId);
-        return entry?.processDependencies ?? {};
+      ordersApi.getMasterView({ search: detailOrder!.orderNumber, page: 1, pageSize: 50 }).then((r) => {
+        return r.data.items.find((o) => o.id === detailOrderId) ?? null;
       }),
     enabled: !!tenantId && !!detailOrderId && !!detailOrder,
-    staleTime: 10_000,
+    staleTime: 5_000,
+    // SignalR push (above) refreshes this within ~1s of any process state
+    // change. Polling stays as a safety net.
+    refetchInterval: 60_000,
   });
+
 
   // Fetch block & change requests for the detail order
   const { data: detailBlockRequests } = useQuery({
@@ -694,6 +672,51 @@ export function OrderListPage() {
     enabled: !!tenantId,
   });
 
+  // Order types — used to gate the manual-processes section in create/edit drawer.
+  // Each enum value (Standard/Repair/...) maps to an OrderTypeDto by Code, and
+  // each type carries an `allowsManualProcesses` flag the admin toggles.
+  const { data: orderTypes } = useQuery({
+    queryKey: ['order-types', tenantId, 'active'],
+    queryFn: () => orderTypesApi.getAll({ isActive: true, pageSize: 100 }).then((r) => r.data.items),
+    enabled: !!tenantId,
+  });
+  const orderTypeByCode = useMemo(() => {
+    const map = new Map<string, OrderTypeDto>();
+    (orderTypes ?? []).forEach((ot) => map.set(ot.code.toUpperCase(), ot));
+    return map;
+  }, [orderTypes]);
+
+  // Watch the create-form's orderType field so we can render the manual-process
+  // section conditionally when the matched OrderType has allowsManualProcesses=true.
+  const watchedOrderType = Form.useWatch('orderType', form) as OrderType | undefined;
+  const watchedOrderTypeMeta = watchedOrderType
+    ? orderTypeByCode.get(String(watchedOrderType).toUpperCase())
+    : undefined;
+
+  // Manual process picker state — used only when watchedOrderTypeMeta.allowsManualProcesses
+  // is true. Sequence is the position in `manualProcessIds`. Reset whenever the
+  // selected order type stops allowing manual processes.
+  const [manualProcessIds, setManualProcessIds] = useState<string[]>([]);
+  const [manualComplexity, setManualComplexity] = useState<Record<string, ComplexityType | undefined>>({});
+  const [manualDeps, setManualDeps] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    if (!watchedOrderTypeMeta?.allowsManualProcesses) {
+      setManualProcessIds([]);
+      setManualComplexity({});
+      setManualDeps({});
+    }
+  }, [watchedOrderTypeMeta?.allowsManualProcesses]);
+  // Drop dangling deps when a process is removed from the manual list.
+  useEffect(() => {
+    setManualDeps((prev) => {
+      const next: Record<string, string[]> = {};
+      for (const pid of manualProcessIds) {
+        next[pid] = (prev[pid] ?? []).filter((d) => manualProcessIds.includes(d) && d !== pid);
+      }
+      return next;
+    });
+  }, [manualProcessIds]);
+
   // Process lookup map
   const processMap = useMemo(() => {
     const map = new Map<string, ProcessDto>();
@@ -707,7 +730,7 @@ export function OrderListPage() {
       { header: t('common:labels.orderNumber'), value: (o) => o.orderNumber, width: 16 },
       {
         header: t('common:labels.type'),
-        value: (o) => tEnum('OrderType', o.orderType),
+        value: (o) => orderTypeByCode.get(String(o.orderType).toUpperCase())?.name ?? tEnum('OrderType', o.orderType),
         cell: (o) => ({ fillColor: orderTypeColors[o.orderType] === 'blue' ? '#E6F4FF' : orderTypeColors[o.orderType] === 'orange' ? '#FFF4E6' : orderTypeColors[o.orderType] === 'red' ? '#FFE6E6' : '#F4E6FF' }),
         width: 14,
       },
@@ -731,7 +754,7 @@ export function OrderListPage() {
       },
       {
         header: t('orders.export.invoiced'),
-        value: (o) => (o.isInvoiced ? t('common:status.active') : '-'),
+        value: (o) => (o.isInvoiced ? t('common:actions.yes') : t('common:actions.no')),
         align: 'center',
         width: 12,
       },
@@ -760,6 +783,7 @@ export function OrderListPage() {
           if (!status) return undefined;
           const isPaused = o.processPaused[proc.id];
           const fill = isPaused ? '#FFAA00' : processStatusColors[status];
+          // White text for dark fills (Blocked red, InProgress blue), dark for light fills
           const dark = status === ProcessStatus.Blocked || status === ProcessStatus.InProgress;
           return { fillColor: fill, fontColor: dark ? '#FFFFFF' : '#1F1F1F', bold: status === ProcessStatus.Blocked };
         },
@@ -774,15 +798,17 @@ export function OrderListPage() {
     if (debouncedSearch) filters.push({ label: t('export.search'), value: debouncedSearch });
     if (statusFilter) filters.push({ label: t('export.status'), value: tEnum('OrderStatus', statusFilter) });
     if (orderTypeFilter) filters.push({ label: t('export.type'), value: tEnum('OrderType', orderTypeFilter) });
+    if (isInvoicedFilter !== undefined) filters.push({ label: t('orders.invoiced'), value: isInvoicedFilter ? t('common:actions.yes') : t('common:actions.no') });
     if (dateFrom) filters.push({ label: t('export.dateFrom'), value: dateFrom.format('DD.MM.YYYY.') });
     if (dateTo) filters.push({ label: t('export.dateTo'), value: dateTo.format('DD.MM.YYYY.') });
     return filters;
-  }, [debouncedSearch, statusFilter, orderTypeFilter, dateFrom, dateTo, t, tEnum]);
+  }, [debouncedSearch, statusFilter, orderTypeFilter, isInvoicedFilter, dateFrom, dateTo, t, tEnum]);
 
   const fetchAllOrders = async (): Promise<OrderMasterViewDto[]> => {
     const { data } = await ordersApi.getMasterView({
       status: statusFilter,
       orderType: orderTypeFilter,
+      isInvoiced: isInvoicedFilter,
       search: debouncedSearch || undefined,
       dateFrom: dateFrom?.format('YYYY-MM-DD'),
       dateTo: dateTo?.format('YYYY-MM-DD'),
@@ -795,6 +821,21 @@ export function OrderListPage() {
   };
 
   const queryClient = useQueryClient();
+
+  // SignalR push: refresh the order list + open-detail row whenever an event
+  // changes order/process state somewhere in the system. Each handler is a
+  // single cache invalidation — the underlying queries refetch with the
+  // user's current filters/sort/page.
+  const invalidateOrderViews = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
+    queryClient.invalidateQueries({ queryKey: ['order-detail-master-row'] });
+  }, [queryClient]);
+  useSignalREvent(SignalREvents.OrderActivated, invalidateOrderViews);
+  useSignalREvent(SignalREvents.OrderUpdated, invalidateOrderViews);
+  useSignalREvent(SignalREvents.ProcessStarted, invalidateOrderViews);
+  useSignalREvent(SignalREvents.ProcessCompleted, invalidateOrderViews);
+  useSignalREvent(SignalREvents.ProcessBlocked, invalidateOrderViews);
+  useSignalREvent(SignalREvents.ProcessUnblocked, invalidateOrderViews);
 
   // ─── Pending state for unified form ──────────────────────
   const [pendingItems, setPendingItems] = useState<AddOrderItemRequest[]>([]);
@@ -821,8 +862,6 @@ export function OrderListPage() {
     setCurrentDraftItemFiles([]);
     setAddingItem(false);
   }, []);
-
-  const hasPendingChanges = pendingItems.length > 0 || pendingItemRemovals.length > 0 || pendingComplexity.size > 0 || pendingSpecialRequestAdds.length > 0 || pendingSpecialRequestRemovals.length > 0;
 
   const changePriorityMutation = useMutation({
     mutationFn: ({ id, priority }: { id: string; priority: number }) => ordersApi.changePriority(id, priority),
@@ -870,12 +909,13 @@ export function OrderListPage() {
       queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
       message.success(t('orders.updatedSuccess'));
       setEditingOrderNumber(false);
+      markEditClean();
     } catch (err) {
       message.error(getTranslatedError(err, t, t('orders.updateFailed')));
     } finally {
       setSavingInline(false);
     }
-  }, [detailOrder, orderNumberDraft, updateOrder, queryClient, t, message]);
+  }, [detailOrder, orderNumberDraft, updateOrder, queryClient, t, message, markEditClean]);
 
   const saveInlineDeliveryDate = useCallback(async () => {
     if (!detailOrder || !deliveryDateDraft) return;
@@ -888,12 +928,13 @@ export function OrderListPage() {
       queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
       message.success(t('orders.updatedSuccess'));
       setEditingDeliveryDate(false);
+      markEditClean();
     } catch (err) {
       message.error(getTranslatedError(err, t, t('orders.updateFailed')));
     } finally {
       setSavingInline(false);
     }
-  }, [detailOrder, deliveryDateDraft, updateOrder, queryClient, t, message]);
+  }, [detailOrder, deliveryDateDraft, updateOrder, queryClient, t, message, markEditClean]);
 
   useEffect(() => {
     if (detailOrder) {
@@ -939,6 +980,22 @@ export function OrderListPage() {
         const compressed = await Promise.all(files.map((f) => compressFile(f)));
         if (compressed.length > 0) compressedItemAttachments.set(key, compressed);
       }
+      // Build manual processes payload only when the picked order type allows it.
+      const manualProcessesPayload: ManualProcessInput[] | undefined =
+        watchedOrderTypeMeta?.allowsManualProcesses && manualProcessIds.length > 0
+          ? manualProcessIds.map((pid, i) => ({
+              processId: pid,
+              sequenceOrder: i + 1,
+              defaultComplexity: manualComplexity[pid],
+            }))
+          : undefined;
+      const manualDependenciesPayload: ManualDependencyInput[] | undefined =
+        watchedOrderTypeMeta?.allowsManualProcesses && manualProcessIds.length > 0
+          ? Object.entries(manualDeps).flatMap(([pid, deps]) =>
+              deps.map((d) => ({ processId: pid, dependsOnProcessId: d })),
+            )
+          : undefined;
+
       await createOrder.mutateAsync({
         orderNumber: values.orderNumber as string,
         deliveryDate: dayjs(values.deliveryDate as string).format('YYYY-MM-DD') + 'T12:00:00Z',
@@ -950,6 +1007,8 @@ export function OrderListPage() {
         items: createPendingItems.length > 0 ? createPendingItems : undefined,
         attachments: compressedOrderFiles.length > 0 ? compressedOrderFiles : undefined,
         itemAttachments: compressedItemAttachments.size > 0 ? compressedItemAttachments : undefined,
+        manualProcesses: manualProcessesPayload,
+        manualDependencies: manualDependenciesPayload && manualDependenciesPayload.length > 0 ? manualDependenciesPayload : undefined,
       });
       message.success(t('orders.createdSuccess'));
       form.resetFields();
@@ -957,6 +1016,9 @@ export function OrderListPage() {
       setPendingFiles(new Map());
       setAddingItem(false);
       setIsCreating(false);
+      setManualProcessIds([]);
+      setManualComplexity({});
+      setManualDeps({});
     } catch (err) {
       message.error(getTranslatedError(err, t, t('orders.createFailed')));
     }
@@ -970,6 +1032,7 @@ export function OrderListPage() {
         title: t('common:labels.priority'),
         dataIndex: 'priority',
         width: 70,
+        fixed: 'left',
         sorter: true,
         sortOrder: sortBy === 'priority' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
       },
@@ -977,6 +1040,7 @@ export function OrderListPage() {
         title: t('orders.orderNumber'),
         dataIndex: 'orderNumber',
         width: 160,
+        fixed: 'left',
         sorter: true,
         sortOrder: sortBy === 'orderNumber' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
         render: (text: string, record: OrderMasterViewDto) => (
@@ -997,7 +1061,9 @@ export function OrderListPage() {
         sorter: true,
         sortOrder: sortBy === 'orderType' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
         render: (type: OrderType) => (
-          <Tag color={orderTypeColors[type]}>{tEnum('OrderType', type)}</Tag>
+          <Tag color={orderTypeColors[type]}>
+            {orderTypeByCode.get(String(type).toUpperCase())?.name ?? tEnum('OrderType', type)}
+          </Tag>
         ),
       },
       {
@@ -1160,12 +1226,9 @@ export function OrderListPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>
-          {t('orders.title')}
-        </Title>
-        <Space>
-          <Popover
+      <PageHeader
+        title={t('orders.title')}
+        actions={<><Popover
             trigger="click"
             placement="bottomRight"
             title={t('orders.legend.title')}
@@ -1232,9 +1295,8 @@ export function OrderListPage() {
             >
               {t('orders.createOrder')}
             </Button>
-          )}
-        </Space>
-      </div>
+          )}</>}
+      />
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <Input.Search
@@ -1258,7 +1320,21 @@ export function OrderListPage() {
           value={orderTypeFilter}
           onChange={(v) => setOrderTypeFilter(v)}
           style={{ width: 160 }}
-          options={Object.values(OrderType).map((ot) => ({ label: tEnum('OrderType', ot), value: ot }))}
+          options={Object.values(OrderType).map((ot) => ({
+            label: orderTypeByCode.get(String(ot).toUpperCase())?.name ?? tEnum('OrderType', ot),
+            value: ot,
+          }))}
+        />
+        <Select
+          placeholder={t('orders.invoiced')}
+          allowClear
+          value={isInvoicedFilter}
+          onChange={(v) => setIsInvoicedFilter(v)}
+          style={{ width: 140 }}
+          options={[
+            { label: t('common:actions.yes'), value: true },
+            { label: t('common:actions.no'), value: false },
+          ]}
         />
         <DatePicker
           value={dateFrom}
@@ -1443,6 +1519,7 @@ export function OrderListPage() {
                   queryClient.invalidateQueries({ queryKey: ['orders-master-view'] });
                   clearPendingState();
                   message.success(t('orders.updatedSuccess'));
+                  markEditClean();
                 } catch (err) {
                   message.error(getTranslatedError(err, t, t('orders.updateFailed')));
                 }
@@ -1477,7 +1554,10 @@ export function OrderListPage() {
                     label={t('orders.orderType')}
                     rules={[{ required: true }]}
                   >
-                    <Select options={Object.values(OrderType).map((ot) => ({ label: tEnum('OrderType', ot), value: ot }))} />
+                    <Select options={Object.values(OrderType).map((ot) => ({
+                      label: orderTypeByCode.get(String(ot).toUpperCase())?.name ?? tEnum('OrderType', ot),
+                      value: ot,
+                    }))} />
                   </Form.Item>
                 </Col>
               </Row>
@@ -1526,6 +1606,105 @@ export function OrderListPage() {
                   </Form.Item>
                 </Col>
               </Row>
+
+              {watchedOrderTypeMeta?.allowsManualProcesses && (
+                <Card
+                  size="small"
+                  style={{ marginTop: 8, borderColor: token.colorPrimaryBorder, background: token.colorPrimaryBg }}
+                  title={
+                    <Space>
+                      <Text strong>{t('orders.manualProcessesTitle')}</Text>
+                      <Tag color="blue">{watchedOrderTypeMeta.name}</Tag>
+                    </Space>
+                  }
+                >
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 12 }}>
+                    {t('orders.manualProcessesHelp')}
+                  </Text>
+                  <Select
+                    mode="multiple"
+                    style={{ width: '100%', marginBottom: 8 }}
+                    placeholder={t('orders.manualProcessesPick')}
+                    value={manualProcessIds}
+                    onChange={(vals: string[]) => setManualProcessIds(vals)}
+                    options={(processes ?? []).map((p) => ({ label: `${p.code} — ${p.name}`, value: p.id }))}
+                    optionFilterProp="label"
+                  />
+                  {manualProcessIds.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {manualProcessIds.map((pid, idx) => {
+                        const proc = processMap.get(pid);
+                        const otherIds = manualProcessIds.filter((id) => id !== pid);
+                        // Adding edge pid → cand cycles if cand already reaches pid via
+                        // existing manualDeps. BFS forward from cand.
+                        const wouldCycle = (cand: string): boolean => {
+                          const visited = new Set<string>();
+                          const stack: string[] = [cand];
+                          while (stack.length) {
+                            const cur = stack.pop()!;
+                            if (cur === pid) return true;
+                            if (visited.has(cur)) continue;
+                            visited.add(cur);
+                            for (const next of manualDeps[cur] ?? []) stack.push(next);
+                          }
+                          return false;
+                        };
+                        return (
+                          <Card key={pid} size="small" bodyStyle={{ padding: 8 }}>
+                            <Row gutter={8} align="middle">
+                              <Col flex="40px"><Tag>{idx + 1}</Tag></Col>
+                              <Col flex="auto">
+                                <Text strong>{proc ? `${proc.code} — ${proc.name}` : pid.slice(0, 8)}</Text>
+                              </Col>
+                              <Col flex="120px">
+                                <Select
+                                  size="small"
+                                  allowClear
+                                  style={{ width: '100%' }}
+                                  placeholder={t('common:labels.complexity')}
+                                  value={manualComplexity[pid]}
+                                  onChange={(v) => setManualComplexity((prev) => ({ ...prev, [pid]: v }))}
+                                  options={Object.values(ComplexityType).map((c) => ({ label: tEnum('ComplexityType', c), value: c }))}
+                                />
+                              </Col>
+                            </Row>
+                            {otherIds.length > 0 && (
+                              <Row gutter={8} align="middle" style={{ marginTop: 6 }}>
+                                <Col flex="80px">
+                                  <Text type="secondary" style={{ fontSize: 12 }}>{t('orders.dependsOn')}</Text>
+                                </Col>
+                                <Col flex="auto">
+                                  <Select
+                                    mode="multiple"
+                                    size="small"
+                                    style={{ width: '100%' }}
+                                    placeholder={t('orders.dependsOnPlaceholder')}
+                                    value={manualDeps[pid] ?? []}
+                                    onChange={(vals: string[]) => setManualDeps((prev) => ({ ...prev, [pid]: vals }))}
+                                    options={otherIds.map((id) => {
+                                      const p = processMap.get(id);
+                                      const cycles = wouldCycle(id);
+                                      const isCurrent = (manualDeps[pid] ?? []).includes(id);
+                                      return {
+                                        label: cycles && !isCurrent
+                                          ? `${p ? `${p.code} — ${p.name}` : id.slice(0, 8)} (${t('orders.cycleBlocked')})`
+                                          : (p ? `${p.code} — ${p.name}` : id.slice(0, 8)),
+                                        value: id,
+                                        disabled: cycles && !isCurrent,
+                                      };
+                                    })}
+                                    optionFilterProp="label"
+                                  />
+                                </Col>
+                              </Row>
+                            )}
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Card>
+              )}
             </Form>
 
             <Divider style={{ margin: '12px 0' }} />
@@ -1774,7 +1953,7 @@ export function OrderListPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 8 }}>
               <Space size={4} wrap>
                 <Text style={{ color: orderTypeTextColors[detailOrder.orderType], fontWeight: 500 }}>
-                  #{tEnum('OrderType', detailOrder.orderType)}
+                  #{orderTypeByCode.get(String(detailOrder.orderType).toUpperCase())?.name ?? tEnum('OrderType', detailOrder.orderType)}
                 </Text>
                 <StatusText status={detailOrder.status} />
               </Space>
@@ -1992,8 +2171,51 @@ export function OrderListPage() {
                 <Text type="secondary" style={{ fontSize: 12, marginBottom: 4, display: 'block' }}>
                   {t('orders.processFlow')}
                 </Text>
-                <ProcessTimeline order={detailOrder} processes={processes} tEnum={tEnum} processDependencies={detailDeps} />
+                <ProcessTimeline order={detailOrder} processes={processes} tEnum={tEnum} masterRow={detailMasterRow ?? undefined} />
               </div>
+            )}
+
+            {/* Manual processes (read-only summary) — only when this order has them. */}
+            {detailOrder.manualProcesses && detailOrder.manualProcesses.length > 0 && (
+              <Card
+                size="small"
+                style={{ marginBottom: 12, borderColor: token.colorPrimaryBorder, background: token.colorPrimaryBg }}
+                title={
+                  <Space>
+                    <Text strong>{t('orders.manualProcessesTitle')}</Text>
+                    <Tag color="blue">
+                      {orderTypeByCode.get(String(detailOrder.orderType).toUpperCase())?.name ?? tEnum('OrderType', detailOrder.orderType)}
+                    </Tag>
+                  </Space>
+                }
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {[...detailOrder.manualProcesses]
+                    .sort((a, b) => a.sequenceOrder - b.sequenceOrder)
+                    .map((mp) => {
+                      const proc = processMap.get(mp.processId);
+                      const deps = (detailOrder.manualProcessDependencies ?? []).filter((d) => d.processId === mp.processId);
+                      return (
+                        <div key={mp.processId} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <Tag>{mp.sequenceOrder}</Tag>
+                          <Text strong>{proc ? `${proc.code} — ${proc.name}` : mp.processId.slice(0, 8)}</Text>
+                          {mp.defaultComplexity && (
+                            <Tag color="default">{tEnum('ComplexityType', mp.defaultComplexity)}</Tag>
+                          )}
+                          {deps.length > 0 && (
+                            <>
+                              <Text type="secondary" style={{ fontSize: 12 }}>{t('orders.dependsOn')}:</Text>
+                              {deps.map((d) => {
+                                const dp = processMap.get(d.dependsOnProcessId);
+                                return <Tag key={d.dependsOnProcessId}>{dp ? `${dp.code} — ${dp.name}` : d.dependsOnProcessId.slice(0, 8)}</Tag>;
+                              })}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </Card>
             )}
 
             <Divider style={{ margin: '12px 0' }} />
@@ -2139,7 +2361,7 @@ export function OrderListPage() {
                   >
                     <ItemProcessBar
                       item={item} processMap={processMap} tEnum={tEnum}
-                      processDependencies={detailDeps}
+                      itemProcessReady={detailMasterRow?.itemProcessReady?.[item.id]}
                       canRestart={(detailOrder.status === OrderStatus.Active || detailOrder.status === OrderStatus.Completed) && user?.role !== UserRole.SalesManager}
                       onRestart={async (oipId, resetTime) => {
                         try {

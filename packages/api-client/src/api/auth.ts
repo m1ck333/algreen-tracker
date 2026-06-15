@@ -1,5 +1,5 @@
-import type { LoginRequest, RefreshTokenRequest } from '@algreen/shared-types';
-import type { LoginResponseDto } from '@algreen/shared-types';
+import type { LoginRequest, RefreshTokenRequest } from '@alblue/shared-types';
+import type { LoginResponseDto } from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export const authApi = {

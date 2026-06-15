@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import {
@@ -6,14 +7,6 @@ import {
   Select, InputNumber, Divider, Popconfirm, DatePicker, theme,
 } from 'antd';
 
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
 import { PlusOutlined, DeleteOutlined, HolderOutlined, CopyOutlined } from '@ant-design/icons';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -26,33 +19,22 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { productCategoriesApi, processesApi } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
+import { productCategoriesApi, processesApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
 import type {
   ProductCategoryDto,
   ProductCategoryProcessDto,
   ProductCategoryDependencyDto,
-} from '@algreen/shared-types';
-import { ComplexityType } from '@algreen/shared-types';
-import { useTranslation } from '@algreen/i18n';
+} from '@alblue/shared-types';
+import { ComplexityType } from '@alblue/shared-types';
+import { useTranslation } from '@alblue/i18n';
 import dayjs from 'dayjs';
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
+import { PageHeader } from '../../components/PageHeader';
+import { getTranslatedError } from '../../utils/errors';
 
 const { Title, Text } = Typography;
-
-function getApiErrorCode(error: unknown): string | undefined {
-  return (error as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
-}
-
-function getTranslatedError(error: unknown, t: (key: string, opts?: Record<string, string>) => string, fallback: string): string {
-  const resp = (error as { response?: { data?: { error?: { code?: string; message?: string } } } })?.response?.data?.error;
-  if (resp?.code) {
-    const translated = t(`common:errors.${resp.code}`, { defaultValue: '' });
-    if (translated) return translated;
-  }
-  return resp?.message || fallback;
-}
 
 const DragHandleContext = React.createContext<ReturnType<typeof useSortable>['listeners']>(undefined);
 
@@ -103,7 +85,7 @@ export function ProductCategoriesPage() {
   const { t } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
-  const { guardedClose: guardedDrawerClose, onValuesChange: onDrawerValuesChange } = useUnsavedChanges(isCreating || !!detailId);
+  const { guardedClose: guardedDrawerClose, onValuesChange: onDrawerValuesChange, markClean: markDrawerClean } = useUnsavedChanges(isCreating || !!detailId);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -238,6 +220,7 @@ export function ProductCategoriesPage() {
     onSuccess: () => {
       invalidate();
       message.success(t('admin.productCategories.updated'));
+      markDrawerClean();
     },
     onError: (err) => message.error(getTranslatedError(err, t, t('admin.productCategories.updateFailed'))),
   });
@@ -354,6 +337,8 @@ export function ProductCategoriesPage() {
       dataIndex: 'name',
       sorter: true,
       sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
+      fixed: 'left' as const,
+      width: 240,
     },
     { title: t('common:labels.description'), dataIndex: 'description', ellipsis: true },
     {
@@ -552,9 +537,9 @@ export function ProductCategoriesPage() {
   // ─── Render ───────────────────────────────────────────
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>{t('admin.productCategories.title')}</Title>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <PageHeader
+        title={t('admin.productCategories.title')}
+        actions={<><div style={{ display: 'flex', gap: 8 }}>
           <TableExportButton
             onFetchAll={fetchAllCategories}
             columns={exportColumns}
@@ -568,10 +553,10 @@ export function ProductCategoriesPage() {
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); clearLocal(); setIsCreating(true); }}>
             {t('admin.productCategories.addCategory')}
           </Button>
-        </div>
-      </div>
+        </div></>}
+      />
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 , flexWrap: 'wrap' }}>
         <Input.Search
           placeholder={t('common:actions.search')}
           allowClear

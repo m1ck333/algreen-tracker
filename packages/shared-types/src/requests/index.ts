@@ -21,6 +21,12 @@ export interface CreateUserRequest {
   lastName: string;
   role: UserRole;
   processIds?: string[];
+  /**
+   * Override the tenant this user is created in. SuperAdmin only — BE
+   * rejects this for non-SuperAdmin callers. Used by the tenant-creation
+   * flow to seed the initial Admin in the freshly-created tenant.
+   */
+  tenantId?: string;
 }
 
 export interface UpdateUserRequest {
@@ -30,6 +36,9 @@ export interface UpdateUserRequest {
   isActive: boolean;
   canIncludeWithdrawnInAnalysis: boolean;
   processIds?: string[];
+  /** Extra roles beyond the primary. Null = leave existing; non-null
+   *  array (incl. empty) = replace. Saša 08.06.2026. */
+  additionalRoles?: UserRole[];
 }
 
 export interface ChangePasswordRequest {
@@ -43,6 +52,11 @@ export interface CreateShiftRequest {
   name: string;
   startTime: string;
   endTime: string;
+  breakMinutes: number;
+  maxOvertimeHours: number;
+  autoLogoutAfterHours: number;
+  alarmBeforeLogoutMinutes: number;
+  autoLogoutRegularMinutes: number;
 }
 
 export interface UpdateShiftRequest {
@@ -50,6 +64,11 @@ export interface UpdateShiftRequest {
   startTime: string;
   endTime: string;
   isActive: boolean;
+  breakMinutes: number;
+  maxOvertimeHours: number;
+  autoLogoutAfterHours: number;
+  alarmBeforeLogoutMinutes: number;
+  autoLogoutRegularMinutes: number;
 }
 
 // ─── Orders ──────────────────────────────────────────────
@@ -61,6 +80,17 @@ export interface CreateOrderItemInput {
   notes?: string;
 }
 
+export interface ManualProcessInput {
+  processId: string;
+  sequenceOrder: number;
+  defaultComplexity?: ComplexityType;
+}
+
+export interface ManualDependencyInput {
+  processId: string;
+  dependsOnProcessId: string;
+}
+
 export interface CreateOrderRequest {
   orderNumber: string;
   deliveryDate: string;
@@ -70,6 +100,8 @@ export interface CreateOrderRequest {
   customWarningDays?: number;
   customCriticalDays?: number;
   items?: CreateOrderItemInput[];
+  manualProcesses?: ManualProcessInput[];
+  manualDependencies?: ManualDependencyInput[];
 }
 
 export interface UpdateOrderRequest {
@@ -242,6 +274,21 @@ export interface AddCategoryDependencyRequest {
   dependsOnProcessId: string;
 }
 
+// ─── Order Types ─────────────────────────────────────────
+
+export interface CreateOrderTypeRequest {
+  // Optional — server auto-generates a slug from name when empty.
+  code?: string;
+  name: string;
+  allowsManualProcesses: boolean;
+}
+
+export interface UpdateOrderTypeRequest {
+  name: string;
+  allowsManualProcesses: boolean;
+  isActive: boolean;
+}
+
 // ─── Special Request Types ───────────────────────────────
 
 export interface CreateSpecialRequestTypeRequest {
@@ -286,18 +333,4 @@ export interface UpdateTenantSettingsRequest {
   defaultCriticalDays: number;
   warningColor: string;
   criticalColor: string;
-}
-
-// ─── Order Types ─────────────────────────────────────────
-
-export interface CreateOrderTypeRequest {
-  code?: string;
-  name: string;
-  allowsManualProcesses: boolean;
-}
-
-export interface UpdateOrderTypeRequest {
-  name: string;
-  allowsManualProcesses: boolean;
-  isActive: boolean;
 }

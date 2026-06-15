@@ -1,12 +1,12 @@
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Upload, Button, List, Space, Typography, Modal, App, theme } from 'antd';
 import { UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, UndoOutlined, DownloadOutlined } from '@ant-design/icons';
-import { ordersApi } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
-import type { OrderAttachmentDto } from '@algreen/shared-types';
-import { UserRole } from '@algreen/shared-types';
+import { ordersApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
+import type { OrderAttachmentDto } from '@alblue/shared-types';
+import { UserRole } from '@alblue/shared-types';
 import { compressFile } from '../utils/compressImage';
-import { useTranslation } from '@algreen/i18n';
+import { useTranslation } from '@alblue/i18n';
 
 const { Text } = Typography;
 

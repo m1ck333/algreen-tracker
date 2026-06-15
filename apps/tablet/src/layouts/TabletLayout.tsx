@@ -1,15 +1,16 @@
 import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@algreen/auth';
+import { useAuthStore } from '@alblue/auth';
 import {
   createConnection,
   startConnection,
   joinTenantGroup,
-} from '@algreen/signalr-client';
-import { tokenManager } from '@algreen/api-client';
+} from '@alblue/signalr-client';
+import { tokenManager } from '@alblue/api-client';
 import { BottomNav } from '../components/BottomNav';
 import { OfflineBanner } from '../components/OfflineBanner';
+import { AutoLogoutBanner } from '../components/AutoLogoutBanner';
 import { StatusBar } from '../components/StatusBar';
 import { PullToRefresh } from '../components/PullToRefresh';
 
@@ -97,6 +98,7 @@ export function TabletLayout() {
       <StatusBar />
 
       <OfflineBanner />
+      <AutoLogoutBanner />
       <PullToRefresh>
         <main className="p-4 pb-24">
           <Outlet />

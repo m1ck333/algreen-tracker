@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@algreen/auth';
-import { tabletApi, workSessionsApi, processWorkflowApi } from '@algreen/api-client';
+import { useAuthStore } from '@alblue/auth';
+import { tabletApi, workSessionsApi, processWorkflowApi } from '@alblue/api-client';
 import { BigButton } from '../../components/BigButton';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { useTranslation, useEnumTranslation } from '@algreen/i18n';
+import { useTranslation, useEnumTranslation } from '@alblue/i18n';
 import { useWorkSessionStore } from '../../stores/work-session-store';
 import { useOfflineStore } from '../../offline/offline-store';
 import { unsubscribeFromPush } from '../../services/push';

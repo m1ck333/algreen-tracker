@@ -32,11 +32,23 @@ export interface UserDto {
   lastName: string;
   fullName: string;
   role: UserRole;
+  /** Extra roles beyond the primary `role`. Saša 08.06.2026 — a user can be
+   *  e.g. Coordinator (primary) + Magacioner (additional). Use `hasRole`
+   *  helper instead of comparing `role` directly when checking permissions. */
+  additionalRoles: UserRole[];
   processes: { processId: string }[];
   canIncludeWithdrawnInAnalysis: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string | null;
+}
+
+/** Check if user has the given role (primary or additional). Preferred over
+ *  raw `user.role === X` so the Magacin module multi-role policy is honored. */
+export function hasRole(user: Pick<UserDto, 'role' | 'additionalRoles'> | null | undefined, role: UserRole): boolean {
+  if (!user) return false;
+  if (user.role === role) return true;
+  return user.additionalRoles?.includes(role) ?? false;
 }
 
 export interface ShiftDto {
@@ -46,6 +58,18 @@ export interface ShiftDto {
   startTime: string;
   endTime: string;
   isActive: boolean;
+  /** Expected break duration during the shift, in minutes. */
+  breakMinutes: number;
+  /** Max overtime allowed past EndTime before auto-logout, in hours. */
+  maxOvertimeHours: number;
+  /** Cadence (hours) at which the auto-logout job ends a forgotten session. */
+  autoLogoutAfterHours: number;
+  /** How many minutes before auto-logout the tablet shows a warning. */
+  alarmBeforeLogoutMinutes: number;
+  /** Hard auto-logout for the REGULAR shift session, in minutes from check-in
+   *  (Bojan 29.05.2026). Time between shift duration and this cap counts as
+   *  overtime within the same session. 0 = legacy behaviour. */
+  autoLogoutRegularMinutes: number;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -54,6 +78,39 @@ export interface LoginResponseDto {
   token: string;
   refreshToken: string;
   user: UserDto;
+}
+
+/**
+ * One row of role-change history rendered in the user-detail drawer.
+ * Returned newest-first by GET /api/users/{id}/role-history.
+ * `changedByUserName` is the actor's full name resolved server-side; it can
+ * be null if the actor's user row was hard-deleted (rare — soft-delete is
+ * the norm).
+ */
+export interface UserRoleChangeEntryDto {
+  id: string;
+  oldRole: UserRole;
+  newRole: UserRole;
+  changedByUserId: string;
+  changedByUserName: string | null;
+  changedAt: string;
+  reason: string | null;
+}
+
+/**
+ * One row of the login-attempt audit log. Returned newest-first by
+ * GET /api/users/{id}/login-history. `failureReason` is null when
+ * `succeeded` is true; otherwise it's the BE error code
+ * (INVALID_CREDENTIALS, USER_INACTIVE, ACCOUNT_LOCKED, ...).
+ */
+export interface LoginAttemptDto {
+  id: string;
+  email: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  succeeded: boolean;
+  failureReason: string | null;
+  attemptedAt: string;
 }
 
 // ─── Orders ──────────────────────────────────────────────
@@ -234,6 +291,13 @@ export interface NotificationDto {
   referenceId: string | null;
   isRead: boolean;
   createdAt: string;
+  /**
+   * Optional JSON payload with structured params (e.g.
+   * '{"code":"100","name":"Profil AL","onHand":2,"min":5,"unit":"kom"}').
+   * FE renders via i18n template keyed on `type` using these params;
+   * falls back to `title` / `message` when missing.
+   */
+  paramsJson: string | null;
 }
 
 // ─── Work Sessions ───────────────────────────────────────
@@ -246,6 +310,14 @@ export interface WorkSessionDto {
   durationMinutes: number | null;
   date: string;
   isActive: boolean;
+}
+
+export interface ActiveWorkSessionDto {
+  session: WorkSessionDto;
+  /** UTC ISO — when the tablet should start showing the auto-logout alarm. */
+  alarmAtUtc: string | null;
+  /** UTC ISO — when reports treat the session as auto-closed. */
+  logoutAtUtc: string | null;
 }
 
 // ─── Production ──────────────────────────────────────────
@@ -414,6 +486,10 @@ export interface TenantDto {
   isActive: boolean;
   createdAt: string;
   updatedAt: string | null;
+  /** Relative path to the uploaded client logo (e.g. "tenant-logos/{id}.png").
+   *  Null when the tenant hasn't uploaded one; sidebar falls back to the
+   *  default MPMS mark. Streamed via GET /api/tenants/me/logo. */
+  logoUrl: string | null;
 }
 
 export interface TenantSettingsDto {
@@ -619,6 +695,76 @@ export interface ActiveProcessFunnelDto {
   processes: ActiveProcessFunnelBucketDto[];
 }
 
+export interface BlocksPerProcessBucketDto {
+  processId: string;
+  processCode: string;
+  processName: string;
+  sequenceOrder: number;
+  totalSubmitted: number;
+  approvedCount: number;
+  resolvedCount: number;
+  rejectedCount: number;
+  /** Average duration in WORKING HOURS — only counts time in active shift windows. */
+  averageDurationHours: number;
+}
+
+export interface BlocksPerProcessReportDto {
+  processes: BlocksPerProcessBucketDto[];
+}
+
+export interface ProductManufacturingProcessDto {
+  processId: string;
+  processCode: string;
+  processName: string;
+  /** Canonical process sequence — used to order columns consistently. */
+  sequenceOrder: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  /** Duration of THIS process slot, in seconds. */
+  durationSeconds: number;
+  /** Gap from this process's end to next process's start. Zero for last or overlapping. */
+  gapToNextSeconds: number;
+}
+
+export interface ProductManufacturingTimeOrderDto {
+  orderId: string;
+  /** One row per order ITEM — this is the unique row key. */
+  orderItemId: string;
+  orderNumber: string;
+  orderType: string;
+  productCategoryName: string;
+  /** "T" / "S" / "L" — null if the item had no processes with complexity set. */
+  topComplexity: string | null;
+  /** "Zastupljenost težina" — e.g. "60% / 20% / 20%". Null if no complexity set. */
+  complexityShare: string | null;
+  processes: ProductManufacturingProcessDto[];
+  /** Sum of all durations + positive inter-process gaps. Seconds. */
+  totalWithGapsSeconds: number;
+  /** Sum of all durations only. Seconds. */
+  totalWithoutGapsSeconds: number;
+}
+
+export interface ProductManufacturingTimeReportDto {
+  orders: ProductManufacturingTimeOrderDto[];
+}
+
+export interface WorkEfficiencyRowDto {
+  userId: string;
+  fullName: string;
+  /** Σ TotalWorked (Prijavljeno / ukupno). */
+  loggedMinutes: number;
+  /** Σ Effective (Efektivno). */
+  effectiveMinutes: number;
+  activeOnProcessesMinutes: number;
+  uncoveredMinutes: number;
+  /** 0–100, weighted (ΣActive / ΣEffective). */
+  efficiencyPercent: number;
+}
+
+export interface WorkEfficiencyReportDto {
+  rows: WorkEfficiencyRowDto[];
+}
+
 export interface DeliveryComplianceBucketDto {
   /** ISO date of bucket start (week → Monday, month → first day). */
   bucketStart: string;
@@ -637,14 +783,93 @@ export type ReportGranularity = 'Week' | 'Month';
 
 export interface WorkerDailyBreakdownDto {
   date: string;
-  totalMinutes: number;
+  firstCheckIn: string | null;
+  lastCheckOut: string | null;
+  regularMinutes: number;
+  overtimeMinutes: number;
+  totalWorkedMinutes: number;
+  effectiveMinutes: number;
+  activeMinutes: number;
+  uncoveredMinutes: number;
+  /** 0–100 */
+  efficiencyPercent: number;
   sessionCount: number;
+  /** True when the day's total worked exceeded the shift's
+   *  AutoLogoutRegularMinutes cap (Bojan Excel v2 column M). */
+  autoLogoutApplied: boolean;
 }
 
 export interface WorkerHoursDto {
   userId: string;
   fullName: string;
-  totalMinutes: number;
-  sessionCount: number;
+  regularMinutes: number;
+  overtimeMinutes: number;
+  totalWorkedMinutes: number;
+  effectiveMinutes: number;
+  activeMinutes: number;
+  uncoveredMinutes: number;
+  /** 0–100, weighted (ΣActive / ΣEffective). */
+  efficiencyPercent: number;
   dailyBreakdown: WorkerDailyBreakdownDto[];
+}
+
+// ─── Magacin (warehouse) — Saša 08.06.2026 ─────────────────────────────────
+
+export interface MaterialDto {
+  id: string;
+  code: string;
+  name: string;
+  unit: string;
+  category: string;
+  minQuantity: number;
+  maxQuantity: number;
+  dimensionX: number | null;
+  dimensionY: number | null;
+  dimensionZ: number | null;
+  location: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface StockMovementDto {
+  id: string;
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  unit: string;
+  category: string;
+  dimensionX: number | null;
+  dimensionY: number | null;
+  dimensionZ: number | null;
+  type: 'Inflow' | 'Outflow';
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  movementDate: string;
+  documentReference: string;
+  notes: string | null;
+  createdAt: string;
+  processId: string | null;
+  processName: string | null;
+}
+
+export interface StockBalanceRowDto {
+  materialId: string;
+  code: string;
+  name: string;
+  unit: string;
+  category: string;
+  dimensionX: number | null;
+  dimensionY: number | null;
+  dimensionZ: number | null;
+  quantity: number;
+  latestUnitPrice: number;
+  totalValue: number;
+  minQuantity: number;
+  maxQuantity: number;
+  status: 'Ok' | 'BelowMin' | 'AboveMax';
+  location: string | null;
+  notes: string | null;
 }

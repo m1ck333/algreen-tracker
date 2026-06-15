@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ordersApi } from '@algreen/api-client';
-import type { OrdersQuery } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
-import type { OrderStatus, CreateOrderRequest, UpdateOrderRequest, AddOrderItemRequest } from '@algreen/shared-types';
+import { ordersApi } from '@alblue/api-client';
+import type { OrdersQuery } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
+import type { OrderStatus, CreateOrderRequest, UpdateOrderRequest, AddOrderItemRequest } from '@alblue/shared-types';
 
 export function useOrders(filters?: { status?: OrderStatus; search?: string; page?: number; pageSize?: number }) {
   const tenantId = useAuthStore((s) => s.tenantId);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Modal } from 'antd';
-import { useTranslation } from '@algreen/i18n';
+import { App } from 'antd';
+import { useTranslation } from '@alblue/i18n';
 
 /**
  * Hook that guards drawer/modal close when a user has actually edited form fields.
@@ -13,6 +13,7 @@ import { useTranslation } from '@algreen/i18n';
  */
 export function useUnsavedChanges(isOpen: boolean) {
   const { t } = useTranslation();
+  const { modal } = App.useApp();
   const [dirty, setDirty] = useState(false);
 
   // Reset dirty when drawer closes
@@ -22,6 +23,12 @@ export function useUnsavedChanges(isOpen: boolean) {
 
   const onValuesChange = useCallback(() => {
     setDirty(true);
+  }, []);
+
+  // Call after a successful save so further mask-clicks don't warn until the
+  // user edits again. Drawer typically stays open after save.
+  const markClean = useCallback(() => {
+    setDirty(false);
   }, []);
 
   // Browser refresh / tab close guard
@@ -39,7 +46,7 @@ export function useUnsavedChanges(isOpen: boolean) {
       // Only guard mask clicks (clicking outside); X button / Escape always close directly
       const isMaskClick = e && (e.target as HTMLElement).classList.contains('ant-drawer-mask');
       if (dirty && isMaskClick) {
-        Modal.confirm({
+        modal.confirm({
           title: t('common:messages.unsavedChanges'),
           content: t('common:messages.unsavedChangesDescription'),
           okText: t('common:actions.discardChanges'),
@@ -54,8 +61,8 @@ export function useUnsavedChanges(isOpen: boolean) {
         closeFn();
       }
     },
-    [dirty, t],
+    [dirty, t, modal],
   );
 
-  return { guardedClose, onValuesChange };
+  return { guardedClose, onValuesChange, markClean };
 }

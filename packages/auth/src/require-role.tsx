@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import type { UserRole } from '@algreen/shared-types';
+import type { UserRole } from '@alblue/shared-types';
 import { useAuthStore } from './auth-store';
 
 interface RequireRoleProps {

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useSignalREvent, SignalREvents } from '@algreen/signalr-client';
+import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
 
 function playAlertSound() {
   try {
@@ -87,6 +87,14 @@ export function useSignalRQueryInvalidation() {
   useSignalREvent(SignalREvents.WorkerCheckedOut, () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'live-view'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'workers-status'] });
+  });
+
+  useSignalREvent(SignalREvents.WorkerAutoLoggedOut, () => {
+    // Bojan 30.05.2026: coordinator gets a warning when auto-logout fires.
+    // Refresh live worker view + the in-app notifications list/badge.
+    queryClient.invalidateQueries({ queryKey: ['dashboard', 'live-view'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard', 'workers-status'] });
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
   });
 
   useSignalREvent(SignalREvents.DeadlineWarning, () => {

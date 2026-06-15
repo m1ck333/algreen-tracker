@@ -1,18 +1,19 @@
-import type { OrderDto, OrderDetailDto, OrderMasterViewDto, OrderAttachmentDto, PagedResult } from '@algreen/shared-types';
-import type { OrderStatus, OrderType } from '@algreen/shared-types';
+import type { OrderDto, OrderDetailDto, OrderMasterViewDto, OrderAttachmentDto, PagedResult } from '@alblue/shared-types';
+import type { OrderStatus, OrderType } from '@alblue/shared-types';
 import type {
   CreateOrderRequest,
   UpdateOrderRequest,
   AddOrderItemRequest,
   AddSpecialRequestRequest,
   OverrideComplexityRequest,
-} from '@algreen/shared-types';
+} from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 import { tokenManager } from '../token-manager';
 
 export interface OrdersQuery {
   status?: OrderStatus;
   orderType?: OrderType;
+  isInvoiced?: boolean;
   search?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -61,6 +62,13 @@ export const ordersApi = {
     // Order-level attachments
     if (data.attachments) {
       data.attachments.forEach((file) => formData.append('Attachments', file));
+    }
+    // Manual processes / dependencies (passed as JSON strings; controller deserializes)
+    if (data.manualProcesses && data.manualProcesses.length > 0) {
+      formData.append('ManualProcessesJson', JSON.stringify(data.manualProcesses));
+    }
+    if (data.manualDependencies && data.manualDependencies.length > 0) {
+      formData.append('ManualDependenciesJson', JSON.stringify(data.manualDependencies));
     }
     return apiClient.post<OrderDetailDto>('/orders', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

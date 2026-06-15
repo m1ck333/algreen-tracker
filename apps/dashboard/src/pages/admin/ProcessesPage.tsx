@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import {
@@ -7,10 +8,10 @@ import {
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, HolderOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { processesApi } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
-import type { ProcessDto, SubProcessDto } from '@algreen/shared-types';
-import { useTranslation } from '@algreen/i18n';
+import { processesApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
+import type { ProcessDto, SubProcessDto } from '@alblue/shared-types';
+import { useTranslation } from '@alblue/i18n';
 import dayjs from 'dayjs';
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
@@ -24,26 +25,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import React from 'react';
+import { PageHeader } from '../../components/PageHeader';
+import { getTranslatedError } from '../../utils/errors';
 
 const { Title, Text } = Typography;
-
-function getTranslatedError(error: unknown, t: (key: string, opts?: Record<string, string>) => string, fallback: string): string {
-  const resp = (error as { response?: { data?: { error?: { code?: string; message?: string } } } })?.response?.data?.error;
-  if (resp?.code) {
-    const translated = t(`common:errors.${resp.code}`, { defaultValue: '' });
-    if (translated) return translated;
-  }
-  return resp?.message || fallback;
-}
-
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
 
 // ─── Sortable table row ──────────────────────────────────────
 
@@ -107,7 +92,7 @@ export function ProcessesPage() {
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
   const { guardedClose: guardedCreateClose, onValuesChange: onCreateValuesChange } = useUnsavedChanges(createOpen);
-  const { guardedClose: guardedEditClose, onValuesChange: onEditValuesChange } = useUnsavedChanges(!!detailProcess);
+  const { guardedClose: guardedEditClose, onValuesChange: onEditValuesChange, markClean: markEditClean } = useUnsavedChanges(!!detailProcess);
 
   useEffect(() => { setPage(1); }, [debouncedSearch, isActiveFilter, dateFrom, dateTo]);
 
@@ -204,6 +189,7 @@ export function ProcessesPage() {
       setPendingSubRemovals(new Set());
       subProcessForm.resetFields();
       message.success(t('admin.processes.updated'));
+      markEditClean();
     },
     onError: (err) => message.error(getTranslatedError(err, t, t('admin.processes.updateFailed'))),
   });
@@ -334,6 +320,7 @@ export function ProcessesPage() {
       title: '',
       dataIndex: 'dragHandle',
       width: 40,
+      fixed: 'left' as const,
       render: () => <DragHandle />,
     },
     {
@@ -341,12 +328,16 @@ export function ProcessesPage() {
       dataIndex: 'code',
       sorter: true,
       sortOrder: sortBy === 'code' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
+      fixed: 'left' as const,
+      width: 120,
     },
     {
       title: t('common:labels.name'),
       dataIndex: 'name',
       sorter: true,
       sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
+      fixed: 'left' as const,
+      width: 240,
     },
     {
       title: t('admin.processes.sequenceOrder'),
@@ -423,9 +414,9 @@ export function ProcessesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>{t('admin.processes.title')}</Title>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <PageHeader
+        title={t('admin.processes.title')}
+        actions={<><div style={{ display: 'flex', gap: 8 }}>
           <TableExportButton
             onFetchAll={fetchAllProcesses}
             columns={exportColumns}
@@ -439,10 +430,10 @@ export function ProcessesPage() {
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); createForm.setFieldValue('sequenceOrder', nextSequenceOrder); setPendingSubProcesses([]); setAddSubName(''); setAddSubOrder(1); setCreateOpen(true); }}>
             {t('admin.processes.addProcess')}
           </Button>
-        </div>
-      </div>
+        </div></>}
+      />
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 , flexWrap: 'wrap' }}>
         <Input.Search
           placeholder={t('common:actions.search')}
           allowClear

@@ -1,4 +1,4 @@
-import type { NotificationDto, PagedResult } from '@algreen/shared-types';
+import type { NotificationDto, PagedResult } from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
 export interface NotificationsQuery {

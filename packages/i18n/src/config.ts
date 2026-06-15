@@ -33,7 +33,12 @@ export function initI18n(
         escapeValue: false,
       },
       detection: {
-        order: ['localStorage'],
+        // localStorage wins when set (explicit user choice persists), then fall
+        // back to the browser's preferred language. Without `navigator`, every
+        // first-time visitor — including foreign prospects landing on /about —
+        // got Serbian regardless of their browser. `htmlTag` is a cheap extra
+        // fallback if some host sets <html lang>.
+        order: ['localStorage', 'navigator', 'htmlTag'],
         lookupLocalStorage: 'i18nextLng',
         caches: ['localStorage'],
       },

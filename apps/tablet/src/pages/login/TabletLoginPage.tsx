@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@algreen/auth';
-import { workSessionsApi, processWorkflowApi } from '@algreen/api-client';
-import { useTranslation } from '@algreen/i18n';
+import { useAuthStore } from '@alblue/auth';
+import { workSessionsApi, processWorkflowApi } from '@alblue/api-client';
+import { useTranslation } from '@alblue/i18n';
 import { useWorkSessionStore } from '../../stores/work-session-store';
 import { subscribeToPush } from '../../services/push';
 
@@ -30,6 +30,14 @@ export function TabletLoginPage() {
       }
 
       setSettingUp(true);
+
+      // Clear any leftover auto-logout flag from a prior session in this
+      // tab. AutoLogoutBanner persists the flag to sessionStorage so a
+      // refresh-while-blocker-up keeps the blocker; without clearing here
+      // a fresh login in the same tab would still hit the blocker (Bojan
+      // 04.06.2026 — tablet showed login screen while dashboard showed
+      // workers as still logged in).
+      if (typeof window !== 'undefined') sessionStorage.removeItem('tablet.autoLoggedOut');
 
       // Check in (tenant derived from JWT). If the worker has used up
       // their MaxOvertimeHours for today, BE returns 400 OVERTIME_EXHAUSTED
@@ -81,10 +89,17 @@ export function TabletLoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="card w-full max-w-md">
-        <h1 className="text-tablet-2xl font-bold text-center text-primary-500 mb-2">
-          {t('common:appName')}
-        </h1>
+      <div className="card w-full max-w-md overflow-hidden p-0">
+        {/* Logo lives in its own navy band so the dark-on-dark MPMS mark
+            stays legible. Same pattern as dashboard LoginPage. */}
+        <div className="flex justify-center" style={{ background: '#001529', padding: '24px 0' }}>
+          <img
+            src="/mpms-logo-text.png"
+            alt="MPMS"
+            style={{ height: 120, objectFit: 'contain' }}
+          />
+        </div>
+        <div className="p-6">
         <p className="text-center text-gray-500 mb-8 text-tablet-sm">
           {t('login.subtitle')}
         </p>
@@ -143,6 +158,7 @@ export function TabletLoginPage() {
             {submitting ? t('login.signingIn') : t('login.signIn')}
           </button>
         </form>
+        </div>
       </div>
     </div>
   );

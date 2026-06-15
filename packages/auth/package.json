@@ -1,5 +1,5 @@
 {
-  "name": "@algreen/auth",
+  "name": "@alblue/auth",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@algreen/api-client": "workspace:*",
-    "@algreen/shared-types": "workspace:*",
+    "@alblue/api-client": "workspace:*",
+    "@alblue/shared-types": "workspace:*",
     "@sentry/react": "^10.53.1",
     "zustand": "^4.5.0"
   },

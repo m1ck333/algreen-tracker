@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useSignalREvent, SignalREvents } from '@algreen/signalr-client';
+import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
 
 export function useSignalRQueryInvalidation() {
   const queryClient = useQueryClient();

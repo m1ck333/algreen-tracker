@@ -1,50 +1,140 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
-import { Typography, Table, Button, Drawer, Form, Input, Select, Tag, App, Switch, DatePicker, Popconfirm } from 'antd';
+import { Typography, Table, Button, Drawer, Form, Input, Select, Tag, App, Switch, DatePicker, Popconfirm, Divider } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { usersApi, processesApi } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
-import { UserRole } from '@algreen/shared-types';
-import type { UserDto, ProcessDto } from '@algreen/shared-types';
-import { useTranslation, useEnumTranslation } from '@algreen/i18n';
+import { usersApi, processesApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
+import { UserRole } from '@alblue/shared-types';
+import type { UserDto, ProcessDto } from '@alblue/shared-types';
+import { useTranslation, useEnumTranslation } from '@alblue/i18n';
 import dayjs from 'dayjs';
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
+import { PageHeader } from '../../components/PageHeader';
+import { getTranslatedError } from '../../utils/errors';
+import { passwordRules } from '../../utils/password';
 
-const { Title } = Typography;
 
-function getApiErrorCode(error: unknown): string | undefined {
-  return (error as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
+/**
+ * Compact list of recent login attempts (success + failure) for the
+ * currently-open user. Same lazy-load pattern as the role-history
+ * section. Failure reasons render as small red tags; successes as
+ * green. IP + user-agent shown beneath the title to help an admin
+ * spot weird origins.
+ */
+function LoginHistorySection({ userId }: { userId: string }) {
+  const { t } = useTranslation('dashboard');
+  const { data, isLoading } = useQuery({
+    queryKey: ['user-login-history', userId],
+    queryFn: () => usersApi.getLoginHistory(userId, 20).then((r) => r.data),
+    enabled: !!userId,
+    staleTime: 30_000,
+  });
+
+  return (
+    <div>
+      <Typography.Text strong style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
+        {t('admin.users.loginHistory')}
+      </Typography.Text>
+      {isLoading && <Typography.Text type="secondary" style={{ fontSize: 12 }}>…</Typography.Text>}
+      {!isLoading && (!data || data.length === 0) && (
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {t('admin.users.loginHistoryEmpty')}
+        </Typography.Text>
+      )}
+      {!isLoading && data && data.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, maxHeight: 180, overflowY: 'auto' }}>
+          {data.map((entry) => (
+            <li key={entry.id} style={{ marginBottom: 6 }}>
+              <div>
+                {entry.succeeded ? (
+                  <Tag color="green" style={{ fontSize: 11 }}>{t('admin.users.loginSucceeded')}</Tag>
+                ) : (
+                  <Tag color="red" style={{ fontSize: 11 }}>
+                    {entry.failureReason ?? t('admin.users.loginFailed')}
+                  </Tag>
+                )}
+              </div>
+              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                {dayjs(entry.attemptedAt).format('DD.MM.YYYY. HH:mm')}
+                {entry.ipAddress ? ` · ${entry.ipAddress}` : ''}
+              </Typography.Text>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
-function getTranslatedError(error: unknown, t: (key: string, opts?: Record<string, string>) => string, fallback: string): string {
-  const resp = (error as { response?: { data?: { error?: { code?: string; message?: string } } } })?.response?.data?.error;
-  if (resp?.code) {
-    const translated = t(`common:errors.${resp.code}`, { defaultValue: '' });
-    if (translated) return translated;
-  }
-  return resp?.message || fallback;
+/**
+ * Compact list of role changes for the currently-open user. Lives at the
+ * bottom of the edit drawer — collapses to "no changes recorded" for
+ * users who never had their role mutated. Loads lazily when the drawer
+ * opens (the query is keyed on userId; React Query caches per user).
+ */
+function RoleHistorySection({ userId }: { userId: string }) {
+  const { t } = useTranslation('dashboard');
+  const { tEnum } = useEnumTranslation();
+  const { data, isLoading } = useQuery({
+    queryKey: ['user-role-history', userId],
+    queryFn: () => usersApi.getRoleHistory(userId).then((r) => r.data),
+    enabled: !!userId,
+    staleTime: 30_000,
+  });
+
+  return (
+    <div>
+      <Typography.Text strong style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
+        {t('admin.users.roleHistory')}
+      </Typography.Text>
+      {isLoading && <Typography.Text type="secondary" style={{ fontSize: 12 }}>…</Typography.Text>}
+      {!isLoading && (!data || data.length === 0) && (
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {t('admin.users.roleHistoryEmpty')}
+        </Typography.Text>
+      )}
+      {!isLoading && data && data.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, maxHeight: 180, overflowY: 'auto' }}>
+          {data.map((entry) => (
+            <li key={entry.id} style={{ marginBottom: 6 }}>
+              <div>
+                {t('admin.users.roleHistoryEntry', {
+                  oldRole: tEnum('UserRole', entry.oldRole),
+                  newRole: tEnum('UserRole', entry.newRole),
+                })}
+              </div>
+              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                {dayjs(entry.changedAt).format('DD.MM.YYYY. HH:mm')} ·{' '}
+                {t('admin.users.roleHistoryBy', { actor: entry.changedByUserName ?? '—' })}
+              </Typography.Text>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
-export function UsersPage() {
+interface UsersPageProps {
+  /** When true, suppress the top PageHeader — used when embedding as a
+   *  tab panel inside KorisniciPage so the parent owns the header. */
+  hideHeader?: boolean;
+}
+
+export function UsersPage({ hideHeader = false }: UsersPageProps = {}) {
   const tenantId = useAuthStore((s) => s.tenantId);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const currentUserRole = useAuthStore((s) => s.user?.role);
   const isSuperAdmin = currentUserRole === UserRole.SuperAdmin;
-  const assignableRoles = Object.values(UserRole).filter(
-    (r) => isSuperAdmin || r !== UserRole.SuperAdmin,
-  );
+  // SuperAdmin is intentionally NOT in the dropdown for anyone — that role
+  // is platform-level and only granted directly via DB (Milos 12.06.2026).
+  // BE rejects the role with FORBIDDEN_ROLE_ASSIGNMENT as defense-in-depth.
+  const assignableRoles = Object.values(UserRole).filter((r) => r !== UserRole.SuperAdmin);
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserDto | null>(null);
@@ -129,6 +219,10 @@ export function UsersPage() {
         isActive: values.isActive as boolean,
         canIncludeWithdrawnInAnalysis: values.canIncludeWithdrawnInAnalysis as boolean,
         processIds: values.role === UserRole.Department && (values.processIds as string[])?.length ? values.processIds as string[] : undefined,
+        // Saša 08.06.2026 — extra roles beyond primary (e.g. Coordinator +
+        // Magacioner). Send the array unconditionally so clearing is
+        // explicit; BE keys off non-null to know "user touched this field".
+        additionalRoles: (values.additionalRoles as UserRole[] | undefined) ?? [],
       });
       const newPassword = (values.newPassword as string)?.trim();
       if (newPassword) {
@@ -161,6 +255,7 @@ export function UsersPage() {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      additionalRoles: user.additionalRoles ?? [],
       processIds: user.processes?.map((p) => p.processId) ?? [],
       isActive: user.isActive,
       canIncludeWithdrawnInAnalysis: user.canIncludeWithdrawnInAnalysis,
@@ -173,6 +268,8 @@ export function UsersPage() {
       dataIndex: 'fullName',
       sorter: true,
       sortOrder: sortBy === 'lastName' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
+      fixed: 'left' as const,
+      width: 220,
     },
     {
       title: t('common:labels.email'),
@@ -277,9 +374,28 @@ export function UsersPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>{t('admin.users.title')}</Title>
-        <div style={{ display: 'flex', gap: 8 }}>
+      {!hideHeader && (
+        <PageHeader
+          title={t('admin.users.title')}
+          actions={<><div style={{ display: 'flex', gap: 8 }}>
+            <TableExportButton
+              onFetchAll={fetchAllUsers}
+              columns={exportColumns}
+              options={{
+                fileName: `users-${dayjs().format('YYYY-MM-DD')}`,
+                title: `${t('common:appName')} — ${t('admin.users.title')}`,
+                filters: exportFilters,
+                sheetName: t('admin.users.title'),
+              }}
+            />
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+              {t('admin.users.addUser')}
+            </Button>
+          </div></>}
+        />
+      )}
+      {hideHeader && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 16 }}>
           <TableExportButton
             onFetchAll={fetchAllUsers}
             columns={exportColumns}
@@ -294,9 +410,9 @@ export function UsersPage() {
             {t('admin.users.addUser')}
           </Button>
         </div>
-      </div>
+      )}
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 , flexWrap: 'wrap' }}>
         <Input.Search
           placeholder={t('common:actions.search')}
           allowClear
@@ -391,7 +507,7 @@ export function UsersPage() {
           <Form.Item name="email" label={t('common:labels.email')} rules={[{ required: true, type: 'email' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="password" label={t('common:labels.password')} rules={[{ required: true, min: 6 }]}>
+          <Form.Item name="password" label={t('common:labels.password')} rules={passwordRules(t)}>
             <Input.Password />
           </Form.Item>
           <Form.Item name="firstName" label={t('common:labels.firstName')} rules={[{ required: true }]}>
@@ -462,12 +578,42 @@ export function UsersPage() {
           <Form.Item name="role" label={t('common:labels.role')} rules={[{ required: true }]}>
             {/* Sprint 3.0 F-7 — only SuperAdmin can change an existing user's
                 role. Non-SuperAdmin viewers see the current role as a
-                disabled select. BE rejects with FORBIDDEN_ROLE_CHANGE. */}
+                disabled select (so they can read it but not modify). BE
+                rejects with FORBIDDEN_ROLE_CHANGE as defense in depth. */}
             <Select
               disabled={!isSuperAdmin}
               options={assignableRoles.map((r) => ({ label: tEnum('UserRole', r), value: r }))}
               onChange={() => editForm.setFieldValue('processIds', undefined)}
             />
+          </Form.Item>
+          {/* Saša 08.06.2026 — extra roles a user holds in addition to the
+              primary. Same SuperAdmin-only gate as primary role. Filtering
+              the picker excludes the primary role + SuperAdmin to keep
+              "additional" meaningful. */}
+          <Form.Item
+            name="additionalRoles"
+            label={t('admin.users.additionalRoles', { defaultValue: 'Dodatne uloge' })}
+            tooltip={t('admin.users.additionalRolesHint', { defaultValue: 'Uloge koje korisnik ima POREDA primarne. Npr. Koordinator + Magacioner.' })}
+          >
+            <Form.Item noStyle shouldUpdate={(prev, cur) => prev.role !== cur.role}>
+              {({ getFieldValue }) => {
+                const primary = getFieldValue('role') as UserRole | undefined;
+                // SuperAdmin is already excluded from assignableRoles
+                // upstream — just drop the primary role here so it can't
+                // also be picked as an additional one.
+                const options = assignableRoles
+                  .filter((r) => r !== primary)
+                  .map((r) => ({ label: tEnum('UserRole', r), value: r }));
+                return (
+                  <Select
+                    mode="multiple"
+                    disabled={!isSuperAdmin}
+                    options={options}
+                    placeholder={t('admin.users.additionalRolesPlaceholder', { defaultValue: 'Bez dodatnih uloga' })}
+                  />
+                );
+              }}
+            </Form.Item>
           </Form.Item>
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.role !== cur.role}>
             {({ getFieldValue }) =>
@@ -484,7 +630,7 @@ export function UsersPage() {
               ) : null
             }
           </Form.Item>
-          <Form.Item name="newPassword" label={t('admin.users.newPassword')} rules={[{ min: 6 }]}>
+          <Form.Item name="newPassword" label={t('admin.users.newPassword')} rules={passwordRules(t, { required: false })}>
             <Input.Password placeholder={t('admin.users.newPasswordPlaceholder')} />
           </Form.Item>
           <Form.Item name="isActive" label={t('common:labels.status')} valuePropName="checked">
@@ -494,6 +640,14 @@ export function UsersPage() {
             <Switch />
           </Form.Item>
         </Form>
+        {editUser && (
+          <>
+            <Divider style={{ margin: '16px 0 8px' }} />
+            <RoleHistorySection userId={editUser.id} />
+            <Divider style={{ margin: '16px 0 8px' }} />
+            <LoginHistorySection userId={editUser.id} />
+          </>
+        )}
         {editUser?.updatedAt && (
           <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
             {t('common:labels.updated')}: {dayjs(editUser.updatedAt).format('DD.MM.YYYY.')}

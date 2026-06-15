@@ -1,4 +1,29 @@
 {
+  "notFound": {
+    "subtitle": "Stranica ne postoji.",
+    "backHome": "Početna"
+  },
+  "errorBoundary": {
+    "title": "Došlo je do greške",
+    "subtitle": "Nešto je pošlo po zlu. Pokušajte ponovo ili se vratite na početnu stranicu.",
+    "reload": "Ponovo učitaj",
+    "home": "Početna",
+    "bootFallback": "Došlo je do greške. Pokušajte ponovo."
+  },
+  "errors": {
+    "forbiddenRoleChange": "Samo super administrator može da menja ulogu korisnika.",
+    "lastAdminRemoval": "Nije moguće ukloniti poslednjeg aktivnog Admina u sistemu.",
+    "selfDeleteForbidden": "Ne možete obrisati sopstveni nalog.",
+    "superAdminDeleteForbidden": "Samo super administrator može da obriše nalog drugog super administratora.",
+    "changePasswordNotSelf": "Možete menjati samo sopstvenu lozinku.",
+    "forbiddenGeneric": "Vaša uloga nema dozvolu za ovu akciju.",
+    "readOnlyCrossTenant": "Pristup je samo za pregled — ne možete menjati podatke u tuđoj firmi.",
+    "peerSuperAdmin": "Nalozi super administratora ne mogu da se menjaju, brišu ili da im se resetuje lozinka — to mora vlasnik naloga preko svog profila."
+  },
+  "crossTenant": {
+    "banner": "Prijavljen si kao super administrator u tuđoj firmi — pristup je samo za pregled.",
+    "exit": "Vrati se na svoj nalog"
+  },
   "nav": {
     "dashboard": "Kontrolna tabla",
     "orders": "Narudžbine",
@@ -9,18 +34,85 @@
     "users": "Korisnici",
     "processes": "Procesi",
     "categories": "Kategorije",
+    "orderTypes": "Tipovi narudžbine",
     "specialRequests": "Specijalni zahtevi",
     "tenants": "Firme",
+    "tenantProfile": "Profil firme",
+    "firma": "Firma",
     "shifts": "Smene",
+    "materials": "Materijali",
+    "warehouse": "Magacin",
+    "stock": "Stanje",
+    "inflow": "Ulaz",
+    "outflow": "Izlaz",
+    "history": "Istorija transakcija",
     "reports": "Vremena procesa",
     "notifications": "Obaveštenja",
-    "profile": "Profil"
+    "profile": "Profil",
+    "tutorial": "Uputstvo",
+    "whatsNew": "Šta je novo",
+    "info": "Info"
+  },
+  "whatsNew": {
+    "title": "Šta je novo",
+    "subtitle": "Pregled poslednjih izmena u aplikaciji",
+    "lastUpdated": "Poslednja izmena: {{date}}",
+    "showOlder": "Prikaži starije unose ({{count}})"
   },
   "profile": {
+    "theme": "Tema",
+    "themeLight": "Svetla",
+    "themeDark": "Tamna",
     "language": "Jezik"
   },
+  "about": {
+    "title": "O aplikaciji",
+    "tagline": "MES sistem za proizvodnju — kontrolna tabla i tablet u jednom",
+    "intro": "Sveobuhvatan softver za upravljanje proizvodnjom (MES) koji povezuje menadžment kancelarije sa radnicima na proizvodnoj liniji u realnom vremenu. Više firmi može koristiti isti sistem nezavisno, svaka sa svojim podacima.",
+    "audience": "Za koga je",
+    "audienceDashboard": "Kontrolna tabla (desktop): menadžeri, koordinatori, prodajni timovi i administracija — kreiraju i prate narudžbine, odobravaju zahteve, vode statistiku.",
+    "audienceTablet": "Tablet (PWA): radnici u pogonu — prijavljuju se na procese, izvršavaju zadatke iz reda čekanja, prijavljuju blokade i završene operacije.",
+    "dashboardTitle": "Kontrolna tabla",
+    "dashboardSubtitle": "Kompletan pregled proizvodnje na jednom mestu.",
+    "dashboardFeatures": [
+      "Kreiranje, izmena i aktiviranje narudžbina sa stavkama i prilozima",
+      "Tipovi narudžbina prilagodljivi po firmi, sa opcijom ručnog izbora procesa",
+      "Master tabela sa živim pregledom statusa svih procesa po narudžbini",
+      "Kontrolna tabla koordinatora — radnici, aktivne narudžbine, kritični rokovi",
+      "Zahtevi za blokadu i izmenu sa workflow-om za odobravanje",
+      "Izveštaji o vremenima procesa, satima rada radnika, izvoz u Excel/CSV",
+      "Administracija: korisnici, procesi, kategorije proizvoda, smene, tipovi narudžbina"
+    ],
+    "tabletTitle": "Tablet aplikacija",
+    "tabletSubtitle": "Brzo i jednostavno za radnike u pogonu.",
+    "tabletFeatures": [
+      "Velika tasterska polja za korišćenje rukavicama",
+      "Red čekanja sortiran po prioritetu i roku isporuke",
+      "Tajmer po procesu i pod-procesu, automatsko pauziranje",
+      "Prijava blokade direktno iz aktivnog procesa",
+      "Pregled dolazećih narudžbina iz prethodnog procesa",
+      "Radi i bez interneta (PWA), automatski se sinhronizuje"
+    ],
+    "techTitle": "Tehničke karakteristike",
+    "techFeatures": [
+      "Više firmi (multi-tenant) sa potpunom izolacijom podataka",
+      "Sinhronizacija u realnom vremenu (SignalR) između kontrolne table i tableta",
+      "Push obaveštenja na tablet i mobilni",
+      "Više jezika (srpski, engleski)",
+      "Tamna i svetla tema",
+      "JWT autentikacija sa ulogama (Admin, Manager, Koordinator, Prodaja, Odeljenje)"
+    ],
+    "ctaTitle": "Zainteresovani?",
+    "ctaText": "Pišite na",
+    "ctaEmail": "sales@algreen.rs",
+    "backToLogin": "Nazad na prijavu",
+    "learnMore": "Saznajte više o aplikaciji"
+  },
+  "tutorial": {
+    "title": "Uputstvo"
+  },
   "login": {
-    "title": "Algreen MES",
+    "title": "MPMS",
     "subtitle": "Prijavite se na svoj nalog",
     "tenantCode": "Kod firme",
     "email": "Email",
@@ -33,13 +125,17 @@
     "noStatistics": "Nema dostupne statistike",
     "stats": {
       "ordersActive": "Aktivne narudžbine",
-      "ordersCompleted": "Završene narudžbine",
-      "processesCompleted": "Završeni procesi",
-      "avgProcessTime": "Prosečno vreme",
+      "groupOrders": "Narudžbine",
+      "groupAlarms": "Upozorenja i alarmi",
+      "groupActivityToday": "Aktivnost danas",
+      "ordersCompletedToday": "Završene danas",
+      "processesCompletedToday": "Završeni procesi danas",
+      "avgProcessTimeToday": "Prosečno vreme danas",
       "min": "min",
       "criticalWarnings": "Kritična upozorenja",
       "warnings": "Upozorenja",
-      "pendingBlockRequests": "Zahtevi na čekanju"
+      "pendingBlockRequests": "Zahtevi na čekanju",
+      "lowStock": "Materijali ispod min"
     },
     "deadlineWarnings": "Upozorenja o rokovima",
     "daysRemaining": "{{count}} dana preostalo",
@@ -78,7 +174,7 @@
     "orderNumber": "Br. narudžbine",
     "export": {
       "progress": "Napredak (kompletirano/ukupno)",
-      "invoiced": "Fakturisana"
+      "invoiced": "Fakturisano"
     },
     "filterByStatus": "Filtriraj po statusu",
     "createOrder": "Kreiraj narudžbinu",
@@ -134,6 +230,13 @@
     "warningDays": "Dani upozorenja",
     "criticalDays": "Kritični dani",
     "orderType": "Tip narudžbine",
+    "manualProcessesTitle": "Ručni izbor procesa",
+    "manualProcessesPlaceholder": "Ovaj tip narudžbine koristi ručno izabrane procese umesto procesa iz kategorije proizvoda. Birač procesa biće dodat u sledećem koraku.",
+    "manualProcessesHelp": "Izaberite procese koji se primenjuju na ovu narudžbinu. Procesi iz kategorije proizvoda biće zanemareni. Možete podesiti zavisnosti i kompleksnost po procesu.",
+    "manualProcessesPick": "Izaberite procese...",
+    "dependsOn": "Zavisi od",
+    "dependsOnPlaceholder": "Procesi koji moraju biti završeni prvi...",
+    "cycleBlocked": "stvara kružnu zavisnost",
     "orderNumberLabel": "Broj narudžbine",
     "listView": "Lista",
     "masterView": "Master tabela",
@@ -225,13 +328,24 @@
       "updated": "Korisnik ažuriran",
       "updateFailed": "Ažuriranje korisnika nije uspelo",
       "canIncludeWithdrawn": "Može uključiti povučene u analizu",
+      "additionalRoles": "Dodatne uloge",
+      "additionalRolesHint": "Uloge koje korisnik ima pored primarne. Npr. Koordinator + Magacioner.",
+      "additionalRolesPlaceholder": "Bez dodatnih uloga",
       "process": "Procesi",
       "selectProcess": "Izaberite procese",
       "newPassword": "Nova lozinka",
       "newPasswordPlaceholder": "Ostavite prazno da zadržite trenutnu lozinku",
       "deleted": "Korisnik obrisan",
       "deleteFailed": "Brisanje korisnika nije uspelo",
-      "deleteConfirm": "Da li ste sigurni da želite da obrišete ovog korisnika?"
+      "deleteConfirm": "Da li ste sigurni da želite da obrišete ovog korisnika?",
+      "roleHistory": "Istorija promene uloge",
+      "roleHistoryEmpty": "Nema zabeleženih promena uloge.",
+      "roleHistoryEntry": "{{oldRole}} → {{newRole}}",
+      "roleHistoryBy": "promenio: {{actor}}",
+      "loginHistory": "Istorija prijava",
+      "loginHistoryEmpty": "Nema zabeleženih pokušaja prijave.",
+      "loginSucceeded": "Uspešna prijava",
+      "loginFailed": "Neuspešan pokušaj"
     },
     "processes": {
       "title": "Procesi",
@@ -302,6 +416,22 @@
       "dependencyAddFailed": "Dodavanje zavisnosti nije uspelo",
       "duplicate": "Dupliraj"
     },
+    "orderTypes": {
+      "title": "Tipovi narudžbine",
+      "addType": "Dodaj tip",
+      "createType": "Kreiraj tip narudžbine",
+      "created": "Tip narudžbine kreiran",
+      "createFailed": "Kreiranje tipa nije uspelo",
+      "updated": "Tip narudžbine ažuriran",
+      "updateFailed": "Ažuriranje tipa nije uspelo",
+      "deletedHard": "Tip narudžbine obrisan",
+      "deletedSoft": "Tip narudžbine deaktiviran (postoje narudžbine koje ga koriste)",
+      "deleteFailed": "Brisanje tipa nije uspelo",
+      "delete": "Obriši",
+      "deleteConfirm": "Da li ste sigurni da želite da obrišete ovaj tip narudžbine? Ako postoje narudžbine koje ga koriste, biće samo deaktiviran.",
+      "allowsManualProcesses": "Ručni izbor procesa",
+      "allowsManualProcessesHelp": "Ako je uključeno, narudžbine ovog tipa nose ručno izabran spisak procesa i zavisnosti umesto procesa iz kategorije proizvoda."
+    },
     "specialRequestTypes": {
       "title": "Tipovi specijalnih zahteva",
       "addType": "Dodaj tip",
@@ -338,6 +468,11 @@
       "deactivate": "Deaktiviraj",
       "deactivated": "Firma deaktivirana",
       "deactivateConfirm": "Da li ste sigurni da želite da deaktivirate ovu firmu?",
+      "activate": "Aktiviraj",
+      "activated": "Firma aktivirana",
+      "activateConfirm": "Da li ste sigurni da želite da aktivirate ovu firmu?",
+      "initialAdmin": "Inicijalni Admin firme",
+      "adminCreateFailed": "Firma kreirana, ali inicijalni Admin nije. Kreiraj Admina ručno za ovu firmu.",
       "defaultWarningDays": "Dani upozorenja",
       "defaultCriticalDays": "Kritični dani",
       "warningColor": "Boja upozorenja",
@@ -359,7 +494,12 @@
       "deactivateConfirm": "Da li ste sigurni da želite da deaktivirate ovu smenu?",
       "activate": "Aktiviraj",
       "activated": "Smena aktivirana",
-      "activateConfirm": "Da li ste sigurni da želite da aktivirate ovu smenu?"
+      "activateConfirm": "Da li ste sigurni da želite da aktivirate ovu smenu?",
+      "breakMinutes": "Pauza (min)",
+      "maxOvertimeHours": "Max prekovremeno (h)",
+      "autoLogoutAfterHours": "Auto-odjava prekovremeno (h)",
+      "alarmBeforeLogoutMinutes": "Alarm pre odjave (min)",
+      "autoLogoutRegularHours": "Auto-odjava redovan rad (h)"
     }
   },
   "notifications": {
@@ -370,7 +510,65 @@
     "timeAgo": "pre {{time}}",
     "loadMore": "Učitaj još",
     "delete": "Obriši",
-    "markUnread": "Označi kao nepročitano"
+    "markUnread": "Označi kao nepročitano",
+    "templates": {
+      "materialLowStock": {
+        "title": "Materijal ispod minimuma: {{code}} — {{name}}",
+        "message": "Stanje materijala „{{code}} — {{name}}\" je palo ispod minimuma ({{onHand}} {{unit}}, min {{min}} {{unit}})."
+      },
+      "orderActivated": {
+        "title": "Nova narudžbina",
+        "message": "Narudžbina #{{orderNumber}} je aktivirana",
+        "title_readyForQueue": "Nova narudžbina u redu",
+        "message_readyForQueue": "Narudžbina #{{orderNumber}} je spremna za vaš proces"
+      },
+      "processCompleted": {
+        "title": "Proces završen",
+        "message": "Narudžbina #{{orderNumber}} — proces je završen"
+      },
+      "processBlocked": {
+        "title": "Proces blokiran",
+        "message": "Narudžbina #{{orderNumber}} — proces blokiran: {{reason}}"
+      },
+      "blockRequest": {
+        "title": "Novi zahtev za blokadu",
+        "message": "Novi zahtev za blokadu je poslat na pregled"
+      },
+      "blockRequestApproved": {
+        "title": "Zahtev odobren",
+        "message": "Zahtev za blokadu je odobren"
+      },
+      "blockRequestRejected": {
+        "title": "Zahtev odbijen",
+        "message": "Vaš zahtev za blokadu je odbijen",
+        "message_withNote": "Vaš zahtev za blokadu je odbijen: {{rejectionNote}}"
+      },
+      "workerAutoLoggedOut": {
+        "title": "Auto-odjava",
+        "message": "Radnik {{workerName}} automatski je odjavljen."
+      },
+      "deadlineWarning": {
+        "title": "Rok — Upozorenje",
+        "message": "Narudžbina #{{orderNumber}} — još {{daysRemaining}} dana"
+      },
+      "deadlineCritical": {
+        "title": "Rok — Kritično",
+        "message": "Narudžbina #{{orderNumber}} — još {{daysRemaining}} dana"
+      },
+      "changeRequest": {
+        "title": "Novi zahtev za izmenu",
+        "message": "Narudžbina #{{orderNumber}} — novi zahtev za izmenu"
+      },
+      "changeRequestApproved": {
+        "title": "Zahtev za izmenu odobren",
+        "message": "Vaš zahtev za izmenu narudžbine #{{orderNumber}} je odobren."
+      },
+      "changeRequestRejected": {
+        "title": "Zahtev za izmenu odbijen",
+        "message": "Vaš zahtev za izmenu narudžbine #{{orderNumber}} je odbijen.",
+        "message_withNote": "Vaš zahtev za izmenu narudžbine #{{orderNumber}} je odbijen: {{rejectionNote}}"
+      }
+    }
   },
   "attachments": {
     "title": "Dokumenti",
@@ -390,14 +588,36 @@
     "tabAverages": "Vremena po procesu",
     "tabTimeTracking": "Praćenje vremena",
     "tabWorkerHours": "Sati radnika",
-    "processCode": "Šifra",
+    "tabBlocksPerProcess": "Blokade po procesu",
+    "tabProductManufacturingTime": "Trajanje izrade proizvoda",
+    "tabWorkEfficiency": "Efikasnost radnog vremena",
+    "efficiencyPercent": "Efikasnost (%)",
+    "checkIn": "Prijava",
+    "checkOut": "Odjava",
+    "regularHours": "Redovno",
+    "overtimeHours": "Prekovremeno",
+    "totalWorkedHours": "Ukupno",
+    "effectiveHours": "Efektivno",
+    "activeHours": "Aktivno na procesima",
+    "uncoveredHours": "Nepokriveno",
+    "loggedHours": "Prijavljeno (ukupno)",
+    "efficiencyStatus": "Status",
+    "autoLogoutApplied": "Auto-odjava",
+    "autoLogoutAppliedYes": "DA ⚠",
+    "autoLogoutAppliedNo": "Ne",
+    "statusExcellent": "Odlično",
+    "statusAcceptable": "Prihvatljivo",
+    "statusBelowNorm": "Ispod norme",
+    "statusUnacceptable": "Neprihvatljivo",
+    "chartWorkDistribution": "Raspodela radnog vremena po radniku",
+    "processCode": "Kod",
     "processName": "Proces",
     "complexityT": "Teško",
     "complexityS": "Srednje",
     "complexityL": "Lako",
     "avg": "Prosek",
-    "min": "min",
-    "max": "max",
+    "min": "Min",
+    "max": "Max",
     "trimmedAvg": "Realni prosek",
     "stdDev": "St. devijacija",
     "count": "Broj",
@@ -430,8 +650,6 @@
     "averageTime": "Prosečno vreme",
     "workerName": "Radnik",
     "totalHours": "Ukupno sati",
-    "sessionCount": "Br. sesija",
-    "avgPerDay": "Prosek/dan",
     "date": "Datum",
     "chartAvgByProcess": "Prosečno vreme po procesu",
     "chartWeeklyTrend": "Trend prosečnog vremena — po nedelji",
@@ -441,7 +659,10 @@
     "late": "Kasni",
     "granularityWeek": "Nedelja",
     "granularityMonth": "Mesec",
-    "minMaxBand": "Min — Max",
+    "period1Month": "Mesec dana",
+    "period3Months": "3 meseca",
+    "period6Months": "6 meseci",
+    "period1Year": "Godina dana",
     "normativ": "Normativ (cilj)",
     "trendPickFilters": "Izaberite proces i kompleksnost",
     "funnelInProgress": "U toku",
@@ -449,7 +670,30 @@
     "funnelBlocked": "Blokirano",
     "filterAll": "Sve",
     "minutesUnit": "min",
-    "noData": "Nema podataka"
+    "noData": "Nema podataka",
+    "chartBlocksPerProcess": "Blokade po procesu",
+    "blocksTableTitle": "Pregled blokada po procesu",
+    "blocksChart1Title": "Broj opravdanih blokada i prosečno trajanje",
+    "blocksChart2Title": "Zahtevi: Poslato / Odobreno / Odbijeno",
+    "blocksSubmitted": "Ukupno poslato",
+    "blocksApproved": "Odobreno",
+    "blocksResolved": "Rešeno",
+    "blocksRejected": "Odbijeno",
+    "blocksJustified": "Opravdane (Odob.+Rešeno)",
+    "blocksTotalRow": "UKUPNO",
+    "blocksAvgDurationHours": "Pros. trajanje (h)",
+    "manufacturingTableTitle": "Trajanje izrade proizvoda po narudžbini",
+    "manufacturingChartTitle": "Sastav prosečnog vremena izrade po procesu",
+    "efficiencyChartTitle": "Efikasnost po radniku (%)",
+    "manufacturingTopComplexity": "Najzast. težina",
+    "manufacturingComplexityShare": "Zastupljenost težina (T/S/L)",
+    "manufacturingTotal": "Ukupno",
+    "manufacturingAvgWithGaps": "Prosek sa vremenom između procesa",
+    "manufacturingAvgWithoutGaps": "Prosek bez vremena između procesa",
+    "manufacturingAggregateTitle": "Prosek po procesu",
+    "manufacturingGapToNext": "Do sledećeg procesa",
+    "manufacturingProcessDuration": "Trajanje",
+    "manufacturingNoComplexity": "—"
   },
   "language": {
     "sr": "Srpski",
@@ -470,5 +714,121 @@
     "dateTo": "Do datuma",
     "isActive": "Aktivan",
     "role": "Uloga"
+  },
+  "materials": {
+    "title": "Materijali",
+    "newMaterial": "Novi materijal",
+    "editMaterial": "Izmeni materijal",
+    "searchPlaceholder": "Pretraga po kodu ili nazivu",
+    "allCategories": "Sve kategorije",
+    "status": "Status",
+    "active": "Aktivni",
+    "inactive": "Neaktivni",
+    "code": "Kod",
+    "name": "Naziv",
+    "unit": "JM",
+    "category": "Kategorija",
+    "dimensions": "Dimenzije (X × Y × Z)",
+    "min": "Min",
+    "max": "Max",
+    "location": "Pozicija",
+    "notes": "Napomena",
+    "dimX": "Dim X",
+    "dimY": "Dim Y",
+    "dimZ": "Dim Z",
+    "activate": "Aktiviraj",
+    "deactivate": "Deaktiviraj",
+    "deactivateConfirm": "Deaktiviraj materijal?",
+    "statusActive": "Aktivan",
+    "statusInactive": "Neaktivan",
+    "empty": "Nema materijala",
+    "created": "Materijal kreiran.",
+    "saved": "Materijal sačuvan.",
+    "createError": "Greška pri kreiranju materijala.",
+    "saveError": "Greška pri čuvanju materijala.",
+    "unitPlaceholder": "kom, m2, kg...",
+    "categoryPlaceholder": "Profil, Lim, Staklo...",
+    "duplicate": "Dupliraj",
+    "import": {
+      "button": "Uvoz iz Excela",
+      "title": "Uvoz materijala iz Excela",
+      "dropHint": "Prevuci .xlsx fajl ovde ili klikni za izbor",
+      "formatHint": "Zaglavlja: Kod, Naziv, Jedinica mere, Kategorija, Min, Max, Dimenzija X/Y/Z, Pozicija, Napomena",
+      "missingHeaders": "Nedostaju obavezna zaglavlja",
+      "validCount": "Spremno: {{n}}",
+      "errorCount": "Greške: {{n}}",
+      "pickAnother": "Drugi fajl",
+      "parseError": "Greška",
+      "parseFailed": "Nije moguće pročitati Excel fajl.",
+      "save": "Uvezi ({{n}})",
+      "failed": "Uvoz nije uspeo.",
+      "allOk": "Svi materijali uspešno uvezeni.",
+      "resultSummary": "Uvezeno: {{c}} • Greške: {{e}}"
+    },
+    "validation": {
+      "codeRequired": "Kod je obavezan.",
+      "nameRequired": "Naziv je obavezan.",
+      "unitRequired": "Jedinica mere je obavezna.",
+      "categoryRequired": "Kategorija je obavezna.",
+      "maxLtMin": "Max ne sme biti manji od Min."
+    }
+  },
+  "warehouse": {
+    "stockTitle": "Stanje magacina",
+    "historyTitle": "Istorija transakcija",
+    "inflowTitle": "Ulaz materijala (prijemnica)",
+    "outflowTitle": "Izlaz materijala (po narudžbenici)",
+    "searchPlaceholder": "Pretraga",
+    "allCategories": "Sve kategorije",
+    "allStatuses": "Svi statusi",
+    "allMaterials": "Svi materijali",
+    "selectMaterial": "Izaberi…",
+    "type": "Tip",
+    "code": "Kod",
+    "name": "Naziv",
+    "unit": "JM",
+    "category": "Kategorija",
+    "quantity": "Količina",
+    "min": "Min",
+    "max": "Max",
+    "unitPrice": "Cena po JM",
+    "totalValue": "Ukupna cena",
+    "total": "Ukupno",
+    "location": "Pozicija",
+    "notes": "Napomena",
+    "date": "Datum",
+    "movementDate": "Datum",
+    "documentReference": "Prijemnica / Narudžbenica",
+    "documentReferenceInflow": "Broj prijemnice",
+    "documentReferenceOutflow": "Broj narudžbenice",
+    "documentReferenceInflowPlaceholder": "2026/043",
+    "documentReferenceOutflowPlaceholder": "ORD-2026-006",
+    "documentReferenceSearch": "Broj prijemnice / narudžbenice",
+    "documentReferenceRequired": "Broj prijemnice/narudžbenice je obavezan.",
+    "process": "Proces",
+    "selectProcessOptional": "Izaberi proces (opciono)",
+    "newMaterial": "Novi materijal",
+    "newMaterialCreated": "Materijal kreiran",
+    "newMaterialFailed": "Kreiranje materijala nije uspelo",
+    "lines": "Stavke materijala",
+    "addLine": "Dodaj stavku",
+    "removeLine": "Ukloni stavku?",
+    "lineQuantityRequired": "Količina",
+    "lineMaterialRequired": "Izaberi materijal",
+    "lineNotesPlaceholder": "—",
+    "inflowSaved": "Ulaz sačuvan.",
+    "outflowSaved": "Izlaz sačuvan.",
+    "saveInflow": "Sačuvaj prijemnicu",
+    "saveOutflow": "Sačuvaj izlaz",
+    "saveError": "Greška pri snimanju.",
+    "stockEmpty": "Nema materijala u magacinu",
+    "stockEmptyAction": "Otvori Materijale",
+    "historyEmpty": "Nema transakcija",
+    "unitPriceFallbackHint": "Preuzima poslednju",
+    "statusBelowMin": "⚠ ISPOD MIN",
+    "statusAboveMax": "↑ IZNAD MAX",
+    "statusOk": "✓ OK",
+    "inflowLabel": "Ulaz",
+    "outflowLabel": "Izlaz"
   }
 }

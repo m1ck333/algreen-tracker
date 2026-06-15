@@ -14,6 +14,6 @@ export const useWorkSessionStore = create<WorkSessionState>()(
       setCheckInTime: (checkInTime) => set({ checkInTime }),
       clear: () => set({ checkInTime: null }),
     }),
-    { name: 'algreen-work-session' },
+    { name: 'alblue-work-session' },
   ),
 );

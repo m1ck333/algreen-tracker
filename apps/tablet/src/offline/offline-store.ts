@@ -46,7 +46,7 @@ export const useOfflineStore = create<OfflineState>()(
       clearPendingActions: () => set({ pendingActions: [] }),
     }),
     {
-      name: 'algreen-offline',
+      name: 'alblue-offline',
     },
   ),
 );

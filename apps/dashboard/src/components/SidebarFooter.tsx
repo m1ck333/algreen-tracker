@@ -1,23 +1,110 @@
 import { useState, useCallback } from 'react';
-import { Badge, Button, Popover, List, Typography, Space, Empty, Tooltip, Divider, Segmented, theme } from 'antd';
+import { Badge, Button, Popover, List, Menu, Typography, Space, Empty, Tooltip, Divider, Segmented, theme, Grid, Drawer } from 'antd';
 import {
   BellOutlined,
   UserOutlined,
   LogoutOutlined,
   GlobalOutlined,
+  SunOutlined,
+  MoonOutlined,
   CheckOutlined,
   DeleteOutlined,
   ClearOutlined,
   EyeInvisibleOutlined,
+  InfoCircleOutlined,
+  BookOutlined,
+  HistoryOutlined,
+  ClockCircleOutlined,
+  AlertOutlined,
+  StopOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  PlayCircleOutlined,
+  WarningOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { notificationsApi } from '@algreen/api-client';
-import { useAuthStore } from '@algreen/auth';
-import { useTranslation } from '@algreen/i18n';
-import type { NotificationDto } from '@algreen/shared-types';
+import { notificationsApi } from '@alblue/api-client';
+import { useAuthStore } from '@alblue/auth';
+import { useTranslation, useEnumTranslation } from '@alblue/i18n';
+import type { NotificationDto } from '@alblue/shared-types';
+import { NotificationType } from '@alblue/shared-types';
+import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
+import { useThemeStore } from '../stores/theme-store';
 
 const { Text } = Typography;
 const PAGE_SIZE = 15;
+
+/**
+ * Map BE notification types to FE i18n template paths. If the type has a
+ * template AND the notification carries structured params, render via i18n
+ * (so it follows the active locale). Otherwise we fall back to the
+ * BE-provided title/message (legacy / unmapped types).
+ *
+ * Some templates use i18next's `context` mechanism to switch sub-variants
+ * (e.g. blockRequestRejected.message vs .message_withNote, or
+ * orderActivated.title vs .title_readyForQueue). The BE sets a `context`
+ * field inside paramsJson; i18next picks it up automatically from the
+ * params object passed to `t()`.
+ */
+const NOTIFICATION_TEMPLATE_KEY: Partial<Record<NotificationType, string>> = {
+  [NotificationType.MaterialLowStock]: 'notifications.templates.materialLowStock',
+  [NotificationType.OrderActivated]: 'notifications.templates.orderActivated',
+  [NotificationType.ProcessCompleted]: 'notifications.templates.processCompleted',
+  [NotificationType.ProcessBlocked]: 'notifications.templates.processBlocked',
+  [NotificationType.BlockRequest]: 'notifications.templates.blockRequest',
+  [NotificationType.BlockRequestApproved]: 'notifications.templates.blockRequestApproved',
+  [NotificationType.BlockRequestRejected]: 'notifications.templates.blockRequestRejected',
+  [NotificationType.WorkerAutoLoggedOut]: 'notifications.templates.workerAutoLoggedOut',
+  [NotificationType.DeadlineWarning]: 'notifications.templates.deadlineWarning',
+  [NotificationType.DeadlineCritical]: 'notifications.templates.deadlineCritical',
+  [NotificationType.ChangeRequest]: 'notifications.templates.changeRequest',
+  [NotificationType.ChangeRequestApproved]: 'notifications.templates.changeRequestApproved',
+  [NotificationType.ChangeRequestRejected]: 'notifications.templates.changeRequestRejected',
+};
+
+/**
+ * Visual signal per notification type — a small leading icon in the bell
+ * list so the user can scan by category without reading every title.
+ * The colour is the antd token (resolved at render time via theme.useToken).
+ */
+type NotificationIconSpec = { icon: typeof BellOutlined; colorToken: 'colorError' | 'colorWarning' | 'colorPrimary' | 'colorSuccess' | 'colorTextSecondary' };
+const NOTIFICATION_ICON: Partial<Record<NotificationType, NotificationIconSpec>> = {
+  [NotificationType.MaterialLowStock]: { icon: AlertOutlined, colorToken: 'colorError' },
+  [NotificationType.DeadlineCritical]: { icon: ClockCircleOutlined, colorToken: 'colorError' },
+  [NotificationType.DeadlineWarning]: { icon: ClockCircleOutlined, colorToken: 'colorWarning' },
+  [NotificationType.BlockRequest]: { icon: StopOutlined, colorToken: 'colorWarning' },
+  [NotificationType.BlockRequestApproved]: { icon: CheckCircleOutlined, colorToken: 'colorSuccess' },
+  [NotificationType.BlockRequestRejected]: { icon: CloseCircleOutlined, colorToken: 'colorError' },
+  [NotificationType.ProcessCompleted]: { icon: CheckCircleOutlined, colorToken: 'colorSuccess' },
+  [NotificationType.ProcessBlocked]: { icon: WarningOutlined, colorToken: 'colorWarning' },
+  [NotificationType.OrderActivated]: { icon: PlayCircleOutlined, colorToken: 'colorPrimary' },
+  [NotificationType.WorkerAutoLoggedOut]: { icon: LogoutOutlined, colorToken: 'colorWarning' },
+  [NotificationType.ChangeRequest]: { icon: EditOutlined, colorToken: 'colorWarning' },
+  [NotificationType.ChangeRequestApproved]: { icon: CheckCircleOutlined, colorToken: 'colorSuccess' },
+  [NotificationType.ChangeRequestRejected]: { icon: CloseCircleOutlined, colorToken: 'colorError' },
+};
+
+
+function renderNotificationText(
+  n: NotificationDto,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): { title: string; message: string } {
+  const templatePath = NOTIFICATION_TEMPLATE_KEY[n.type];
+  if (templatePath && n.paramsJson) {
+    try {
+      const params = JSON.parse(n.paramsJson) as Record<string, unknown>;
+      return {
+        title: t(`${templatePath}.title`, params),
+        message: t(`${templatePath}.message`, params),
+      };
+    } catch {
+      // Bad JSON — fall through to BE strings rather than crashing.
+    }
+  }
+  return { title: n.title, message: n.message };
+}
 
 function formatTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -39,19 +126,93 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { t, i18n } = useTranslation('dashboard');
+  const { tEnum } = useEnumTranslation();
   const queryClient = useQueryClient();
   const { token } = theme.useToken();
-
+  const themeMode = useThemeStore((s) => s.mode);
+  const setThemeMode = useThemeStore((s) => s.setMode);
+  const navigate = useNavigate();
+  const location = useLocation();
   const [notifOpen, setNotifOpen] = useState(false);
+  const screens = Grid.useBreakpoint();
+  const isMobile = screens.lg === false;
   const [profileOpen, setProfileOpen] = useState(false);
   const [page, setPage] = useState(1);
+
+  // Info group rendered as a real antd Menu so the flyout (collapsed) and
+  // inline-expansion (expanded) behaviour matches every other parent item
+  // in SidebarMenu — Milos 08.06.2026 asked for the footer to use the same
+  // UI as the upper part instead of the custom Popover+Tooltip it had.
+  const infoMenuItems = [
+    {
+      key: 'info',
+      icon: <InfoCircleOutlined />,
+      label: t('nav.info'),
+      children: [
+        { key: '/tutorial', icon: <BookOutlined />, label: t('nav.tutorial') },
+        { key: '/whats-new', icon: <HistoryOutlined />, label: t('nav.whatsNew') },
+      ],
+    },
+  ];
 
   const { data: count } = useQuery({
     queryKey: ['notifications', 'unread-count', userId],
     queryFn: () => notificationsApi.getUnreadCount(userId!).then((r) => r.data),
     enabled: !!userId,
-    refetchInterval: 120_000,
+    // Polling fallback. The SignalR subscriptions below make most updates
+    // arrive instantly, but polling still catches the types we don't have
+    // a dedicated SignalR event for (e.g. MaterialLowStock fires from a
+    // stock-entry write — no broadcast event for that yet).
+    refetchInterval: 60_000,
   });
+
+  // SignalR push: NotificationCreated fires every time the BE persists a new
+  // in-app notification for anyone in this tenant (block request, low-stock
+  // alarm, deadline warning, auto-logout, ...). One subscription covers every
+  // notification type — no per-type wiring on the FE.
+  const invalidateNotificationsLists = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  }, [queryClient]);
+  useSignalREvent(SignalREvents.NotificationCreated, invalidateNotificationsLists);
+
+  /**
+   * Click navigation for a notification. Each notification carries a
+   * referenceType + referenceId that maps to the page where the user can
+   * act on the underlying record. If the type maps cleanly, we mark as
+   * read and navigate; otherwise we just mark as read (no navigation).
+   * Drops the bell popover/drawer on the way out.
+   */
+  function handleNotificationClick(item: NotificationDto) {
+    if (!item.isRead) markAsRead.mutate(item.id);
+    setNotifOpen(false);
+
+    const refType = item.referenceType;
+    const refId = item.referenceId;
+    if (!refType) return;
+
+    switch (refType) {
+      case 'Order':
+        if (refId) navigate(`/orders?detail=${refId}`);
+        else navigate('/orders');
+        break;
+      case 'BlockRequest':
+        navigate('/block-requests');
+        break;
+      case 'ChangeRequest':
+        navigate('/change-requests');
+        break;
+      case 'Material':
+        // The low-stock notification lands the user on the Stock page
+        // filtered to materials currently below min — the actionable view.
+        navigate('/warehouse/stock?status=BelowMin');
+        break;
+      case 'WorkSession':
+        navigate('/dashboard');
+        break;
+      default:
+        break;
+    }
+  }
 
   const { data: pagedResult, isLoading } = useQuery({
     queryKey: ['notifications', 'list', userId, page],
@@ -91,7 +252,7 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
   });
 
   const notificationsContent = (
-    <div style={{ width: 360 }}>
+    <div style={{ width: isMobile ? '100%' : 360 }}>
       <div style={{ marginBottom: 8 }}>
         <Text strong style={{ fontSize: 15 }}>{t('notifications.title')}</Text>
         <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
@@ -133,12 +294,26 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
             </Button>
           </div>
         ) : null}
-        renderItem={(item: NotificationDto) => (
+        renderItem={(item: NotificationDto) => {
+          const { title, message } = renderNotificationText(item, t);
+          const iconSpec = NOTIFICATION_ICON[item.type];
+          const IconComp = iconSpec?.icon ?? BellOutlined;
+          const iconColor = iconSpec ? token[iconSpec.colorToken] : token.colorTextSecondary;
+          // Notifications with a referenceType are clickable — clicking
+          // marks-as-read and jumps to the relevant page. Notifications
+          // without a referenceType only show the cursor on hover for the
+          // action buttons.
+          const isClickable = !!item.referenceType;
+          return (
           <List.Item
+            className={isClickable ? 'notification-item-clickable' : undefined}
             style={{
               background: item.isRead ? undefined : token.colorPrimaryBg,
-              padding: '8px 12px',
+              padding: '10px 12px',
+              cursor: isClickable ? 'pointer' : 'default',
+              alignItems: 'flex-start',
             }}
+            onClick={isClickable ? () => handleNotificationClick(item) : undefined}
             actions={[
               item.isRead ? (
                 <Tooltip key="unread" title={t('notifications.markUnread')}>
@@ -146,7 +321,7 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
                     type="text"
                     size="small"
                     icon={<EyeInvisibleOutlined />}
-                    onClick={() => markAsUnread.mutate(item.id)}
+                    onClick={(e) => { e.stopPropagation(); markAsUnread.mutate(item.id); }}
                   />
                 </Tooltip>
               ) : (
@@ -155,7 +330,7 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
                     type="text"
                     size="small"
                     icon={<CheckOutlined />}
-                    onClick={() => markAsRead.mutate(item.id)}
+                    onClick={(e) => { e.stopPropagation(); markAsRead.mutate(item.id); }}
                   />
                 </Tooltip>
               ),
@@ -165,24 +340,39 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
                   size="small"
                   danger
                   icon={<DeleteOutlined />}
-                  onClick={() => deleteOne.mutate(item.id)}
+                  onClick={(e) => { e.stopPropagation(); deleteOne.mutate(item.id); }}
                 />
               </Tooltip>,
             ]}
           >
             <List.Item.Meta
-              title={<Text strong={!item.isRead} style={{ fontSize: 13 }}>{item.title}</Text>}
-              description={
-                <Space direction="vertical" size={0}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>{item.message}</Text>
-                  <Text type="secondary" style={{ fontSize: 11 }}>
-                    {t('notifications.timeAgo', { time: formatTimeAgo(item.createdAt) })}
+              avatar={
+                <div
+                  style={{
+                    width: 32, height: 32, borderRadius: 16,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: iconColor + '22', color: iconColor, fontSize: 15,
+                    flexShrink: 0,
+                  }}
+                >
+                  <IconComp />
+                </div>
+              }
+              title={
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                  <Text strong={!item.isRead} style={{ fontSize: 13, lineHeight: 1.3 }}>{title}</Text>
+                  <Text type="secondary" style={{ fontSize: 11, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {formatTimeAgo(item.createdAt)}
                   </Text>
-                </Space>
+                </div>
+              }
+              description={
+                <Text type="secondary" style={{ fontSize: 12, lineHeight: 1.4 }}>{message}</Text>
               }
             />
           </List.Item>
-        )}
+          );
+        }}
       />
     </div>
   );
@@ -191,23 +381,39 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
     <div style={{ width: 240 }}>
       <Space direction="vertical" size={0} style={{ width: '100%' }}>
         <Text strong>{user?.fullName}</Text>
-        <Text type="secondary" style={{ fontSize: 12 }}>{user?.role}</Text>
+        <Text type="secondary" style={{ fontSize: 12 }}>{user?.role ? tEnum('UserRole', user.role) : ''}</Text>
       </Space>
       <Divider style={{ margin: '12px 0' }} />
-      <div>
-        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-          <GlobalOutlined /> {t('profile.language', { defaultValue: 'Language' })}
-        </Text>
-        <Segmented
-          block
-          value={i18n.language === 'en' ? 'en' : 'sr'}
-          onChange={(v) => i18n.changeLanguage(v as string)}
-          options={[
-            { label: t('language.sr'), value: 'sr' },
-            { label: t('language.en'), value: 'en' },
-          ]}
-        />
-      </div>
+      <Space direction="vertical" size={10} style={{ width: '100%' }}>
+        <div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
+            {t('profile.theme', { defaultValue: 'Theme' })}
+          </Text>
+          <Segmented
+            block
+            value={themeMode}
+            onChange={(v) => setThemeMode(v as 'light' | 'dark')}
+            options={[
+              { label: t('profile.themeLight', { defaultValue: 'Light' }), value: 'light', icon: <SunOutlined /> },
+              { label: t('profile.themeDark', { defaultValue: 'Dark' }), value: 'dark', icon: <MoonOutlined /> },
+            ]}
+          />
+        </div>
+        <div>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
+            <GlobalOutlined /> {t('profile.language', { defaultValue: 'Language' })}
+          </Text>
+          <Segmented
+            block
+            value={i18n.language === 'en' ? 'en' : 'sr'}
+            onChange={(v) => i18n.changeLanguage(v as string)}
+            options={[
+              { label: t('language.sr'), value: 'sr' },
+              { label: t('language.en'), value: 'en' },
+            ]}
+          />
+        </div>
+      </Space>
       <Divider style={{ margin: '12px 0' }} />
       <Button
         block
@@ -235,27 +441,75 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
 
   return (
     <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 4, paddingBottom: 4 }}>
-      <Popover
-        content={notificationsContent}
-        trigger="click"
-        open={notifOpen}
-        onOpenChange={(v) => { setNotifOpen(v); if (v) setPage(1); }}
-        placement="rightBottom"
-        arrow={false}
-      >
-        <Tooltip title={collapsed ? t('nav.notifications', { defaultValue: 'Notifications' }) : ''} placement="right">
-          <div
-            style={rowStyle}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+      {/* Info: same antd Menu component as SidebarMenu, so flyout (collapsed)
+          and inline expansion (expanded) match the upper menu groups. Just
+          this one group; Notifications + Profile below keep custom Popovers
+          because their content (notif list with actions, theme/lang/logout)
+          doesn't fit the antd submenu pattern. */}
+      <Menu
+        theme="dark"
+        mode="inline"
+        inlineCollapsed={collapsed}
+        items={infoMenuItems}
+        selectedKeys={[location.pathname]}
+        onClick={({ key }) => {
+          if (key.startsWith('/')) navigate(key);
+        }}
+        style={{ border: 'none', background: 'transparent' }}
+      />
+      {(() => {
+        const bellRow = (
+          <Tooltip title={collapsed ? t('nav.notifications', { defaultValue: 'Notifications' }) : ''} placement="right">
+            <div
+              style={rowStyle}
+              onClick={isMobile ? () => { setNotifOpen(true); setPage(1); } : undefined}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <Badge count={count ?? 0} size="small" offset={[2, -2]}>
+                <BellOutlined style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }} />
+              </Badge>
+              {!collapsed && <span>{t('nav.notifications', { defaultValue: 'Notifications' })}</span>}
+            </div>
+          </Tooltip>
+        );
+
+        // Mobile: the sidebar lives inside a Drawer already, so a
+        // right-placed Popover anchored to the bell would land off-screen
+        // (the bell is at ~x=200px and the popover would extend further
+        // right). Use a dedicated right-side Drawer for notifications
+        // instead; it stacks above the menu Drawer cleanly.
+        if (isMobile) {
+          return (
+            <>
+              {bellRow}
+              <Drawer
+                title={t('notifications.title')}
+                placement="right"
+                open={notifOpen}
+                onClose={() => setNotifOpen(false)}
+                width={Math.min(360, window.innerWidth - 16)}
+                styles={{ body: { padding: 16 } }}
+              >
+                {notificationsContent}
+              </Drawer>
+            </>
+          );
+        }
+
+        return (
+          <Popover
+            content={notificationsContent}
+            trigger="click"
+            open={notifOpen}
+            onOpenChange={(v) => { setNotifOpen(v); if (v) setPage(1); }}
+            placement="rightBottom"
+            arrow={false}
           >
-            <Badge count={count ?? 0} size="small" offset={[2, -2]}>
-              <BellOutlined style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }} />
-            </Badge>
-            {!collapsed && <span>{t('nav.notifications', { defaultValue: 'Notifications' })}</span>}
-          </div>
-        </Tooltip>
-      </Popover>
+            {bellRow}
+          </Popover>
+        );
+      })()}
       <Popover
         content={profileContent}
         trigger="click"

@@ -1,8 +1,10 @@
+import { useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from '@algreen/i18n';
-import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '@algreen/auth';
-import { notificationsApi } from '@algreen/api-client';
+import { useTranslation } from '@alblue/i18n';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@alblue/auth';
+import { notificationsApi } from '@alblue/api-client';
+import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
 
 const ListIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -43,12 +45,19 @@ export function BottomNav() {
   const { t } = useTranslation('tablet');
   const userId = useAuthStore((s) => s.user?.id) ?? '';
 
+  const queryClient = useQueryClient();
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ['unread-count', userId],
     queryFn: () => notificationsApi.getUnreadCount(userId).then((r) => r.data),
     enabled: !!userId,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
   });
+
+  const invalidateUnreadCount = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  }, [queryClient]);
+  useSignalREvent(SignalREvents.NotificationCreated, invalidateUnreadCount);
 
   const navItems = [
     { path: '/queue', label: t('nav.queue'), icon: <ListIcon />, badge: 0 },

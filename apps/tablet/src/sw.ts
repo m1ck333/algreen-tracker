@@ -22,7 +22,7 @@ self.addEventListener('push', (event) => {
     payload = event.data.json();
     console.log('[SW] push payload:', JSON.stringify(payload));
   } catch {
-    payload = { title: 'Algreen MES', body: event.data.text() };
+    payload = { title: 'MPMS', body: event.data.text() };
     console.log('[SW] push payload (text fallback):', payload.body);
   }
 

@@ -1,6 +1,6 @@
 # Backend Flag: Tablet DTO Enhancements
 
-> Based on analysis of the original AlGreen Excel Master v3 workbook and comparison with current backend DTOs.
+> Based on analysis of the original Alblue Excel Master v3 workbook and comparison with current backend DTOs.
 > Frontend is ready to consume these fields once added.
 
 ---
