@@ -46,6 +46,46 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    id: '2026-06-18-firma-naplata',
+    date: '2026-06-18',
+    title: {
+      sr: 'Firma — pregled pretplate i istorija uplata',
+      en: 'Company — subscription overview and payment history',
+    },
+    bullets: [
+      {
+        sr: 'Stranica „Firma" je sad podeljena na dva taba: „Podešavanja" (logo i rokovi narudžbina) i „Naplata" (pregled pretplate). U tabu „Naplata" odmah vidite do kada vam je pretplata aktivna i koliko dana je ostalo — više ne morate da računate sami sabirajući mesece iz pojedinačnih uplata.',
+        en: 'The "Company" page is now split into two tabs: "Settings" (logo and order deadlines) and "Billing" (subscription overview). The Billing tab shows at a glance how long your subscription is active and how many days remain — no more manual math across stacked payments.',
+      },
+      {
+        sr: 'Ispod pregleda je tabela istorije uplata sa kolonama: Datum uplate, Trajanje, Iznos, Faktura i Napomena. Možete sortirati po svakoj koloni i filtrirati po godini. Sve uplate su samo za čitanje — beleži ih tehnička podrška, a vi ovde proveravate da li je vaša poslednja uplata zavedena.',
+        en: 'Below the overview is the payment history table with columns: Payment date, Duration, Amount, Invoice number and Notes. Sortable by each column and filterable by year. Entries are read-only — support records them; this tab lets you confirm your last payment is on file.',
+      },
+      {
+        sr: 'Kada se pretplata bliži kraju (manje od 14 dana) ili je istekla, svako jutro vam stiže obaveštenje u zvoncetu (gore-levo u sidebaru). Klikom na obaveštenje otvarate Firma → Naplata tab — ne morate sami da pratite datume, sistem vas podseća.',
+        en: 'When the subscription is close to expiring (under 14 days) or has lapsed, you receive a morning notification in the bell (bottom-left of the sidebar). Clicking the notification opens Company → Billing — no need to track dates yourself, the system reminds you.',
+      },
+    ],
+  },
+  {
+    id: '2026-06-16-change-password',
+    date: '2026-06-16',
+    title: {
+      sr: 'Promena sopstvene lozinke',
+      en: 'Self-service password change',
+    },
+    bullets: [
+      {
+        sr: 'U profilu (klik na ime u donjem levom uglu) je dodato dugme „Promeni lozinku". Otvara panel sa desne strane sa tri polja: trenutna lozinka, nova, potvrda nove. Posle čuvanja ostajete prijavljeni na trenutnoj sesiji, ali sledeća prijava traži novu lozinku.',
+        en: 'A "Change password" button has been added in the profile (click your name in the bottom-left corner). It opens a side panel with three fields: current password, new password, confirm new password. After saving, you stay signed in on the current session, but the next sign-in requires the new password.',
+      },
+      {
+        sr: 'Svako menja samo svoju lozinku. Ako je neko zaboravio lozinku, administrator je resetuje na njegovom redu u listi Korisnika (akcija „Resetuj lozinku") — bez potrebe za starom lozinkom.',
+        en: 'Each user can only change their own password. If someone has forgotten theirs, an admin resets it from their row in the Users list (action "Reset password") — no current password required.',
+      },
+    ],
+  },
+  {
     id: '2026-06-15-firma-logo',
     date: '2026-06-15',
     title: {
@@ -104,8 +144,8 @@ export const changelog: ChangelogEntry[] = [
         en: 'Issue form: if the requested quantity exceeds the on-hand amount, the system rejects the entry with "Insufficient stock for CODE — NAME: currently X UoM, requested Y UoM" — stock cannot go below zero.',
       },
       {
-        sr: 'Alarm za minimum zaliha (po potvrdi Saše): kada Izlaz prevede materijal iz stanja iznad minimuma u stanje ispod minimuma, na kontrolnoj tabli koordinatora pojavi se brojač „Materijali ispod min" (crveni broj klikom vodi na Stanje sa filterom „Ispod min"), a u zvoncetu se kreira obaveštenje „Materijal ispod minimuma: KOD — NAZIV" za sve menadžment uloge (Super administrator, Administrator, Menadžer, Koordinator). Ako je materijal već bio ispod min, dodatni Izlazi ne stvaraju nove notifikacije — tek kad se vrati iznad min i ponovo padne ispod.',
-        en: 'Low-stock alarm (per Saša\'s confirmation): when an Issue brings a material from at-or-above min down to below min, the coordinator dashboard shows a "Materials below min" counter (the red number is clickable and navigates to Stock filtered to "Below min"), and a "Material below minimum: CODE — NAME" notification is created in the bell for every management user (Super Administrator, Administrator, Manager, Coordinator). If the material was already below min, follow-up Issues don\'t create extra notifications — a new one fires only after the stock is restored above min and crosses back below.',
+        sr: 'Alarm za minimum zaliha (po potvrdi Saše): kada Izlaz prevede materijal iz stanja iznad minimuma u stanje ispod minimuma, na kontrolnoj tabli koordinatora pojavi se brojač „Materijali ispod min" (crveni broj klikom vodi na Stanje sa filterom „Ispod min"), a u zvoncetu se kreira obaveštenje „Materijal ispod minimuma: KOD — NAZIV" za sve menadžment uloge (Administrator, Menadžer, Koordinator). Ako je materijal već bio ispod min, dodatni Izlazi ne stvaraju nove notifikacije — tek kad se vrati iznad min i ponovo padne ispod.',
+        en: 'Low-stock alarm (per Saša\'s confirmation): when an Issue brings a material from at-or-above min down to below min, the coordinator dashboard shows a "Materials below min" counter (the red number is clickable and navigates to Stock filtered to "Below min"), and a "Material below minimum: CODE — NAME" notification is created in the bell for every management user (Administrator, Manager, Coordinator). If the material was already below min, follow-up Issues don\'t create extra notifications — a new one fires only after the stock is restored above min and crosses back below.',
       },
       {
         sr: 'Obaveštenja prate jezik aplikacije: tekst „Materijal ispod minimuma…" se odmah prepravlja kada se jezik promeni u profilu, bez osvežavanja stranice.',
@@ -404,10 +444,6 @@ export const changelog: ChangelogEntry[] = [
       {
         sr: 'Sprečeno brisanje poslednjeg Admin korisnika — firma ne može da ostane bez administratora.',
         en: 'Blocked deletion of the last Admin in a company — a company can never end up without an administrator.',
-      },
-      {
-        sr: 'Promena uloge korisnika sada zahteva nivo super administratora.',
-        en: 'Changing a user role now requires Super Administrator privileges.',
       },
       {
         sr: 'Prilikom promene uloge korisnika, njegove postojeće sesije se odjavljuju — stara prava ne mogu da nastave da važe.',

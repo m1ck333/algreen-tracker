@@ -209,6 +209,11 @@ export function OrderQueuePage() {
         return () => clearTimeout(timer);
       }
     }
+    // visibleCount is intentionally NOT a dependency: this effect reacts
+    // to highlightId / mergedItems changes and READS the latest
+    // visibleCount to decide whether to bump it. Including it would
+    // re-run the effect every bump and re-trigger the highlight.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightId, mergedItems]);
 
   if (isLoading) {
@@ -609,10 +614,6 @@ function WorkPanel({
     const s = seconds % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
-
-  const daysUntilDelivery = activeWork
-    ? Math.ceil((new Date(activeWork.deliveryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null;
 
   return (
     <div className="border-t border-gray-200 mt-3 pt-3 space-y-4">

@@ -32,12 +32,12 @@ export function KorisniciPage() {
         items={[
           {
             key: 'korisnici',
-            label: t('admin.users.tabTenantUsers', { defaultValue: 'Korisnici firme' }),
+            label: t('admin.users.tabTenantUsers'),
             children: <UsersPage hideHeader />,
           },
           {
             key: 'system',
-            label: t('admin.systemAdmins.title', { defaultValue: 'Super administratori' }),
+            label: t('admin.systemAdmins.title'),
             children: <SuperAdminsPanel />,
           },
         ]}

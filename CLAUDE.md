@@ -25,13 +25,70 @@ apps/
 
 ## Key Commands
 ```bash
-pnpm install                    # Install all deps
+pnpm install                    # Install all deps (also activates husky pre-commit)
 pnpm --filter dashboard dev     # Start dashboard on :5941
 pnpm --filter tablet dev        # Start tablet on :5942
 pnpm build                      # Build everything
 pnpm --filter dashboard build   # Build dashboard only
 pnpm --filter tablet build      # Build tablet only
+pnpm check:i18n                 # Manually run i18n key audit
+pnpm check:brand                # Manually run brand-leak audit
+pnpm check:colors               # Manually run hardcoded-color audit
 ```
+
+## Pre-commit hooks
+`pnpm install` auto-installs husky (via the `prepare` script). The
+pre-commit chain runs on every commit (~5s total):
+1. **merge conflict markers** — inline grep in the hook; fails on any
+   staged `<<<<<<<` / `=======` / `>>>>>>>` line.
+2. **i18n keys** (`scripts/check-i18n-keys.mjs`) — every static `t('key')`
+   must exist in both `sr/` and `en/` dashboard.json.
+3. **locale placeholders** (`scripts/check-locale-placeholders.mjs`) —
+   `{{name}}` placeholders must match between sr/en for each key, and
+   no empty values.
+4. **brand leaks** (`scripts/check-brand-leaks.mjs`) — fails on
+   user-visible `algreen` / `alblue` / `easy-mes` / `Skysoft`.
+5. **hardcoded colors** (`scripts/check-hardcoded-colors.mjs`) — fails on
+   hex / rgb / rgba literals in non-exempt `.tsx` files.
+6. **file size** (`scripts/check-file-size.mjs`) — soft cap of 1500
+   lines per `.tsx`/`.ts`; OrderListPage is allow-listed.
+7. **ESLint via lint-staged** — runs on changed `.ts`/`.tsx` only,
+   `--max-warnings=0`.
+8. **TypeScript typecheck** — full monorepo via `pnpm -r typecheck`.
+
+Bypass with `git commit --no-verify` only when reverting.
+
+## Tooling
+- **CI**: `.github/workflows/ci.yml` runs the same static checks + lint
+  + typecheck + dashboard/tablet builds on every push to main + PR.
+  Catches anything bypassed via `--no-verify`.
+- **Dependabot**: `.github/dependabot.yml` — weekly npm patch/minor PRs
+  grouped, immediate security advisories, monthly GHA updates.
+- **Bundle analyzer** (rollup-plugin-visualizer):
+  `pnpm analyze:dashboard` builds with `ANALYZE=1` and opens
+  `dist/stats.html` (interactive treemap of chunk contents).
+- **E2E** (Playwright): `e2e/*.spec.ts`. First time, run
+  `pnpm exec playwright install chromium` to fetch the browser. Then
+  `pnpm e2e` (headless) or `pnpm e2e:ui` (interactive). Tests assume a
+  running stack on `localhost:5941` (dashboard) and `localhost:5030`
+  (BE) — override via `PLAYWRIGHT_BASE_URL`. Test credentials default
+  to `admin@demo.com` / `Admin123!` / tenant `DEMO`; override via
+  `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` / `E2E_TENANT_CODE`. If
+  the admin password has been manually changed on your local DB:
+  `E2E_ADMIN_PASSWORD=<your-pw> pnpm e2e`.
+
+  **E2E in CI** (`.github/workflows/e2e.yml`): spins up Postgres +
+  BE + FE on every push to main + PR. Opt-in via two repo settings
+  (Settings → Secrets and variables → Actions):
+    1. **Variables** tab: add `E2E_ENABLED` with value `true`. Without
+       this, the job is skipped (shows as skipped in CI, not failed).
+    2. **Secrets** tab: add `BE_CHECKOUT_TOKEN` — a fine-grained GitHub
+       PAT with `Contents:read` on `NikolaMilanovic22/AlgreenMES`.
+       Create the PAT at GitHub → Settings → Developer settings →
+       Personal access tokens → Fine-grained tokens → Generate new
+       token; resource owner `NikolaMilanovic22`, repository access
+       "Only select repositories" → `AlgreenMES`, permissions
+       Repository → Contents: Read.
 
 ## Environment Variables
 Set in `.env` at root or per-app:

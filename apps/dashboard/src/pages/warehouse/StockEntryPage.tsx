@@ -54,7 +54,7 @@ export function StockEntryPage({ type }: { type: StockMovementType }) {
     mutationFn: (values: CreateMaterialRequest) => materialsApi.create(values),
     onSuccess: (resp) => {
       const created = resp.data;
-      message.success(t('warehouse.newMaterialCreated', { defaultValue: 'Materijal kreiran' }));
+      message.success(t('warehouse.newMaterialCreated'));
       queryClient.invalidateQueries({ queryKey: ['materials-for-warehouse', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['materials'] });
       const lines = (form.getFieldValue('lines') as LineFormShape[]) ?? [];
@@ -69,7 +69,7 @@ export function StockEntryPage({ type }: { type: StockMovementType }) {
       setNewMaterialOpen(false);
       newMaterialForm.resetFields();
     },
-    onError: (err) => message.error(getErrorMessage(err, t('warehouse.newMaterialFailed', { defaultValue: 'Kreiranje materijala nije uspelo' }))),
+    onError: (err) => message.error(getErrorMessage(err, t('warehouse.newMaterialFailed'))),
   });
 
   const { data: processes } = useQuery({
@@ -251,8 +251,8 @@ export function StockEntryPage({ type }: { type: StockMovementType }) {
         onCancel={() => { setNewMaterialOpen(false); setPendingLineForNewMaterial(null); }}
         onOk={() => newMaterialForm.submit()}
         confirmLoading={createMaterialMutation.isPending}
-        okText={t('common:actions.save', { defaultValue: 'Sačuvaj' })}
-        cancelText={t('common:actions.cancel', { defaultValue: 'Otkaži' })}
+        okText={t('common:actions.save')}
+        cancelText={t('common:actions.cancel')}
         destroyOnHidden
         width={600}
       >

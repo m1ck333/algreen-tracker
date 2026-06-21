@@ -6,11 +6,11 @@ import {
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { PlusOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ordersApi, changeRequestsApi } from '@alblue/api-client';
+import { ordersApi, changeRequestsApi, orderTypesApi } from '@alblue/api-client';
 import { useAuthStore } from '@alblue/auth';
 import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
 import {
-  OrderStatus, OrderType, RequestStatus, ChangeRequestType,
+  OrderStatus, RequestStatus, ChangeRequestType,
 } from '@alblue/shared-types';
 import type { OrderDto, ChangeRequestDto } from '@alblue/shared-types';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -21,11 +21,15 @@ import { getTranslatedError } from '../../utils/errors';
 
 const { Text } = Typography;
 
-const orderTypeColors: Record<OrderType, string> = {
-  [OrderType.Standard]: 'blue',
-  [OrderType.Repair]: 'orange',
-  [OrderType.Complaint]: 'red',
-  [OrderType.Rework]: 'purple',
+// Color map for the 4 original seeded order type codes. Custom codes
+// (admin-added since 20.06.2026) fall through to the default 'default'
+// antd Tag color — admins can theme custom types via the OrderTypes
+// admin page in a future iteration.
+const orderTypeColors: Record<string, string> = {
+  Standard: 'blue',
+  Repair: 'orange',
+  Complaint: 'red',
+  Rework: 'purple',
 };
 
 export function SalesDashboard() {
@@ -58,6 +62,15 @@ export function SalesDashboard() {
     enabled: !!tenantId && !!userId,
   });
 
+  // Per-tenant order types — drives the create-order dropdown + the
+  // table filter values + resolves codes to localized names.
+  const { data: orderTypes } = useQuery({
+    queryKey: ['order-types', tenantId, 'active'],
+    queryFn: () => orderTypesApi.getAll({ isActive: true, pageSize: 100 }).then((r) => r.data.items),
+    enabled: !!tenantId,
+  });
+  const orderTypeNameByCode = new Map((orderTypes ?? []).map((ot) => [ot.code, ot.name] as const));
+
   // SignalR push: orders + their own change requests update within ~1s of
   // any state change instead of staying stale until manual refresh. The
   // sales dashboard has no polling, so this is the only thing keeping the
@@ -81,7 +94,7 @@ export function SalesDashboard() {
         orderNumber: values.orderNumber as string,
         deliveryDate: dayjs(values.deliveryDate as string).format('YYYY-MM-DD') + 'T12:00:00Z',
         priority: values.priority as number,
-        orderType: values.orderType as OrderType,
+        orderType: values.orderType as string,
         notes: values.notes as string | undefined,
       }),
     onSuccess: () => {
@@ -129,9 +142,9 @@ export function SalesDashboard() {
       title: t('orders.orderType'),
       dataIndex: 'orderType',
       width: 110,
-      filters: Object.values(OrderType).map((ot) => ({ text: tEnum('OrderType', ot), value: ot })),
+      filters: (orderTypes ?? []).map((ot) => ({ text: ot.name, value: ot.code })),
       onFilter: (value: unknown, record: OrderDto) => record.orderType === value,
-      render: (ot: OrderType) => <Tag color={orderTypeColors[ot]}>{tEnum('OrderType', ot)}</Tag>,
+      render: (ot: string) => <Tag color={orderTypeColors[ot] ?? 'default'}>{orderTypeNameByCode.get(ot) ?? ot}</Tag>,
     },
     {
       title: t('common:labels.status'),
@@ -281,7 +294,7 @@ export function SalesDashboard() {
             </Col>
             <Col span={10}>
               <Form.Item name="orderType" label={t('orders.orderType')} rules={[{ required: true }]}>
-                <Select options={Object.values(OrderType).map((ot) => ({ label: tEnum('OrderType', ot), value: ot }))} />
+                <Select options={(orderTypes ?? []).map((ot) => ({ label: ot.name, value: ot.code }))} />
               </Form.Item>
             </Col>
           </Row>
@@ -327,6 +340,7 @@ export function SalesDashboard() {
         okText={t('common:actions.save')}
         cancelText={t('common:actions.cancel')}
         confirmLoading={createCRMutation.isPending}
+        destroyOnHidden
       >
         <Form form={crForm} layout="vertical" scrollToFirstError={{ behavior: "smooth", block: "center" }} onFinish={(v) => createCRMutation.mutate(v)} onValuesChange={onCRValuesChange} style={{ marginTop: 16 }}>
           {crTargetOrder ? (

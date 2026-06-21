@@ -7,7 +7,8 @@
     "close": "Close",
     "loadingPdf": "Loading PDF...",
     "pdfPageAlt": "Page {{n}}",
-    "pdfLoadError": "Failed to load PDF"
+    "pdfLoadError": "Failed to load PDF",
+    "documentsCount": "📎 Documents ({{count}})"
   },
   "nav": {
     "queue": "Queue",
@@ -33,7 +34,6 @@
     "loadingQueue": "Loading queue...",
     "loadFailed": "Failed to load queue",
     "retry": "Retry",
-    "items": "{{count}} items",
     "qty": "Qty: {{count}}",
     "daysLeft": "{{count}}d left",
     "progress": "{{completed}}/{{total}} processes",
@@ -41,7 +41,6 @@
     "itemNotes": "Item note"
   },
   "work": {
-    "title": "Work Session",
     "working": "Working...",
     "readyToStart": "Ready to start",
     "subProcesses": "Sub-processes",
@@ -50,13 +49,10 @@
     "resume": "RESUME",
     "paused": "Paused",
     "complete": "COMPLETE",
-    "backToQueue": "Back to Queue",
-    "min": "min",
     "startFailed": "Failed to start process",
     "pauseFailed": "Failed to pause process",
     "resumeFailed": "Failed to resume process",
     "completeFailed": "Failed to complete process",
-    "product": "Product",
     "priority": "Priority",
     "deliveryDate": "Delivery deadline",
     "quantity": "Quantity",
@@ -76,7 +72,6 @@
     "title": "Incoming Orders",
     "subtitle": "Orders arriving from previous processes",
     "noOrders": "No incoming orders",
-    "incoming": "Incoming",
     "blocked": "{{count}} blocking processes",
     "blockedBy": "Previous process not completed:",
     "daysLeft": "{{count}}d left",
@@ -87,11 +82,8 @@
   "checkout": {
     "title": "End of Shift",
     "checkOut": "CHECK OUT",
-    "checkOutFailed": "Failed to check out",
-    "goBack": "Go Back",
     "confirmTitle": "End Shift",
     "confirmMessage": "Are you sure you want to end your shift and check out?",
-    "process": "Process",
     "checkedInAt": "Checked in at"
   },
   "offline": {
@@ -103,10 +95,6 @@
     "loggedOutTitle": "You have been auto-logged-out",
     "loggedOutBody": "Your work session was automatically closed because the auto-logout time was reached. To work overtime, please log in again.",
     "loginAgain": "Log in again"
-  },
-  "notifications": {
-    "prompt": "Enable notifications to get alerts about new orders and blocks",
-    "enable": "Enable"
   },
   "notificationsPage": {
     "title": "Notifications",
@@ -182,8 +170,7 @@
     }
   },
   "common": {
-    "loadMore": "Load more ({{remaining}} remaining)",
-    "showingOf": "Showing {{shown}} of {{total}}"
+    "loadMore": "Load more ({{remaining}} remaining)"
   },
   "language": {
     "sr": "SR",

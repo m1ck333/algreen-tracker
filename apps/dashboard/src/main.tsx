@@ -34,7 +34,7 @@ setOnForbidden((code) => {
   // page-level mutation onError will surface it via getTranslatedError —
   // staying silent here prevents the duplicate toast (Milos 15.06.2026,
   // two stacked toasts for READ_ONLY_CROSS_TENANT in different locales).
-  if (code && i18n.t(`common:errors.${code}`, { defaultValue: '' })) {
+  if (code && i18n.t(`common:errors.${code}`)) {
     return;
   }
   const key = (code && FORBIDDEN_MESSAGE_KEY[code]) ?? 'errors.forbiddenGeneric';

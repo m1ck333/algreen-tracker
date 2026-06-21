@@ -1,0 +1,63 @@
+name: CI
+
+# Catch anything that escapes the local husky pre-commit (e.g. --no-verify
+# bypasses, or env-specific failures on Milos's mac). Runs on every push
+# to main and on PRs targeting main.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel older runs on the same branch when a new push lands — saves
+# minutes on rapid pushes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: typecheck + static checks + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: i18n key check
+        run: pnpm check:i18n
+
+      - name: i18n placeholder + empty value check
+        run: pnpm check:i18n-params
+
+      - name: brand-leak check
+        run: pnpm check:brand
+
+      - name: hardcoded-color check
+        run: pnpm check:colors
+
+      - name: file-size check
+        run: pnpm check:size
+
+      - name: lint
+        run: pnpm lint
+
+      - name: typecheck
+        run: pnpm typecheck
+
+      - name: build dashboard
+        run: pnpm --filter dashboard build
+
+      - name: build tablet
+        run: pnpm --filter tablet build

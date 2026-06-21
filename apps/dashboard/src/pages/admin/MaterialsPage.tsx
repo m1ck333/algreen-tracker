@@ -147,7 +147,7 @@ export function MaterialsPage() {
             }}
           />
           <Button icon={<ImportOutlined />} onClick={() => setImportOpen(true)}>
-            {t('materials.import.button', { defaultValue: 'Uvoz iz Excela' })}
+            {t('materials.import.button')}
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); setCreateOpen(true); }}>
             {t('materials.newMaterial')}
@@ -283,7 +283,7 @@ export function MaterialsPage() {
         destroyOnHidden
         extra={
           <Button type="primary" onClick={() => createForm.submit()} loading={createMutation.isPending}>
-            {t('common:actions.save', { defaultValue: 'Save' })}
+            {t('common:actions.save')}
           </Button>
         }
       >
@@ -358,7 +358,7 @@ export function MaterialsPage() {
         extra={
           editing ? (
             <Button type="primary" onClick={() => editForm.submit()} loading={updateMutation.isPending}>
-              {t('common:actions.save', { defaultValue: 'Save' })}
+              {t('common:actions.save')}
             </Button>
           ) : null
         }
@@ -399,8 +399,8 @@ export function MaterialsPage() {
                 <Popconfirm
                   title={t('materials.deactivateConfirm')}
                   onConfirm={() => setActiveMutation.mutate({ id: editing.id, isActive: false }, { onSuccess: () => setEditing(null) })}
-                  okText={t('common:actions.confirm', { defaultValue: 'Da' })}
-                  cancelText={t('common:actions.no', { defaultValue: 'Ne' })}
+                  okText={t('common:actions.confirm')}
+                  cancelText={t('common:actions.no')}
                 >
                   <Button size="small" danger loading={setActiveMutation.isPending}>{t('materials.deactivate')}</Button>
                 </Popconfirm>

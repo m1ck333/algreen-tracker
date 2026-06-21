@@ -7,6 +7,7 @@ import { useTranslation } from '@alblue/i18n';
 import { PageHeader } from '../../components/PageHeader';
 import { TenantProfilePage } from './TenantProfilePage';
 import { TenantsPage } from './TenantsPage';
+import { AllPaymentsPage } from './AllPaymentsPage';
 
 /**
  * "Firma" — consolidated tenant management. Merges what used to be two
@@ -38,7 +39,7 @@ export function FirmaPage() {
     return (
       <>
         <PageHeader
-          title={t('admin.tenantProfile.title', { defaultValue: 'Profil firme' })}
+          title={t('admin.tenantProfile.title')}
           subtitle={tenant ? <Typography.Text type="secondary">{tenant.name} · {tenant.code}</Typography.Text> : undefined}
         />
         <TenantProfilePage hideHeader />
@@ -49,7 +50,7 @@ export function FirmaPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <PageHeader
-        title={t('admin.firma.title', { defaultValue: 'Firma' })}
+        title={t('admin.firma.title')}
         subtitle={tenant ? <Typography.Text type="secondary">{tenant.name} · {tenant.code}</Typography.Text> : undefined}
       />
       <Tabs
@@ -57,13 +58,18 @@ export function FirmaPage() {
         items={[
           {
             key: 'profil',
-            label: t('admin.firma.tabProfile', { defaultValue: 'Profil' }),
+            label: t('admin.firma.tabProfile'),
             children: <TenantProfilePage hideHeader />,
           },
           {
             key: 'sve',
-            label: t('admin.firma.tabAll', { defaultValue: 'Sve firme' }),
+            label: t('admin.firma.tabAll'),
             children: <TenantsPage hideHeader />,
+          },
+          {
+            key: 'uplate',
+            label: t('admin.firma.tabAllPayments'),
+            children: <AllPaymentsPage />,
           },
         ]}
       />

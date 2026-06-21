@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Badge, Button, Popover, List, Menu, Typography, Space, Empty, Tooltip, Divider, Segmented, theme, Grid, Drawer } from 'antd';
+import { Badge, Button, Popover, List, Menu, Typography, Space, Empty, Tooltip, Divider, Segmented, theme, Grid, Drawer, Form, Input, App } from 'antd';
 import {
   BellOutlined,
   UserOutlined,
@@ -14,6 +14,7 @@ import {
   InfoCircleOutlined,
   BookOutlined,
   HistoryOutlined,
+  LockOutlined,
   ClockCircleOutlined,
   AlertOutlined,
   StopOutlined,
@@ -24,14 +25,16 @@ import {
   EditOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { notificationsApi } from '@alblue/api-client';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { notificationsApi, usersApi } from '@alblue/api-client';
 import { useAuthStore } from '@alblue/auth';
 import { useTranslation, useEnumTranslation } from '@alblue/i18n';
 import type { NotificationDto } from '@alblue/shared-types';
 import { NotificationType } from '@alblue/shared-types';
 import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
 import { useThemeStore } from '../stores/theme-store';
+import { passwordRules } from '../utils/password';
+import { getTranslatedError } from '../utils/errors';
 
 const { Text } = Typography;
 const PAGE_SIZE = 15;
@@ -62,6 +65,8 @@ const NOTIFICATION_TEMPLATE_KEY: Partial<Record<NotificationType, string>> = {
   [NotificationType.ChangeRequest]: 'notifications.templates.changeRequest',
   [NotificationType.ChangeRequestApproved]: 'notifications.templates.changeRequestApproved',
   [NotificationType.ChangeRequestRejected]: 'notifications.templates.changeRequestRejected',
+  [NotificationType.SubscriptionExpiring]: 'notifications.templates.subscriptionExpiring',
+  [NotificationType.SubscriptionExpired]: 'notifications.templates.subscriptionExpired',
 };
 
 /**
@@ -84,6 +89,8 @@ const NOTIFICATION_ICON: Partial<Record<NotificationType, NotificationIconSpec>>
   [NotificationType.ChangeRequest]: { icon: EditOutlined, colorToken: 'colorWarning' },
   [NotificationType.ChangeRequestApproved]: { icon: CheckCircleOutlined, colorToken: 'colorSuccess' },
   [NotificationType.ChangeRequestRejected]: { icon: CloseCircleOutlined, colorToken: 'colorError' },
+  [NotificationType.SubscriptionExpiring]: { icon: ClockCircleOutlined, colorToken: 'colorWarning' },
+  [NotificationType.SubscriptionExpired]: { icon: ClockCircleOutlined, colorToken: 'colorError' },
 };
 
 
@@ -119,9 +126,13 @@ function formatTimeAgo(dateStr: string): string {
 
 interface SidebarFooterProps {
   collapsed: boolean;
+  /** Called when an in-popover action opens its own overlay (Drawer / Modal)
+   *  — used by MainLayout to dismiss the mobile sidebar Drawer so it doesn't
+   *  sit visible behind the new overlay. No-op on desktop. */
+  onOverlayAction?: () => void;
 }
 
-export function SidebarFooter({ collapsed }: SidebarFooterProps) {
+export function SidebarFooter({ collapsed, onOverlayAction }: SidebarFooterProps) {
   const userId = useAuthStore((s) => s.user?.id);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -137,7 +148,24 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
   const screens = Grid.useBreakpoint();
   const isMobile = screens.lg === false;
   const [profileOpen, setProfileOpen] = useState(false);
-  const [page, setPage] = useState(1);
+  const [changePwOpen, setChangePwOpen] = useState(false);
+  const [pwForm] = Form.useForm();
+  const { message } = App.useApp();
+
+  // Self-service password change (Milos 16.06.2026). Strictly self-only on
+  // the BE — even SuperAdmin can't change another user's password through
+  // this endpoint. Admin-initiated reset is /reset-password (separate UI).
+  const changePasswordMutation = useMutation({
+    mutationFn: (values: { currentPassword: string; newPassword: string }) =>
+      usersApi.changePassword(user!.id, values),
+    onSuccess: () => {
+      message.success(t('profile.passwordChanged'));
+      setChangePwOpen(false);
+      pwForm.resetFields();
+    },
+    onError: (err) => message.error(getTranslatedError(err, t,
+      t('profile.passwordChangeFailed'))),
+  });
 
   // Info group rendered as a real antd Menu so the flyout (collapsed) and
   // inline-expansion (expanded) behaviour matches every other parent item
@@ -209,19 +237,41 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
       case 'WorkSession':
         navigate('/dashboard');
         break;
+      case 'Subscription':
+        // Saša 18.06.2026: lands the Admin on Profil firme with the
+        // Naplata tab pre-selected (TenantProfilePage reads ?tab=billing).
+        navigate('/admin/company?tab=billing');
+        break;
       default:
         break;
     }
   }
 
-  const { data: pagedResult, isLoading } = useQuery({
-    queryKey: ['notifications', 'list', userId, page],
-    queryFn: () => notificationsApi.getAll({ userId: userId!, page, pageSize: PAGE_SIZE }).then((r) => r.data),
+  // Saša 19.06.2026: switched from page-keyed useQuery to useInfiniteQuery
+  // so "Load more" ACCUMULATES instead of replacing the visible page.
+  // Old behaviour wiped the list back to page N's 15 items, which made
+  // it impossible to scroll back up to earlier items the user had
+  // already seen.
+  const {
+    data: infiniteData,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['notifications', 'list', userId],
+    queryFn: ({ pageParam }) =>
+      notificationsApi.getAll({ userId: userId!, page: pageParam, pageSize: PAGE_SIZE }).then((r) => r.data),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((sum, p) => sum + p.items.length, 0);
+      return loaded < lastPage.totalCount ? allPages.length + 1 : undefined;
+    },
     enabled: !!userId && notifOpen,
   });
 
-  const notifications = pagedResult?.items ?? [];
-  const hasMore = pagedResult ? page * PAGE_SIZE < pagedResult.totalCount : false;
+  const notifications = infiniteData?.pages.flatMap((p) => p.items) ?? [];
+  const hasMore = !!hasNextPage;
 
   const invalidateAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -245,10 +295,7 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
   });
   const deleteAll = useMutation({
     mutationFn: () => notificationsApi.deleteAll(userId!),
-    onSuccess: () => {
-      setPage(1);
-      invalidateAll();
-    },
+    onSuccess: invalidateAll,
   });
 
   const notificationsContent = (
@@ -289,7 +336,7 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
         style={{ maxHeight: 400, overflowY: 'auto' }}
         loadMore={hasMore ? (
           <div style={{ textAlign: 'center', margin: '8px 0' }}>
-            <Button size="small" onClick={() => setPage((p) => p + 1)}>
+            <Button size="small" loading={isFetchingNextPage} onClick={() => fetchNextPage()}>
               {t('notifications.loadMore')}
             </Button>
           </div>
@@ -387,21 +434,21 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
       <Space direction="vertical" size={10} style={{ width: '100%' }}>
         <div>
           <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-            {t('profile.theme', { defaultValue: 'Theme' })}
+            {t('profile.theme')}
           </Text>
           <Segmented
             block
             value={themeMode}
             onChange={(v) => setThemeMode(v as 'light' | 'dark')}
             options={[
-              { label: t('profile.themeLight', { defaultValue: 'Light' }), value: 'light', icon: <SunOutlined /> },
-              { label: t('profile.themeDark', { defaultValue: 'Dark' }), value: 'dark', icon: <MoonOutlined /> },
+              { label: t('profile.themeLight'), value: 'light', icon: <SunOutlined /> },
+              { label: t('profile.themeDark'), value: 'dark', icon: <MoonOutlined /> },
             ]}
           />
         </div>
         <div>
           <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-            <GlobalOutlined /> {t('profile.language', { defaultValue: 'Language' })}
+            <GlobalOutlined /> {t('profile.language')}
           </Text>
           <Segmented
             block
@@ -417,6 +464,14 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
       <Divider style={{ margin: '12px 0' }} />
       <Button
         block
+        icon={<LockOutlined />}
+        onClick={() => { setProfileOpen(false); onOverlayAction?.(); setChangePwOpen(true); }}
+        style={{ marginBottom: 8 }}
+      >
+        {t('profile.changePassword')}
+      </Button>
+      <Button
+        block
         danger
         icon={<LogoutOutlined />}
         onClick={() => { setProfileOpen(false); queryClient.clear(); logout(); }}
@@ -424,6 +479,66 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
         {t('common:actions.logout')}
       </Button>
     </div>
+  );
+
+  const changePasswordDrawer = (
+    <Drawer
+      open={changePwOpen}
+      onClose={() => { setChangePwOpen(false); pwForm.resetFields(); }}
+      title={t('profile.changePassword')}
+      width={Math.min(480, window.innerWidth)}
+      extra={
+        <Button
+          type="primary"
+          onClick={() => pwForm.submit()}
+          loading={changePasswordMutation.isPending}
+        >
+          {t('common:actions.save')}
+        </Button>
+      }
+      destroyOnHidden
+    >
+      <Form
+        form={pwForm}
+        layout="vertical"
+        onFinish={(values) => changePasswordMutation.mutate({
+          currentPassword: values.currentPassword,
+          newPassword: values.newPassword,
+        })}
+      >
+        <Form.Item
+          name="currentPassword"
+          label={t('profile.currentPassword')}
+          rules={[{ required: true, message: t('profile.currentPasswordRequired') }]}
+        >
+          <Input.Password autoComplete="current-password" autoFocus />
+        </Form.Item>
+        <Form.Item
+          name="newPassword"
+          label={t('profile.newPassword')}
+          rules={passwordRules(t)}
+        >
+          <Input.Password autoComplete="new-password" />
+        </Form.Item>
+        <Form.Item
+          name="confirmPassword"
+          label={t('profile.confirmPassword')}
+          dependencies={['newPassword']}
+          rules={[
+            { required: true, message: t('profile.confirmPasswordRequired') },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                if (!value || getFieldValue('newPassword') === value) return Promise.resolve();
+                return Promise.reject(new Error(
+                  t('profile.confirmPasswordMismatch')));
+              },
+            }),
+          ]}
+        >
+          <Input.Password autoComplete="new-password" />
+        </Form.Item>
+      </Form>
+    </Drawer>
   );
 
   const rowStyle: React.CSSProperties = {
@@ -459,17 +574,17 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
       />
       {(() => {
         const bellRow = (
-          <Tooltip title={collapsed ? t('nav.notifications', { defaultValue: 'Notifications' }) : ''} placement="right">
+          <Tooltip title={collapsed ? t('nav.notifications') : ''} placement="right">
             <div
               style={rowStyle}
-              onClick={isMobile ? () => { setNotifOpen(true); setPage(1); } : undefined}
+              onClick={isMobile ? () => setNotifOpen(true) : undefined}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
               <Badge count={count ?? 0} size="small" offset={[2, -2]}>
                 <BellOutlined style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }} />
               </Badge>
-              {!collapsed && <span>{t('nav.notifications', { defaultValue: 'Notifications' })}</span>}
+              {!collapsed && <span>{t('nav.notifications')}</span>}
             </div>
           </Tooltip>
         );
@@ -502,7 +617,7 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
             content={notificationsContent}
             trigger="click"
             open={notifOpen}
-            onOpenChange={(v) => { setNotifOpen(v); if (v) setPage(1); }}
+            onOpenChange={setNotifOpen}
             placement="rightBottom"
             arrow={false}
           >
@@ -518,7 +633,7 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
         placement="rightBottom"
         arrow={false}
       >
-        <Tooltip title={collapsed ? user?.fullName ?? t('nav.profile', { defaultValue: 'Profile' }) : ''} placement="right">
+        <Tooltip title={collapsed ? user?.fullName ?? t('nav.profile') : ''} placement="right">
           <div
             style={rowStyle}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
@@ -527,12 +642,13 @@ export function SidebarFooter({ collapsed }: SidebarFooterProps) {
             <UserOutlined style={{ fontSize: 16 }} />
             {!collapsed && (
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.fullName ?? t('nav.profile', { defaultValue: 'Profile' })}
+                {user?.fullName ?? t('nav.profile')}
               </span>
             )}
           </div>
         </Tooltip>
       </Popover>
+      {changePasswordDrawer}
     </div>
   );
 }

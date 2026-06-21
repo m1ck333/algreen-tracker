@@ -25,8 +25,8 @@ podešavanja.
 
 | Aplikacija | URL |
 |---|---|
-| Kontrolna tabla | https://alblue.duckdns.org/login |
-| Tablet | https://alblue-tablet.duckdns.org/login |
+| Kontrolna tabla | URL koji vam je dao administrator vaše firme |
+| Tablet | URL tablet aplikacije koji vam je dao administrator |
 
 Polja prilikom prijave:
 
@@ -53,7 +53,12 @@ Klik na avatar u donjem levom uglu otvara profil:
 
 - **Tema:** Svetla / Tamna.
 - **Jezik:** Srpski / Engleski. Promena je trenutna; izbor se pamti.
-- **Promena lozinke**.
+- **Promena lozinke** — otvara panel sa desne strane. Unosi se trenutna
+  lozinka, pa nova, pa potvrda nove. Posle čuvanja ostajete prijavljeni
+  na trenutnoj sesiji, ali za sledeću prijavu (ili posle neaktivnosti)
+  treba nova lozinka. Menja se samo sopstvena lozinka — administrator
+  ne može menjati tuđu kroz ovaj panel; ako je korisnik zaboravio
+  lozinku, koristi se „Resetuj lozinku" na njegovom redu u Korisnicima.
 - **Odjava**.
 
 Na javnim stranicama (prijava, *O aplikaciji*) jezik se može promeniti
@@ -465,7 +470,7 @@ Otvoreno za uloge Admin i Manager.
 | **Tipovi narudžbina** | Standardna, Reklamacija itd. Prekidač "Ručni izbor procesa". |
 | **Tipovi specijalnih zahteva** | Modifikatori procesa po stavki (dodaj/ukloni/samo navedene). |
 | **Smene** | Definisanje radnih smena. Podešavanja po smeni: pauza, max prekovremeno, **auto-odjava prekovremeno** (po sesiji), alarm pre odjave, i **auto-odjava redovan rad (h)** — vreme posle koga sistem automatski zatvara radnikovu sesiju (npr. 8.5h za smenu od 8h sa 30 min produžetka). |
-| **Firma** | Podešavanja sopstvene firme: logo (PNG/JPG/SVG, do 2 MB — prikazuje se gore-levo u sidebaru), rokovi narudžbina (broj dana pre roka isporuke za žuto upozorenje i crveno kritično), i boje upozorenja. Logo se otprema klikom na „Otpremi logo" (ili „Zameni logo" ako već postoji), a klik na pregled otvara uvećani prikaz. |
+| **Firma** | Podešavanja sopstvene firme i pregled pretplate, podeljeni u dva taba: **Podešavanja** (logo, rokovi narudžbina i boje upozorenja) i **Naplata** (pregled trenutne pretplate i istorija uplata). Logo se otprema klikom na „Otpremi logo" (ili „Zameni logo" ako već postoji), a klik na pregled otvara uvećani prikaz. U tabu Naplata gore vidite kartu sa datumom do kog je pretplata aktivna i koliko vam dana ostaje (zeleno ako je sve u redu, narandžasto ispod 14 dana, crveno ako je istekla). Ispod karte je tabela istorije uplata — datum uplate, trajanje pretplate, iznos, broj fakture i napomena. Sortirate kolone klikom na zaglavlje i filtrirate po godini. Uplate beleži tehnička podrška; ovde ih samo pregledate. Kada se pretplata bliži kraju (manje od 14 dana) ili je istekla, svako jutro stiže obaveštenje u zvoncetu Admin korisnicima firme — klikom se otvara direktno Naplata tab. |
 
 ### 3.9 Kontrolna tabla koordinatora
 
@@ -511,7 +516,7 @@ prijave (sistem traži dozvolu).
 
 ### 3.11 Magacin
 
-Otvoreno za uloge Administrator, Menadžer, Koordinator, Super administrator i
+Otvoreno za uloge Administrator, Menadžer, Koordinator i
 **Magacioner**. Magacioner je posebna uloga koja se može dodeliti
 nekom korisniku pored njegove glavne uloge (npr. koordinator + magacioner
 istovremeno). Magacioner ima pristup svim stranicama Magacina i može da
@@ -672,7 +677,7 @@ ispod minimuma, sistem automatski obaveštava menadžment:
   materijala koji su trenutno ispod svog minimuma. Crveni broj
   klikom vodi na Stanje magacina sa već primenjenim filterom „Ispod
   min".
-- **Obaveštenje u zvoncetu** — svaki korisnik sa ulogom Super administrator,
+- **Obaveštenje u zvoncetu** — svaki korisnik sa ulogom
   Administrator, Menadžer ili Koordinator (uključujući kombinacije sa
   Magacioner ulogom) dobija obaveštenje „**Materijal ispod
   minimuma: KOD — NAZIV**" sa detaljima trenutnog stanja, minimuma
@@ -691,8 +696,8 @@ ispod minimuma, sistem automatski obaveštava menadžment:
 
 ### 4.1 Instalacija
 
-1. Otvori https://alblue-tablet.duckdns.org u Chrome (Android) ili
-   Safari (iOS).
+1. Otvori URL tablet aplikacije (koji vam je dao administrator) u
+   Chrome (Android) ili Safari (iOS).
 2. Meni pretraživača → **Add to Home screen** / **Dodaj na početni
    ekran**.
 3. Ikona se pojavljuje na home screen-u. Aplikacija se ponaša kao
@@ -881,4 +886,4 @@ prema podešavanju pretraživača posetioca.
 
 ---
 
-*Za sva pitanja i komentare: **sales@algreen.rs***
+*Za sva pitanja i komentare obratite se administratoru vaše firme.*

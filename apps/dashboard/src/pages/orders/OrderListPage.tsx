@@ -3,13 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Typography, Table, Button, Space, Select, Tag, Drawer, Form, Input,
   InputNumber, DatePicker, App, Row, Col, Spin, Popconfirm, Divider,
-  Tooltip, Progress, Statistic, Upload, List, Modal, Card, Dropdown, Popover, Checkbox, theme,
+  Tooltip, Progress, Statistic, Upload, List, Modal, Card, Popover, Checkbox, theme,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, CheckOutlined, PaperClipOutlined, UndoOutlined, UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, CopyOutlined, FullscreenOutlined, FullscreenExitOutlined, QuestionCircleOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useAuthStore } from '@alblue/auth';
 import { OrderStatus, OrderType, ProcessStatus, ComplexityType, UserRole } from '@alblue/shared-types';
-import type { OrderMasterViewDto, OrderDetailDto, OrderItemDto, OrderItemSubProcessDto, ProcessDto, ProductCategoryDto, SpecialRequestTypeDto, AddOrderItemRequest, OrderTypeDto, ManualProcessInput, ManualDependencyInput } from '@alblue/shared-types';
+import type { OrderMasterViewDto, OrderItemDto, ProcessDto, ProductCategoryDto, SpecialRequestTypeDto, AddOrderItemRequest, OrderTypeDto, ManualProcessInput, ManualDependencyInput } from '@alblue/shared-types';
 import {
   useCreateOrder, useOrder, useActivateOrder,
   useUpdateOrder, useCancelOrder, usePauseOrder, useResumeOrder, useReopenOrder,
@@ -29,462 +29,24 @@ import type { ExportColumn } from '../../utils/exportTable';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
 import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
+import {
+  processStatusColors,
+  orderTypeColors,
+  orderTypeTextColors,
+  orderStatusTextColors,
+  READY_BORDER_COLOR,
+  getCompletionInfo,
+  getDeadlineLevel,
+  formatDurationSec,
+} from './orderListHelpers';
+import { ProcessCell } from './ProcessCell';
+import { StatusText } from './StatusText';
+import { ProcessTimeline } from './ProcessTimeline';
+import { ItemProcessBar } from './ItemProcessBar';
 
 const { Title, Text } = Typography;
 
 const ATTACHMENT_RECOVERY = import.meta.env.VITE_ATTACHMENT_RECOVERY === 'true';
-
-// ─── Process status color mapping (matching Excel conditional formatting) ────
-
-const processStatusColors: Record<ProcessStatus, string> = {
-  [ProcessStatus.Completed]: '#92D050',   // Green - done
-  [ProcessStatus.InProgress]: '#1890ff',  // Blue - in progress
-  [ProcessStatus.Blocked]: '#FF0000',     // Red - blocked
-  [ProcessStatus.Stopped]: '#FFAA00',     // Orange - stopped
-  [ProcessStatus.Pending]: '#BFBFBF',     // Medium gray - pending (darker than empty/not-applicable)
-  [ProcessStatus.Withdrawn]: '#F0F0F0',   // Very light gray - withdrawn
-};
-
-// Bold border for "ready to start" — fixed vivid green, distinct from Completed
-// bright green and clearly visible against any cell fill in both light/dark themes.
-const READY_BORDER_COLOR = '#1B5E20';
-
-const orderTypeColors: Record<OrderType, string> = {
-  [OrderType.Standard]: 'blue',
-  [OrderType.Repair]: 'orange',
-  [OrderType.Complaint]: 'red',
-  [OrderType.Rework]: 'purple',
-};
-
-const orderTypeTextColors: Record<OrderType, string> = {
-  [OrderType.Standard]: '#1677ff',
-  [OrderType.Repair]: '#d46b08',
-  [OrderType.Complaint]: '#cf1322',
-  [OrderType.Rework]: '#531dab',
-};
-
-const orderStatusTextColors: Record<OrderStatus, string> = {
-  [OrderStatus.Draft]: '#8c8c8c',
-  [OrderStatus.Active]: '#389e0d',
-  [OrderStatus.Paused]: '#d46b08',
-  [OrderStatus.Cancelled]: '#cf1322',
-  [OrderStatus.Completed]: '#08979c',
-};
-
-// ─── Helpers ─────────────────────────────────────────────
-
-/** Aggregate process status across all items in an order for a given processId (used in detail drawer) */
-type AggregateState = {
-  status: ProcessStatus | null;
-  isReady: boolean;  // pending-ready or paused (gray + bold border)
-  isPaused: boolean; // subset of isReady - show "Pauzirano" text
-};
-
-/**
- * Sourced directly from the master-view row (BE-computed):
- *   - processStatuses[processId] — aggregated status string
- *   - processReady[processId]    — true if any item has it Pending + deps satisfied
- *   - processPaused[processId]   — true if any item has it paused
- *
- * Previously this was recomputed on the FE from a flattened processDependencies
- * dict, which was wrong for multi-item orders with different categories: deps
- * from item A's category were applied to item B and vice-versa, giving false
- * negatives/positives. The BE already does the right per-item computation —
- * just consume it.
- */
-type MasterRowFields = {
-  processStatuses?: Record<string, string>;
-  processReady?: Record<string, boolean>;
-  processPaused?: Record<string, boolean>;
-};
-
-function getAggregateProcessState(
-  masterRow: MasterRowFields | undefined,
-  processId: string,
-): AggregateState {
-  if (!masterRow?.processStatuses || !(processId in masterRow.processStatuses)) {
-    return { status: null, isReady: false, isPaused: false };
-  }
-  const status = masterRow.processStatuses[processId] as ProcessStatus;
-  const isPausedAgg = masterRow.processPaused?.[processId] ?? false;
-  const isReady = masterRow.processReady?.[processId] ?? false;
-  // BE already enforces the priority (Blocked/InProgress beat Ready), so we
-  // just forward what it says — the only twist is when paused, the bold ring
-  // is replaced with the orange "paused" visual.
-  return { status, isReady, isPaused: isPausedAgg };
-}
-
-/** Count completed vs total processes across all items (used in detail drawer) */
-function getCompletionInfo(order: OrderDetailDto): { completed: number; total: number } {
-  let completed = 0;
-  let total = 0;
-  for (const item of order.items) {
-    for (const proc of item.processes) {
-      if (proc.status !== ProcessStatus.Withdrawn) {
-        total++;
-        if (proc.status === ProcessStatus.Completed) completed++;
-      }
-    }
-  }
-  return { completed, total };
-}
-
-/** Get deadline urgency level based on delivery date */
-function getDeadlineLevel(
-  deliveryDate: string,
-  customWarningDays: number | null,
-  customCriticalDays: number | null,
-): 'critical' | 'warning' | 'normal' {
-  const daysRemaining = dayjs(deliveryDate).diff(dayjs(), 'day');
-  const criticalDays = customCriticalDays ?? 3;
-  const warningDays = customWarningDays ?? 7;
-  if (daysRemaining <= criticalDays) return 'critical';
-  if (daysRemaining <= warningDays) return 'warning';
-  return 'normal';
-}
-
-// ─── Process Status Cell (master table) ──────────────────
-
-function statusColor(status: string | null, paused: boolean): string {
-  if (paused) return '#faad14';
-  if (!status) return '#999';
-  return processStatusColors[status as ProcessStatus] ?? '#999';
-}
-
-function SubProcessTooltip({ subProcesses, processMap }: { subProcesses: OrderItemSubProcessDto[]; processMap: Map<string, ProcessDto> }) {
-  const { tEnum } = useEnumTranslation();
-  if (!subProcesses || subProcesses.length === 0) return null;
-  const active = subProcesses.filter((sp) => !sp.isWithdrawn);
-  if (active.length === 0) return null;
-  return (
-    <div style={{ marginTop: 4, paddingTop: 4, borderTop: '2px solid rgba(255,255,255,0.5)', fontSize: 11 }}>
-      {active.map((sp) => {
-        const spTime = sp.totalDurationMinutes + (sp.isTimerRunning && sp.currentLogStartedAt ? Math.floor((Date.now() - new Date(sp.currentLogStartedAt).getTime()) / 1000) : 0);
-        // Find sub-process name from process definitions
-        let spName = sp.subProcessId.slice(0, 6);
-        for (const p of processMap.values()) {
-          const found = p.subProcesses?.find((s) => s.id === sp.subProcessId);
-          if (found) { spName = found.name; break; }
-        }
-        return (
-          <div key={sp.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, opacity: sp.status === 'Completed' ? 0.7 : 1 }}>
-            <span>↳ {spName}</span>
-            <span style={{ color: statusColor(sp.status, false) }}>
-              {tEnum('SubProcessStatus', sp.status)}
-              {spTime > 0 ? ` ${formatDurationSec(spTime)}` : ''}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function formatDurationSec(totalSec: number): string {
-  if (totalSec <= 0) return '';
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  if (h > 0) return `${h}h ${m}min ${s}s`;
-  return `${m}min ${s}s`;
-}
-
-function calcLiveSeconds(proc: { status: string; totalDurationMinutes: number; startedAt: string | null; pausedAt: string | null; resumedAt: string | null; subProcesses?: { totalDurationMinutes: number; status: string; isWithdrawn: boolean; isTimerRunning?: boolean; currentLogStartedAt?: string | null }[] }): number {
-  // For processes with sub-processes, sum sub-process durations + open log elapsed
-  if (proc.subProcesses && proc.subProcesses.length > 0) {
-    const result = proc.subProcesses
-      .filter((sp) => !sp.isWithdrawn)
-      .reduce((sum, sp) => {
-        let spTime = sp.totalDurationMinutes;
-        if (sp.isTimerRunning && sp.currentLogStartedAt) {
-          spTime += Math.max(0, Math.floor((Date.now() - new Date(sp.currentLogStartedAt).getTime()) / 1000));
-        }
-        return sum + spTime;
-      }, 0);
-    return result;
-  }
-  const saved = proc.totalDurationMinutes;
-  if (proc.status === 'InProgress' && !proc.pausedAt && (proc.startedAt || proc.resumedAt)) {
-    const since = proc.resumedAt ?? proc.startedAt!;
-    const elapsed = Math.floor((Date.now() - new Date(since).getTime()) / 1000);
-    return saved + Math.max(elapsed, 0);
-  }
-  return saved;
-}
-
-function isPaused(proc: { status: string; pausedAt: string | null; subProcesses?: { status: string; isWithdrawn: boolean; isTimerRunning?: boolean }[] }): boolean {
-  if (proc.status !== 'InProgress') return false;
-  if (proc.subProcesses && proc.subProcesses.length > 0) {
-    const active = proc.subProcesses.filter((sp) => !sp.isWithdrawn);
-    const anyTimerRunning = active.some((sp) => sp.isTimerRunning);
-    const allDone = active.every((sp) => sp.status === 'Completed');
-    return !anyTimerRunning && !allDone;
-  }
-  return !!proc.pausedAt;
-}
-
-function ProcessCell({
-  status,
-  processName,
-  isReady,
-  duration,
-  paused,
-  tEnum,
-}: {
-  status: ProcessStatus | null;
-  processName: string;
-  isReady?: boolean;
-  duration?: number;
-  paused?: boolean;
-  tEnum: (enumName: string, value: string) => string;
-}) {
-  const { t } = useTranslation('dashboard');
-  const { token } = theme.useToken();
-  if (status === null) {
-    return (
-      <div style={{
-        width: 24,
-        height: 24,
-        margin: '0 auto',
-        borderRadius: 4,
-        border: `1px dashed ${token.colorBorderSecondary}`,
-      }} />
-    );
-  }
-
-  // Paused sub-process gap: show as orange with bold border instead of blue
-  const showAsReady = paused && status === ProcessStatus.InProgress;
-  const color = showAsReady ? '#FFAA00' : processStatusColors[status];
-  const label = tEnum('ProcessStatus', status);
-
-  const timeStr = duration ? formatDurationSec(duration) : '';
-
-  const tooltipStatus = paused ? t('orders.paused') : (isReady ? t('orders.ready') : label);
-  return (
-    <Tooltip title={<div><div><b>{processName}</b></div><div style={{ color: isReady ? READY_BORDER_COLOR : statusColor(status, !!paused) }}>{tooltipStatus}</div>{timeStr && <div>{timeStr}</div>}</div>}>
-      <div
-        style={{
-          width: 24,
-          height: 24,
-          margin: '0 auto',
-          borderRadius: 4,
-          backgroundColor: color,
-          border: isReady ? `3px solid ${READY_BORDER_COLOR}` : `1px solid ${token.colorBorderSecondary}`,
-          cursor: 'default',
-        }}
-      />
-    </Tooltip>
-  );
-}
-
-// ─── Status as plain colored text (drawer header) ────────
-
-function StatusText({ status }: { status: OrderStatus }) {
-  const { tEnum } = useEnumTranslation();
-  return (
-    <Text style={{ color: orderStatusTextColors[status], fontWeight: 500 }}>
-      #{tEnum('OrderStatus', status)}
-    </Text>
-  );
-}
-
-// ─── Process Timeline (drawer) ───────────────────────────
-
-function ProcessTimeline({
-  order,
-  processes,
-  tEnum,
-  masterRow,
-}: {
-  order: OrderDetailDto;
-  processes: ProcessDto[];
-  tEnum: (enumName: string, value: string) => string;
-  masterRow?: MasterRowFields;
-}) {
-  const { t } = useTranslation('dashboard');
-  const { token } = theme.useToken();
-  const STEP = 48; // px per process step
-  const CIRCLE = 24;
-  const totalWidth = processes.length * STEP;
-
-  // Pre-compute aggregate states from BE-supplied per-process fields.
-  const states = processes.map((proc) => getAggregateProcessState(masterRow, proc.id));
-
-  return (
-    <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-      <div style={{ position: 'relative', width: totalWidth, height: 44, marginLeft: 4, marginRight: 4 }}>
-        {/* Connector lines layer */}
-        {processes.map((proc, i) => {
-          if (i === 0) return null;
-          const prevCompleted = states[i - 1]?.status === ProcessStatus.Completed;
-          // Line goes from center of previous circle to center of current circle
-          const x1 = (i - 1) * STEP + STEP / 2;
-          const x2 = i * STEP + STEP / 2;
-          return (
-            <div
-              key={`line-${proc.id}`}
-              style={{
-                position: 'absolute',
-                left: x1,
-                top: CIRCLE / 2 - 1,
-                width: x2 - x1,
-                height: 2,
-                backgroundColor: prevCompleted ? '#92D050' : '#D9D9D9',
-              }}
-            />
-          );
-        })}
-        {/* Circles + labels layer */}
-        {processes.map((proc, i) => {
-          const state = states[i];
-          const { status, isReady, isPaused: aggPaused } = state;
-          const isCompleted = status === ProcessStatus.Completed;
-          const x = i * STEP;
-
-          const totalSec = order.items.reduce((sum, item) => {
-            const p = item.processes.find((ip) => ip.processId === proc.id);
-            return sum + (p ? calcLiveSeconds(p) : 0);
-          }, 0);
-          const timeStr = formatDurationSec(totalSec);
-          // Bold "ready" border suppressed when any item is paused — paused
-          // dominates aggregate (orange color) and overlaying bold = ready
-          // contradicts the paused signal. Matches drawer→master-table behavior.
-          const showBold = isReady && !aggPaused;
-          const color = aggPaused ? '#FFAA00' : isReady ? '#BFBFBF' : (status ? processStatusColors[status] : '#F0F0F0');
-          const tooltipStatus = aggPaused
-            ? t('orders.paused')
-            : isReady
-              ? t('orders.ready')
-              : (status ? tEnum('ProcessStatus', status) : t('orders.processNotApplicable'));
-
-          return (
-            <Tooltip key={proc.id} title={<div><div><b>{proc.name}</b></div><div style={{ color: isReady ? READY_BORDER_COLOR : statusColor(status, aggPaused) }}>{tooltipStatus}</div>{timeStr && <div>{timeStr}</div>}</div>}>
-              <div style={{ position: 'absolute', left: x, top: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', width: STEP }}>
-                <div style={{
-                  width: CIRCLE,
-                  height: CIRCLE,
-                  borderRadius: '50%',
-                  backgroundColor: color,
-                  border: showBold ? `3px solid ${READY_BORDER_COLOR}` : ('2px solid ' + (status ? color : token.colorBorderSecondary)),
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'default',
-                  position: 'relative',
-                  zIndex: 1,
-                }}>
-                  {isCompleted && <CheckOutlined style={{ fontSize: 12, color: '#fff' }} />}
-                </div>
-                <Text style={{
-                  fontSize: 10,
-                  marginTop: 2,
-                  color: '#888',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  maxWidth: STEP - 4,
-                  textAlign: 'center',
-                  display: 'block',
-                }}>{proc.code}</Text>
-              </div>
-            </Tooltip>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─── Item Process Rectangles (drawer item cards) ─────────
-
-function ItemProcessBar({
-  item,
-  processMap,
-  tEnum,
-  onRestart,
-  canRestart,
-  itemProcessReady,
-}: {
-  item: OrderItemDto;
-  processMap: Map<string, ProcessDto>;
-  tEnum: (enumName: string, value: string) => string;
-  onRestart?: (orderItemProcessId: string, resetTime: boolean) => void;
-  canRestart?: boolean;
-  /** Per-item readiness map keyed by processId. Source of truth from BE. */
-  itemProcessReady?: Record<string, boolean>;
-}) {
-  const { t } = useTranslation('dashboard');
-  const { token } = theme.useToken();
-  const sorted = [...item.processes]
-    .filter((p) => p.status !== ProcessStatus.Withdrawn)
-    .sort((a, b) => {
-      const pa = processMap.get(a.processId);
-      const pb = processMap.get(b.processId);
-      return (pa?.sequenceOrder ?? 0) - (pb?.sequenceOrder ?? 0);
-    });
-
-  return (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-      {sorted.map((proc) => {
-        const process = processMap.get(proc.processId);
-        const procPaused = isPaused(proc);
-        // Trust BE's per-item readiness. Was previously recomputed from a flat
-        // processDependencies dict which unioned deps across categories and
-        // gave wrong answers for multi-item orders.
-        const isReady = !!itemProcessReady?.[proc.processId];
-        const color = procPaused ? '#FFAA00' : processStatusColors[proc.status];
-        const statusLabel = tEnum('ProcessStatus', proc.status);
-        return (
-          canRestart && proc.status === ProcessStatus.Completed && onRestart ? (
-            <Dropdown
-              key={proc.id}
-              trigger={['click']}
-              menu={{
-                items: [
-                  { key: 'keep', label: t('orders.restartKeepTime'), onClick: () => onRestart(proc.id, false) },
-                  { key: 'reset', label: t('orders.restartResetTime'), onClick: () => onRestart(proc.id, true) },
-                ],
-              }}
-            >
-              <Tooltip title={<div><div><b>{process?.name ?? proc.processId}</b></div><div style={{ color: isReady ? READY_BORDER_COLOR : statusColor(proc.status, procPaused) }}>{procPaused ? t('orders.paused') : isReady ? t('orders.ready') : statusLabel}</div>{calcLiveSeconds(proc) > 0 && <div>{formatDurationSec(calcLiveSeconds(proc))}</div>}{proc.subProcesses && <SubProcessTooltip subProcesses={proc.subProcesses} processMap={processMap} />}</div>}>
-                <div style={{
-                  padding: '2px 6px', borderRadius: 4, backgroundColor: color,
-                  border: isReady ? `3px solid ${READY_BORDER_COLOR}` : `1px solid ${token.colorBorderSecondary}`, fontSize: 11, fontWeight: 500,
-                  color: (procPaused || isReady) ? '#666' : '#fff', cursor: 'pointer', lineHeight: '16px',
-                }}>
-                  {process?.code ?? '?'}{proc.complexity ? <span style={{ opacity: 0.85 }}> {proc.complexity}</span> : null}
-                </div>
-              </Tooltip>
-            </Dropdown>
-          ) : (
-            <Tooltip
-              key={proc.id}
-              title={
-                <div>
-                  <div><b>{process?.name ?? proc.processId}</b></div>
-                  <div style={{ color: isReady ? READY_BORDER_COLOR : statusColor(proc.status, procPaused) }}>{procPaused ? t('orders.paused') : isReady ? t('orders.ready') : statusLabel}</div>
-                  {(proc.complexity || calcLiveSeconds(proc) > 0) && (
-                    <div>{proc.complexity ?? ''}{calcLiveSeconds(proc) > 0 ? `${proc.complexity ? ' · ' : ''}${formatDurationSec(calcLiveSeconds(proc))}` : ''}</div>
-                  )}
-                  {proc.subProcesses && <SubProcessTooltip subProcesses={proc.subProcesses} processMap={processMap} />}
-                </div>
-              }
-            >
-              <div style={{
-                padding: '2px 6px', borderRadius: 4, backgroundColor: color,
-                border: isReady ? `3px solid ${READY_BORDER_COLOR}` : `1px solid ${token.colorBorderSecondary}`, fontSize: 11, fontWeight: 500,
-                color: proc.status === ProcessStatus.Pending || proc.status === ProcessStatus.Withdrawn || procPaused ? '#666' : '#fff',
-                cursor: 'default', lineHeight: '16px',
-              }}>
-                {process?.code ?? '?'}{proc.complexity ? <span style={{ opacity: 0.85 }}> {proc.complexity}</span> : null}
-              </div>
-            </Tooltip>
-          )
-        );
-      })}
-    </div>
-  );
-}
 
 // ─── Main Component ──────────────────────────────────────
 
@@ -969,6 +531,19 @@ export function OrderListPage() {
     user?.role === UserRole.SuperAdmin;
 
   const onCreateFinish = async (values: Record<string, unknown>) => {
+    // Empty-order guard (Milos 16.06.2026): without this it's possible to
+    // hit Save with no items and no manual processes added, which produces
+    // an empty order header — useless and confusing on the drawer.
+    // OrderTypes with AllowsManualProcesses=true are intentionally exempted
+    // when at least one manual process is picked, so the "rework" / "complaint"
+    // flow (where items may come later) isn't blocked.
+    const hasItems = createPendingItems.length > 0;
+    const hasManualProcesses =
+      !!watchedOrderTypeMeta?.allowsManualProcesses && manualProcessIds.length > 0;
+    if (!hasItems && !hasManualProcesses) {
+      message.error(t('orders.emptyOrderError'));
+      return;
+    }
     try {
       // Compress order-level attachments
       const orderFiles = pendingFiles.get(-1) ?? [];
@@ -1320,9 +895,9 @@ export function OrderListPage() {
           value={orderTypeFilter}
           onChange={(v) => setOrderTypeFilter(v)}
           style={{ width: 160 }}
-          options={Object.values(OrderType).map((ot) => ({
-            label: orderTypeByCode.get(String(ot).toUpperCase())?.name ?? tEnum('OrderType', ot),
-            value: ot,
+          options={(orderTypes ?? []).map((ot) => ({
+            label: ot.name,
+            value: ot.code,
           }))}
         />
         <Select
@@ -1554,9 +1129,9 @@ export function OrderListPage() {
                     label={t('orders.orderType')}
                     rules={[{ required: true }]}
                   >
-                    <Select options={Object.values(OrderType).map((ot) => ({
-                      label: orderTypeByCode.get(String(ot).toUpperCase())?.name ?? tEnum('OrderType', ot),
-                      value: ot,
+                    <Select options={(orderTypes ?? []).map((ot) => ({
+                      label: ot.name,
+                      value: ot.code,
                     }))} />
                   </Form.Item>
                 </Col>

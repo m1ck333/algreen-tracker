@@ -75,6 +75,16 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Tenant access revoked mid-session (block or legacy deactivation)
+    // — skip the refresh-and-retry dance; the new token would just hit
+    // the same TenantBlockedMiddleware. Force-logout so the user lands
+    // back on /login where they see the proper TENANT_BLOCKED message.
+    const errorCode = error.response?.data?.error?.code as string | undefined;
+    if (errorCode === 'TENANT_BLOCKED' || errorCode === 'TENANT_INACTIVE') {
+      forceLogout();
+      return Promise.reject(error);
+    }
+
     // Don't try to refresh on the refresh endpoint itself
     if (originalRequest.url?.includes('/auth/refresh')) {
       forceLogout();

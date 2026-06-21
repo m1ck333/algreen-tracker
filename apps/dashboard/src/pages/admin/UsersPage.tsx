@@ -592,8 +592,8 @@ export function UsersPage({ hideHeader = false }: UsersPageProps = {}) {
               "additional" meaningful. */}
           <Form.Item
             name="additionalRoles"
-            label={t('admin.users.additionalRoles', { defaultValue: 'Dodatne uloge' })}
-            tooltip={t('admin.users.additionalRolesHint', { defaultValue: 'Uloge koje korisnik ima POREDA primarne. Npr. Koordinator + Magacioner.' })}
+            label={t('admin.users.additionalRoles')}
+            tooltip={t('admin.users.additionalRolesHint')}
           >
             <Form.Item noStyle shouldUpdate={(prev, cur) => prev.role !== cur.role}>
               {({ getFieldValue }) => {
@@ -609,7 +609,7 @@ export function UsersPage({ hideHeader = false }: UsersPageProps = {}) {
                     mode="multiple"
                     disabled={!isSuperAdmin}
                     options={options}
-                    placeholder={t('admin.users.additionalRolesPlaceholder', { defaultValue: 'Bez dodatnih uloga' })}
+                    placeholder={t('admin.users.additionalRolesPlaceholder')}
                   />
                 );
               }}

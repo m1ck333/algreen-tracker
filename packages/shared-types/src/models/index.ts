@@ -121,7 +121,7 @@ export interface OrderDto {
   orderNumber: string;
   deliveryDate: string;
   priority: number;
-  orderType: OrderType;
+  orderType: string;
   status: OrderStatus;
   notes: string | null;
   customWarningDays: number | null;
@@ -146,7 +146,7 @@ export interface OrderDetailDto {
   orderNumber: string;
   deliveryDate: string;
   priority: number;
-  orderType: OrderType;
+  orderType: string;
   status: OrderStatus;
   notes: string | null;
   customWarningDays: number | null;
@@ -206,7 +206,7 @@ export interface OrderItemSpecialRequestDto {
 export interface OrderMasterViewDto {
   id: string;
   orderNumber: string;
-  orderType: OrderType;
+  orderType: string;
   status: OrderStatus;
   deliveryDate: string;
   priority: number;
@@ -490,6 +490,56 @@ export interface TenantDto {
    *  Null when the tenant hasn't uploaded one; sidebar falls back to the
    *  default MPMS mark. Streamed via GET /api/tenants/me/logo. */
   logoUrl: string | null;
+  /** Set when a SuperAdmin manually blocked the tenant (typically for
+   *  unpaid subscription). Block flips isActive to false; null when the
+   *  tenant has never been blocked (or has been unblocked). */
+  blockedAt: string | null;
+  blockedReason: string | null;
+  /** Most recent payment.paidAt for this tenant, or null when no payments
+   *  have been recorded. SA-only field — never exposed on /tenants/me. */
+  lastPaidAt: string | null;
+  /** Max payment.periodEnd — date through which subscription is paid up.
+   *  Null when no payments yet. FE compares to today to flag overdue. */
+  paidThrough: string | null;
+  /** SA-controlled list of feature keys disabled for this tenant.
+   *  Sidebar + routes filter out items whose featureKey appears here.
+   *  Empty array = all features enabled. */
+  disabledFeatures: string[];
+}
+
+/** Known feature keys. Kept in sync with Tenant.KnownFeatures on the BE. */
+export const TenantFeature = {
+  ProcessTimes: 'process-times',
+  Magacin: 'magacin',
+} as const;
+export type TenantFeatureKey = typeof TenantFeature[keyof typeof TenantFeature];
+
+export interface TenantPaymentDto {
+  id: string;
+  tenantId: string;
+  periodStart: string;
+  periodEnd: string;
+  amount: number;
+  currency: string;
+  paidAt: string;
+  invoiceNumber: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface AllTenantPaymentDto {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  tenantCode: string;
+  periodStart: string;
+  periodEnd: string;
+  amount: number;
+  currency: string;
+  paidAt: string;
+  invoiceNumber: string | null;
+  notes: string | null;
+  createdAt: string;
 }
 
 export interface TenantSettingsDto {

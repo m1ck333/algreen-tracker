@@ -1,5 +1,9 @@
-import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
+// exceljs is ~900 KB minified and file-saver pulls a few KB of polyfills.
+// Loaded statically, both bloat every admin page bundle that imports
+// TableExportButton. We use `import type` for compile-time references and
+// dynamically import the runtime objects inside the export functions —
+// the heavy chunks only download when the user actually clicks Export.
+import type ExcelJSType from 'exceljs';
 
 export type ExportCellStyle = {
   /** Hex without leading # — e.g. "92D050". */
@@ -83,7 +87,7 @@ export type ExtraSheet<S> = {
 };
 
 function writeSheetData<T>(
-  sheet: ExcelJS.Worksheet,
+  sheet: ExcelJSType.Worksheet,
   rows: T[],
   columns: ExportColumn<T>[],
   startRow: number,
@@ -132,7 +136,7 @@ function writeSheetData<T>(
         if (fill) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
         }
-        const font: Partial<ExcelJS.Font> = {};
+        const font: Partial<ExcelJSType.Font> = {};
         const fontArgb = toExcelArgb(style.fontColor);
         if (fontArgb) font.color = { argb: fontArgb };
         if (style.bold) font.bold = true;
@@ -165,9 +169,15 @@ export async function exportToXlsx<T>(
   options: ExportOptions,
   extraSheets?: ExtraSheet<unknown>[],
 ): Promise<void> {
+  // Pull the heavy chunks at call time (after user clicks Export).
+  // Parallel imports — exceljs and file-saver are independent.
+  const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
+    import('exceljs'),
+    import('file-saver'),
+  ]);
   const workbook = new ExcelJS.Workbook();
   workbook.created = new Date();
-  workbook.creator = 'Algreen MES';
+  workbook.creator = 'MPMS';
   const sheet = workbook.addWorksheet(options.sheetName ?? 'Sheet1');
 
   const colCount = columns.length;
@@ -222,11 +232,14 @@ export async function exportToXlsx<T>(
 
 // ─── CSV ────────────────────────────────────────────────
 
-export function exportToCsv<T>(
+export async function exportToCsv<T>(
   rows: T[],
   columns: ExportColumn<T>[],
   options: ExportOptions,
-): void {
+): Promise<void> {
+  // file-saver alone is small but pulling it lazily lets CSV-only callers
+  // skip the bundle entry on initial page load.
+  const { saveAs } = await import('file-saver');
   const lines: string[] = [];
   const colCount = columns.length;
   // Metadata rows get padded with empty cells so spreadsheet viewers don't

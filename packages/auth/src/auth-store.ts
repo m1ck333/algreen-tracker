@@ -8,10 +8,6 @@ import { parseJwt } from './jwt-utils';
 export interface AuthState {
   user: UserDto | null;
   tenantId: string | null;
-  /** SuperAdmin is logged into a tenant that isn't their home — UI is
-   *  rendered read-only and a banner is shown. Derived from the JWT
-   *  claim cross_tenant_session. */
-  isCrossTenantSession: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -25,7 +21,6 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       tenantId: null,
-      isCrossTenantSession: false,
       isAuthenticated: false,
       isLoading: false,
       error: null,
@@ -38,11 +33,9 @@ export const useAuthStore = create<AuthState>()(
           const payload = parseJwt(data.token);
           const user = data.user;
           const resolvedTenantId = payload?.tenant_id ?? user.tenantId;
-          const crossTenant = payload?.cross_tenant_session === 'true';
           set({
             user,
             tenantId: resolvedTenantId,
-            isCrossTenantSession: crossTenant,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -70,7 +63,6 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           tenantId: null,
-          isCrossTenantSession: false,
           isAuthenticated: false,
           error: null,
         });
@@ -84,7 +76,6 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         tenantId: state.tenantId,
-        isCrossTenantSession: state.isCrossTenantSession,
         isAuthenticated: state.isAuthenticated,
       }),
     },

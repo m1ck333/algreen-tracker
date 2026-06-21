@@ -1,7 +1,8 @@
 import { lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { RequireAuth, RequireRole } from '@alblue/auth';
-import { UserRole, StockMovementType } from '@alblue/shared-types';
+import { UserRole, StockMovementType, TenantFeature } from '@alblue/shared-types';
+import { RequireFeature } from './components/RequireFeature';
 import { AuthLayout } from './layouts/AuthLayout';
 import { MainLayout } from './layouts/MainLayout';
 import { LoginPage } from './pages/login/LoginPage';
@@ -103,7 +104,9 @@ export function AppRoutes() {
             <RequireRole
               roles={[UserRole.Coordinator, UserRole.Manager, UserRole.Admin, UserRole.SuperAdmin]}
             >
-              <ReportsPage />
+              <RequireFeature feature={TenantFeature.ProcessTimes}>
+                <ReportsPage />
+              </RequireFeature>
             </RequireRole>
           }
         />
@@ -150,7 +153,7 @@ export function AppRoutes() {
           }
         />
         <Route
-          path="/admin/firma"
+          path="/admin/company"
           element={
             <RequireRole roles={[UserRole.SuperAdmin, UserRole.Admin]}>
               <FirmaPage />
@@ -169,7 +172,9 @@ export function AppRoutes() {
           path="/admin/materials"
           element={
             <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.SuperAdmin, UserRole.Magacioner]}>
-              <MaterialsPage />
+              <RequireFeature feature={TenantFeature.Magacin}>
+                <MaterialsPage />
+              </RequireFeature>
             </RequireRole>
           }
         />
@@ -179,7 +184,9 @@ export function AppRoutes() {
           path="/warehouse/stock"
           element={
             <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.Coordinator, UserRole.SuperAdmin, UserRole.Magacioner]}>
-              <StockPage />
+              <RequireFeature feature={TenantFeature.Magacin}>
+                <StockPage />
+              </RequireFeature>
             </RequireRole>
           }
         />
@@ -187,7 +194,9 @@ export function AppRoutes() {
           path="/warehouse/inflow"
           element={
             <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.SuperAdmin, UserRole.Magacioner]}>
-              <StockEntryPage type={StockMovementType.Inflow} />
+              <RequireFeature feature={TenantFeature.Magacin}>
+                <StockEntryPage type={StockMovementType.Inflow} />
+              </RequireFeature>
             </RequireRole>
           }
         />
@@ -195,7 +204,9 @@ export function AppRoutes() {
           path="/warehouse/outflow"
           element={
             <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.SuperAdmin, UserRole.Magacioner]}>
-              <StockEntryPage type={StockMovementType.Outflow} />
+              <RequireFeature feature={TenantFeature.Magacin}>
+                <StockEntryPage type={StockMovementType.Outflow} />
+              </RequireFeature>
             </RequireRole>
           }
         />
@@ -203,7 +214,9 @@ export function AppRoutes() {
           path="/warehouse/history"
           element={
             <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.Coordinator, UserRole.SuperAdmin, UserRole.Magacioner]}>
-              <HistoryPage />
+              <RequireFeature feature={TenantFeature.Magacin}>
+                <HistoryPage />
+              </RequireFeature>
             </RequireRole>
           }
         />

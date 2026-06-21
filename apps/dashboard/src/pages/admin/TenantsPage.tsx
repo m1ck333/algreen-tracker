@@ -4,13 +4,14 @@ import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import {
   Table, Button, Drawer, Form, Input, Tag, App,
-  Divider, Popconfirm, Select, DatePicker,
+  Divider, Popconfirm, Select, DatePicker, Alert, InputNumber, Typography, Tooltip, Switch,
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined, EditOutlined, ClearOutlined } from '@ant-design/icons';
+import { EmptyState } from '../../components/EmptyState';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tenantsApi, usersApi } from '@alblue/api-client';
-import { UserRole } from '@alblue/shared-types';
-import type { TenantDto } from '@alblue/shared-types';
+import { UserRole, TenantFeature } from '@alblue/shared-types';
+import type { TenantDto, TenantPaymentDto } from '@alblue/shared-types';
 import { useTranslation } from '@alblue/i18n';
 import { passwordRules } from '../../utils/password';
 import dayjs from 'dayjs';
@@ -18,11 +19,12 @@ import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
+import { paidAtColumn, durationColumn, amountColumn, invoiceColumn, notesColumn } from '../../utils/paymentColumns';
 
 // Defaults for warning / critical days seeded at tenant creation time so
 // the new tenant's Admin has something sensible until they tune them via
 // Profil firme (Milos 15.06.2026 — those numbers are the tenant's own
-// settings, not Skysoft's concern).
+// settings, not a SuperAdmin concern).
 const DEFAULT_WARNING_DAYS = 7;
 const DEFAULT_CRITICAL_DAYS = 3;
 
@@ -39,15 +41,28 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
   const [editTenant, setEditTenant] = useState<TenantDto | null>(null);
   const [form] = Form.useForm();
   const { message } = App.useApp();
-  const { t } = useTranslation('dashboard');
+  const { t, i18n } = useTranslation('dashboard');
 
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
   const { guardedClose: guardedDrawerClose, onValuesChange: onDrawerValuesChange, markClean: markDrawerClean } = useUnsavedChanges(drawerOpen);
+
+  // Naplata (billing) drawer state — nested inside the tenant edit Drawer
+  // so a SA can record a new payment without losing the tenant they're on.
+  const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<TenantPaymentDto | null>(null);
+  const [paymentForm] = Form.useForm();
+  const [blockReasonOpen, setBlockReasonOpen] = useState(false);
+  const [blockReason, setBlockReason] = useState('');
+  const [paymentsYearFilter, setPaymentsYearFilter] = useState<number | undefined>(undefined);
 
   // ─── Filter & Pagination State ──────────────────────────
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
   const [isActiveFilter, setIsActiveFilter] = useState<boolean | undefined>(undefined);
+  // Saša 17.06.2026: separate filter for subscription state. Client-side
+  // since pagination on the SA tenant list is mostly cosmetic (handful of
+  // rows) — no need to push the predicate to BE today.
+  const [subscriptionFilter, setSubscriptionFilter] = useState<'paid' | 'overdue' | undefined>(undefined);
   const [dateFrom, setDateFrom] = useState<dayjs.Dayjs | null>(null);
   const [dateTo, setDateTo] = useState<dayjs.Dayjs | null>(null);
   const [page, setPage] = useState(1);
@@ -55,7 +70,7 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
   const [sortBy, setSortBy] = useState<string | undefined>('name');
   const [sortDirection, setSortDirection] = useState<string | undefined>('asc');
 
-  useEffect(() => { setPage(1); }, [debouncedSearch, isActiveFilter, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, isActiveFilter, subscriptionFilter, dateFrom, dateTo]);
 
   const isCreating = drawerOpen && !editTenant;
 
@@ -73,15 +88,24 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
     }).then((r) => r.data),
   });
 
-  const data = pagedResult?.items;
+  // Overdue = no payment covers today. Covers both lapsed (paidThrough
+  // is in the past) and never-paid (no payments at all). The two cases
+  // are distinguished in the "Plaćeno do" column — lapsed shows a date,
+  // never-paid shows "—".
+  const isOverdue = (tn: TenantDto) => !tn.paidThrough || dayjs(tn.paidThrough).endOf('day').isBefore(dayjs());
+
+  const rawData = pagedResult?.items;
+  const data = rawData && subscriptionFilter
+    ? rawData.filter((tn) => subscriptionFilter === 'overdue' ? isOverdue(tn) : !isOverdue(tn))
+    : rawData;
 
   const currentDetail = editTenant ? data?.find((item) => item.id === editTenant.id) ?? editTenant : null;
 
   // Tenant creation is a two-step server-side flow because tenant + user
   // live in different modules with different DbContexts (no shared
   // transaction). On admin-creation failure the tenant exists but is
-  // adminless — we surface a clear error so Skysoft can recover from DB,
-  // and a future commit will add a "create Admin for tenant X" button.
+  // adminless — we surface a clear error so a SuperAdmin can recover from
+  // DB, and a future commit will add a "create Admin for tenant X" button.
   const createMutation = useMutation({
     mutationFn: async (values: Record<string, unknown>) => {
       const tenant = await tenantsApi.create({
@@ -102,9 +126,7 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
           role: UserRole.Admin,
         });
       } catch (adminErr) {
-        throw new Error(t('admin.tenants.adminCreateFailed', {
-          defaultValue: 'Firma kreirana, ali inicijalni Admin nije. Kreiraj Admina ručno za ovu firmu.',
-        }) + ' (' + ((adminErr as { message?: string })?.message ?? '') + ')');
+        throw new Error(t('admin.tenants.adminCreateFailed') + ' (' + ((adminErr as { message?: string })?.message ?? '') + ')');
       }
       return tenant.data;
     },
@@ -118,10 +140,7 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, values }: { id: string; values: Record<string, unknown> }) =>
-      tenantsApi.update(id, {
-        name: values.name as string,
-        isActive: currentDetail!.isActive,
-      }),
+      tenantsApi.update(id, { name: values.name as string }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       message.success(t('admin.tenants.updated'));
@@ -130,27 +149,125 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
     onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.updateFailed'))),
   });
 
-  const deactivateMutation = useMutation({
-    mutationFn: (tenant: TenantDto) =>
-      tenantsApi.update(tenant.id, { name: tenant.name, isActive: false }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      closeDrawer();
-      message.success(t('admin.tenants.deactivated'));
-    },
-    onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.updateFailed'))),
+  // ─── Naplata (billing) — payments + block/unblock ──────────
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
+    queryKey: ['tenant-payments', editTenant?.id],
+    queryFn: () => tenantsApi.listPayments(editTenant!.id).then((r) => r.data),
+    enabled: !!editTenant?.id && drawerOpen,
   });
 
-  const activateMutation = useMutation({
-    mutationFn: (tenant: TenantDto) =>
-      tenantsApi.update(tenant.id, { name: tenant.name, isActive: true }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      closeDrawer();
-      message.success(t('admin.tenants.activated', { defaultValue: 'Firma aktivirana' }));
+  const savePaymentMutation = useMutation({
+    mutationFn: (values: Record<string, unknown>) => {
+      // Saša 17.06.2026: subscription period is entered as "broj meseci"
+      // and runs FROM the payment date. BE schema stays as date range.
+      //
+      // Stacking rule (Saša 18.06.2026): if other payments already cover
+      // today through some future date, this payment EXTENDS coverage
+      // from that date rather than starting from paidAt. Two consecutive
+      // 6-month payments give 12 months, not 6 months + 1 day.
+      //
+      // When EDITING (Saša 18.06.2026 follow-up #2), the "other paid
+      // through" must exclude THIS row, otherwise the edit self-stacks:
+      // currentDetail.paidThrough included the row being edited, so
+      // every re-save pushed periodStart further into the future. We
+      // recompute the max periodEnd from the local payments list,
+      // skipping the current id.
+      const paidAt = values.paidAt as dayjs.Dayjs;
+      const months = values.months as number;
+      const today = dayjs().startOf('day');
+      const otherPaidThrough = payments
+        .filter((p) => p.id !== editingPayment?.id && !dayjs(p.periodStart).startOf('day').isAfter(today))
+        .reduce<dayjs.Dayjs | null>((max, p) => {
+          const end = dayjs(p.periodEnd);
+          return !max || end.isAfter(max) ? end : max;
+        }, null);
+      const periodStart = (otherPaidThrough && otherPaidThrough.isAfter(paidAt))
+        ? otherPaidThrough
+        : paidAt;
+      const periodEnd = periodStart.add(months, 'month');
+      const payload = {
+        periodStart: periodStart.format('YYYY-MM-DD'),
+        periodEnd: periodEnd.format('YYYY-MM-DD'),
+        amount: values.amount as number,
+        currency: (values.currency as string)?.trim() || 'EUR',
+        paidAt: paidAt.toISOString(),
+        invoiceNumber: (values.invoiceNumber as string) || null,
+        notes: (values.notes as string) || null,
+      };
+      return editingPayment
+        ? tenantsApi.updatePayment(editTenant!.id, editingPayment.id, payload)
+        : tenantsApi.addPayment(editTenant!.id, payload);
     },
-    onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.updateFailed'))),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-payments', editTenant?.id] });
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      const wasEdit = !!editingPayment;
+      setPaymentDrawerOpen(false);
+      setEditingPayment(null);
+      paymentForm.resetFields();
+      message.success(
+        wasEdit
+          ? t('admin.tenants.billing.paymentUpdated')
+          : t('admin.tenants.billing.paymentAdded')
+      );
+    },
+    onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.billing.paymentSaveFailed'))),
   });
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: (paymentId: string) => tenantsApi.deletePayment(editTenant!.id, paymentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-payments', editTenant?.id] });
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      message.success(t('admin.tenants.billing.paymentDeleted'));
+    },
+    onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.billing.paymentDeleteFailed'))),
+  });
+
+  const blockMutation = useMutation({
+    mutationFn: (reason: string | null) => tenantsApi.block(editTenant!.id, { reason }),
+    onSuccess: (resp) => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      setEditTenant(resp.data);
+      setBlockReasonOpen(false);
+      setBlockReason('');
+      message.success(t('admin.tenants.billing.blocked'));
+    },
+    onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.billing.blockFailed'))),
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: () => tenantsApi.unblock(editTenant!.id),
+    onSuccess: (resp) => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      setEditTenant(resp.data);
+      message.success(t('admin.tenants.billing.unblocked'));
+    },
+    onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.billing.unblockFailed'))),
+  });
+
+  // Saša 17.06.2026: SA toggles which feature sections this tenant has
+  // access to. Empty disabledFeatures = all enabled (Premium); Basic
+  // ships with process-times + magacin disabled by default.
+  const updateFeaturesMutation = useMutation({
+    mutationFn: (disabledFeatures: string[]) =>
+      tenantsApi.updateFeatures(editTenant!.id, { disabledFeatures }),
+    onSuccess: (resp) => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['my-tenant'] });
+      setEditTenant(resp.data);
+      message.success(t('admin.tenants.features.updated'));
+    },
+    onError: (err) => message.error(getTranslatedError(err, t, t('admin.tenants.features.updateFailed'))),
+  });
+
+  const toggleFeature = (featureKey: string, enabled: boolean) => {
+    const current = currentDetail?.disabledFeatures ?? [];
+    const next = enabled
+      ? current.filter((k) => k !== featureKey)
+      : Array.from(new Set([...current, featureKey]));
+    updateFeaturesMutation.mutate(next);
+  };
 
   const openCreate = () => {
     form.resetFields();
@@ -196,17 +313,58 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
       sortOrder: sortBy === 'code' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
-      title: t('common:labels.status'),
+      // Saša 17.06.2026: "Status naloga" is binary — Aktivan or Blokiran.
+      // Saša 18.06.2026: collapse legacy "Neaktivan" (isActive=false +
+      // no blockedAt) into Blokiran since both deny login. The Naplata
+      // banner still only renders for rows with an explicit blockedAt
+      // record — legacy ones just show the Tag without a reason banner.
+      title: t('admin.tenants.billing.accountStatus'),
       dataIndex: 'isActive',
-      width: 110,
-      render: (active: boolean) => (
-        <Tag color={active ? 'green' : 'default'}>{active ? t('common:status.active') : t('common:status.inactive')}</Tag>
+      width: 140,
+      render: (_: unknown, record: TenantDto) => (
+        <Tag color={record.isActive ? 'green' : 'red'}>
+          {record.isActive
+            ? t('admin.tenants.billing.statusAccountActive')
+            : t('admin.tenants.billing.statusBlocked')}
+        </Tag>
       ),
+    },
+    {
+      // Saša 17.06.2026: separate "Status pretplate" — Plaćeno (paidThrough
+      // covers today) vs Uplata kasni (paidThrough null or in the past).
+      title: t('admin.tenants.billing.subscriptionStatus'),
+      dataIndex: 'paidThrough',
+      width: 160,
+      render: (_: unknown, record: TenantDto) => {
+        if (isOverdue(record)) {
+          const tooltipText = record.paidThrough
+            ? t('admin.tenants.billing.paidThroughTooltip') + ' ' + dayjs(record.paidThrough).format('DD.MM.YYYY.')
+            : t('admin.tenants.billing.neverPaidTooltip');
+          return (
+            <Tooltip title={tooltipText}>
+              <Tag color="orange">{t('admin.tenants.billing.statusOverdue')}</Tag>
+            </Tooltip>
+          );
+        }
+        return <Tag color="green">{t('admin.tenants.billing.statusPaid')}</Tag>;
+      },
+    },
+    {
+      title: t('admin.tenants.billing.paidThrough'),
+      dataIndex: 'paidThrough',
+      width: 130,
+      render: (d: string | null) => (d ? dayjs(d).format('DD.MM.YYYY.') : <Typography.Text type="secondary">—</Typography.Text>),
+    },
+    {
+      title: t('admin.tenants.billing.lastPaid'),
+      dataIndex: 'lastPaidAt',
+      width: 140,
+      render: (d: string | null) => (d ? dayjs(d).format('DD.MM.YYYY.') : <Typography.Text type="secondary">—</Typography.Text>),
     },
     {
       title: t('common:labels.created'),
       dataIndex: 'createdAt',
-      width: 150,
+      width: 130,
       sorter: true,
       sortOrder: sortBy === 'createdAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
       render: (d: string) => dayjs(d).format('DD.MM.YYYY.'),
@@ -295,14 +453,25 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
           style={{ width: 260 }}
         />
         <Select
-          placeholder={t('common:labels.status')}
+          placeholder={t('admin.tenants.billing.accountStatus')}
           allowClear
           value={isActiveFilter}
           onChange={(v) => setIsActiveFilter(v)}
-          style={{ width: 150 }}
+          style={{ width: 170 }}
           options={[
-            { label: t('common:status.active'), value: true },
-            { label: t('common:status.inactive'), value: false },
+            { label: t('admin.tenants.billing.statusAccountActive'), value: true },
+            { label: t('admin.tenants.billing.statusBlocked'), value: false },
+          ]}
+        />
+        <Select
+          placeholder={t('admin.tenants.billing.subscriptionStatus')}
+          allowClear
+          value={subscriptionFilter}
+          onChange={(v) => setSubscriptionFilter(v)}
+          style={{ width: 180 }}
+          options={[
+            { label: t('admin.tenants.billing.statusPaid'), value: 'paid' },
+            { label: t('admin.tenants.billing.statusOverdue'), value: 'overdue' },
           ]}
         />
         <DatePicker
@@ -310,14 +479,14 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
           onChange={setDateFrom}
           format="DD.MM.YYYY"
           allowClear
-          placeholder={t('common:labels.dateFrom')}
+          placeholder={t('admin.tenants.filters.createdFromPlaceholder')}
         />
         <DatePicker
           value={dateTo}
           onChange={setDateTo}
           format="DD.MM.YYYY"
           allowClear
-          placeholder={t('common:labels.dateTo')}
+          placeholder={t('admin.tenants.filters.createdToPlaceholder')}
         />
       </div>
 
@@ -327,7 +496,34 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
           dataSource={data}
           rowKey="id"
           loading={isLoading}
-          scroll={{ x: 'max-content', y: tableBodyHeight }}
+          locale={{
+            emptyText: (() => {
+              const hasFilters = !!(debouncedSearch || isActiveFilter !== undefined || subscriptionFilter || dateFrom || dateTo);
+              return (
+                <EmptyState
+                  description={hasFilters
+                    ? t('admin.tenants.emptyFiltered')
+                    : t('admin.tenants.empty')}
+                  action={hasFilters ? {
+                    label: t('admin.tenants.clearFilters'),
+                    icon: <ClearOutlined />,
+                    onClick: () => {
+                      setSearch('');
+                      setIsActiveFilter(undefined);
+                      setSubscriptionFilter(undefined);
+                      setDateFrom(null);
+                      setDateTo(null);
+                    },
+                  } : undefined}
+                />
+              );
+            })(),
+          }}
+          // Drop the y-scroll cap when there are no rows so the empty
+          // state (description + "Obriši filtere" button) can render at
+          // its natural height instead of getting clipped by the table
+          // body's viewport-derived height (Saša 18.06.2026).
+          scroll={{ x: 'max-content', y: (data?.length ?? 0) > 0 ? tableBodyHeight : undefined }}
           pagination={{
             current: page,
             pageSize,
@@ -362,69 +558,370 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
         title={isCreating ? t('admin.tenants.createTenant') : currentDetail?.name}
         open={drawerOpen}
         onClose={closeDrawer}
-        width={Math.min(480, window.innerWidth)}
+        width={Math.min(560, window.innerWidth)}
         extra={
           <div style={{ display: 'flex', gap: 8 }}>
-            {!isCreating && currentDetail?.isActive && (
+            {isCreating && (
+              <Button
+                type="primary"
+                onClick={() => form.submit()}
+                loading={createMutation.isPending}
+              >
+                {t('common:actions.save')}
+              </Button>
+            )}
+            {!isCreating && currentDetail && !currentDetail.blockedAt && (
+              <Button
+                danger
+                icon={<StopOutlined />}
+                onClick={() => { setBlockReason(''); setBlockReasonOpen(true); }}
+              >
+                {t('admin.tenants.billing.block')}
+              </Button>
+            )}
+            {!isCreating && currentDetail && currentDetail.blockedAt && (
               <Popconfirm
-                title={t('admin.tenants.deactivateConfirm')}
-                onConfirm={() => deactivateMutation.mutate(currentDetail)}
+                title={t('admin.tenants.billing.unblockConfirm')}
+                onConfirm={() => unblockMutation.mutate()}
                 okText={t('common:actions.confirm')}
                 cancelText={t('common:actions.cancel')}
               >
-                <Button danger loading={deactivateMutation.isPending}>{t('admin.tenants.deactivate')}</Button>
+                <Button icon={<CheckCircleOutlined />} loading={unblockMutation.isPending}>
+                  {t('admin.tenants.billing.unblock')}
+                </Button>
               </Popconfirm>
             )}
-            {!isCreating && currentDetail && !currentDetail.isActive && (
-              <Popconfirm
-                title={t('admin.tenants.activateConfirm', { defaultValue: 'Aktivirati ovu firmu?' })}
-                onConfirm={() => activateMutation.mutate(currentDetail)}
-                okText={t('common:actions.confirm')}
-                cancelText={t('common:actions.cancel')}
+            {!isCreating && (
+              <Button
+                type="primary"
+                onClick={() => form.submit()}
+                loading={updateMutation.isPending}
               >
-                <Button loading={activateMutation.isPending}>{t('admin.tenants.activate', { defaultValue: 'Aktiviraj' })}</Button>
-              </Popconfirm>
+                {t('common:actions.save')}
+              </Button>
             )}
-            <Button
-              type="primary"
-              onClick={() => form.submit()}
-              loading={createMutation.isPending || updateMutation.isPending}
-            >
-              {t('common:actions.save')}
-            </Button>
           </div>
         }
       >
-        <Form form={form} layout="vertical" scrollToFirstError={{ behavior: 'smooth', block: 'center' }} onFinish={handleFinish} onValuesChange={onDrawerValuesChange}>
-          <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="code" label={t('common:labels.code')} rules={[{ required: true }]}>
-            <Input disabled={!isCreating} />
-          </Form.Item>
-          {/* Initial Admin user — only on creation. Skysoft (SuperAdmin)
-              creates the tenant + first Admin in one drawer; the new
-              Admin then manages everything else (warning/critical days,
-              theme colors, later logo) from Profil firme. */}
-          {isCreating && (
-            <>
-              <Divider>{t('admin.tenants.initialAdmin', { defaultValue: 'Inicijalni Admin firme' })}</Divider>
-              <Form.Item name="adminEmail" label={t('common:labels.email')} rules={[{ required: true, type: 'email' }]}>
+        {isCreating ? (
+          <Form form={form} layout="vertical" scrollToFirstError={{ behavior: 'smooth', block: 'center' }} onFinish={handleFinish} onValuesChange={onDrawerValuesChange}>
+            <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="code" label={t('common:labels.code')} rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            {/* Initial Admin user — only on creation. A SuperAdmin creates
+                the tenant + first Admin in one drawer; the new Admin then
+                manages everything else (warning/critical days, theme
+                colors, later logo) from Profil firme. */}
+            <Divider>{t('admin.tenants.initialAdmin')}</Divider>
+            <Form.Item name="adminEmail" label={t('common:labels.email')} rules={[{ required: true, type: 'email' }]}>
+              <Input />
+            </Form.Item>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <Form.Item name="adminFirstName" label={t('common:labels.firstName')} rules={[{ required: true }]} style={{ flex: 1 }}>
                 <Input />
               </Form.Item>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <Form.Item name="adminFirstName" label={t('common:labels.firstName')} rules={[{ required: true }]} style={{ flex: 1 }}>
-                  <Input />
-                </Form.Item>
-                <Form.Item name="adminLastName" label={t('common:labels.lastName')} rules={[{ required: true }]} style={{ flex: 1 }}>
-                  <Input />
-                </Form.Item>
-              </div>
-              <Form.Item name="adminPassword" label={t('common:labels.password')} rules={passwordRules(t)}>
-                <Input.Password />
+              <Form.Item name="adminLastName" label={t('common:labels.lastName')} rules={[{ required: true }]} style={{ flex: 1 }}>
+                <Input />
               </Form.Item>
-            </>
-          )}
+            </div>
+            <Form.Item name="adminPassword" label={t('common:labels.password')} rules={passwordRules(t)}>
+              <Input.Password />
+            </Form.Item>
+          </Form>
+        ) : currentDetail && (
+          <>
+            {currentDetail.blockedAt && (
+              <Alert
+                type="error"
+                showIcon
+                style={{ marginBottom: 16 }}
+                message={t('admin.tenants.billing.blockedBanner')}
+                description={
+                  <>
+                    <div>{t('admin.tenants.billing.blockedAt')}: {dayjs(currentDetail.blockedAt).format('DD.MM.YYYY. HH:mm')}</div>
+                    {currentDetail.blockedReason && (
+                      <div>{t('admin.tenants.billing.blockedReason')}: {currentDetail.blockedReason}</div>
+                    )}
+                  </>
+                }
+              />
+            )}
+
+            <Form
+              form={form}
+              layout="vertical"
+              scrollToFirstError={{ behavior: 'smooth', block: 'center' }}
+              onFinish={handleFinish}
+              onValuesChange={onDrawerValuesChange}
+            >
+              <Form.Item name="name" label={t('common:labels.name')} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="code" label={t('common:labels.code')}>
+                <Input disabled />
+              </Form.Item>
+            </Form>
+
+            <Divider>{t('admin.tenants.features.title')}</Divider>
+            <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+              {t('admin.tenants.features.hint')}
+            </Typography.Paragraph>
+            {[
+              { key: TenantFeature.ProcessTimes, label: t('admin.tenants.features.processTimes') },
+              { key: TenantFeature.Magacin, label: t('admin.tenants.features.magacin') },
+            ].map((f) => {
+              const isEnabled = !(currentDetail.disabledFeatures ?? []).includes(f.key);
+              return (
+                <div key={f.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span>{f.label}</span>
+                  <Switch
+                    checked={isEnabled}
+                    loading={updateFeaturesMutation.isPending}
+                    onChange={(checked) => toggleFeature(f.key, checked)}
+                  />
+                </div>
+              );
+            })}
+
+            <Divider>{t('admin.tenants.billing.payments')}</Divider>
+
+            {(() => {
+              // Year filter — derived from existing payments so it stays
+              // in sync without a hardcoded range. A short list collapses
+              // to "all years" and we hide the filter.
+              const years = Array.from(new Set(payments.map((p) => dayjs(p.paidAt).year()))).sort((a, b) => b - a);
+              const filtered = paymentsYearFilter
+                ? payments.filter((p) => dayjs(p.paidAt).year() === paymentsYearFilter)
+                : payments;
+              return (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <Select
+                      placeholder={t('admin.tenants.billing.filterByYear')}
+                      allowClear
+                      value={paymentsYearFilter}
+                      onChange={(v) => setPaymentsYearFilter(v)}
+                      style={{ width: 140 }}
+                      disabled={years.length === 0}
+                      options={years.map((y) => ({ label: String(y), value: y }))}
+                    />
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => {
+                        setEditingPayment(null);
+                        paymentForm.resetFields();
+                        paymentForm.setFieldsValue({ currency: 'EUR', paidAt: dayjs(), months: 12 });
+                        setPaymentDrawerOpen(true);
+                      }}
+                    >
+                      {t('admin.tenants.billing.addPayment')}
+                    </Button>
+                  </div>
+
+                  <Table
+                    size="small"
+                    loading={paymentsLoading}
+                    dataSource={filtered}
+                    rowKey="id"
+                    pagination={false}
+                    scroll={{ x: 'max-content' }}
+                    locale={{
+                      emptyText: (
+                        <EmptyState
+                          description={paymentsYearFilter
+                            ? t('admin.tenants.billing.noPaymentsForYear')
+                            : t('admin.tenants.billing.noPayments')}
+                          action={paymentsYearFilter ? {
+                            label: t('admin.tenants.clearFilters'),
+                            icon: <ClearOutlined />,
+                            onClick: () => setPaymentsYearFilter(undefined),
+                          } : undefined}
+                        />
+                      ),
+                    }}
+                    columns={[
+                      paidAtColumn<TenantPaymentDto>({ t, language: i18n.language, clientSort: true }),
+                      durationColumn<TenantPaymentDto>({ t, language: i18n.language, clientSort: true }),
+                      amountColumn<TenantPaymentDto>({ t, language: i18n.language, clientSort: true }),
+                      invoiceColumn<TenantPaymentDto>({ t, language: i18n.language, clientSort: true }),
+                      notesColumn<TenantPaymentDto>({ t, language: i18n.language, clientSort: true }),
+                      {
+                        title: '',
+                        width: 90,
+                        fixed: 'right' as const,
+                        render: (_: unknown, row: TenantPaymentDto) => (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <Button
+                              type="text"
+                              icon={<EditOutlined />}
+                              onClick={() => {
+                                setEditingPayment(row);
+                                paymentForm.resetFields();
+                                // Reverse the BE date range back into a
+                                // month count for the form. Rounds half-up
+                                // so a 28-31 day period reads as 1 month.
+                                const months = Math.max(1, Math.round(dayjs(row.periodEnd).diff(dayjs(row.periodStart), 'month', true)));
+                                paymentForm.setFieldsValue({
+                                  paidAt: dayjs(row.paidAt),
+                                  months,
+                                  amount: row.amount,
+                                  currency: row.currency,
+                                  invoiceNumber: row.invoiceNumber ?? undefined,
+                                  notes: row.notes ?? undefined,
+                                });
+                                setPaymentDrawerOpen(true);
+                              }}
+                            />
+                            <Popconfirm
+                              title={t('admin.tenants.billing.deletePaymentConfirm')}
+                              onConfirm={() => deletePaymentMutation.mutate(row.id)}
+                              okText={t('common:actions.confirm')}
+                              cancelText={t('common:actions.cancel')}
+                            >
+                              <Button type="text" danger icon={<DeleteOutlined />} />
+                            </Popconfirm>
+                          </div>
+                        ),
+                      },
+                    ]}
+                  />
+                </>
+              );
+            })()}
+          </>
+        )}
+      </Drawer>
+
+      {/* Nested drawer: add OR edit a payment without leaving the tenant
+          drawer. Reused for both flows — `editingPayment` decides which
+          mutation fires and what the header title says. */}
+      <Drawer
+        title={editingPayment
+          ? t('admin.tenants.billing.editPayment')
+          : t('admin.tenants.billing.addPayment')}
+        open={paymentDrawerOpen}
+        onClose={() => { setPaymentDrawerOpen(false); setEditingPayment(null); }}
+        width={Math.min(420, window.innerWidth)}
+        extra={
+          <Button
+            type="primary"
+            loading={savePaymentMutation.isPending}
+            onClick={() => paymentForm.submit()}
+          >
+            {t('common:actions.save')}
+          </Button>
+        }
+      >
+        <Form
+          form={paymentForm}
+          layout="vertical"
+          onFinish={(values) => savePaymentMutation.mutate(values)}
+        >
+          <Form.Item
+            name="paidAt"
+            label={t('admin.tenants.billing.paidAt')}
+            rules={[
+              { required: true },
+              {
+                // Saša 18.06.2026: future-dated payments lead to confusing
+                // "Plaćeno do —" + "Uplata kasni" displays. SAs record
+                // payments that are already received; pre-paid future
+                // entries aren't a real workflow.
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve();
+                  const d = value as dayjs.Dayjs;
+                  if (d.startOf('day').isAfter(dayjs().startOf('day'))) {
+                    return Promise.reject(new Error(t('admin.tenants.billing.paidAtNotFuture')));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <DatePicker
+              style={{ width: '100%' }}
+              format="DD.MM.YYYY"
+              disabledDate={(d) => d && d.startOf('day').isAfter(dayjs().startOf('day'))}
+            />
+          </Form.Item>
+          <Form.Item
+            name="months"
+            label={t('admin.tenants.billing.months')}
+            // Bounds live on the Form.Item rule, not InputNumber's `min`,
+            // so the user sees a proper validation error instead of antd
+            // silently snapping the value to 1 on blur (Saša 18.06.2026).
+            rules={[
+              { required: true, type: 'integer' },
+              { type: 'number', min: 1, message: t('admin.tenants.billing.monthsMin') },
+              { type: 'number', max: 120, message: t('admin.tenants.billing.monthsMax') },
+            ]}
+            extra={t('admin.tenants.billing.monthsHint')}
+          >
+            <InputNumber style={{ width: '100%' }} precision={0} />
+          </Form.Item>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Form.Item
+              name="amount"
+              label={t('admin.tenants.billing.amount')}
+              // Same pattern as months: no bound on the input itself so
+              // antd doesn't silently snap 0 to 0.01 on blur — Form.Item
+              // catches invalid values on submit.
+              rules={[
+                { required: true, type: 'number' },
+                { type: 'number', min: 0.01, message: t('admin.tenants.billing.amountMin') },
+              ]}
+              style={{ flex: 1 }}
+            >
+              <InputNumber style={{ width: '100%' }} step={1} precision={2} />
+            </Form.Item>
+            <Form.Item name="currency" label={t('admin.tenants.billing.currency')} rules={[{ required: true }]} style={{ width: 100 }}>
+              <Input maxLength={8} />
+            </Form.Item>
+          </div>
+          <Form.Item name="invoiceNumber" label={t('admin.tenants.billing.invoiceNumber')}>
+            <Input maxLength={100} />
+          </Form.Item>
+          <Form.Item name="notes" label={t('admin.tenants.billing.notes')}>
+            <Input.TextArea rows={3} maxLength={2000} />
+          </Form.Item>
+        </Form>
+      </Drawer>
+
+      {/* Block confirmation modal — a separate drawer keeps the reason field
+          first-class without crowding the Naplata tab. */}
+      <Drawer
+        title={t('admin.tenants.billing.block')}
+        open={blockReasonOpen}
+        onClose={() => setBlockReasonOpen(false)}
+        width={Math.min(420, window.innerWidth)}
+        extra={
+          <Button
+            danger
+            type="primary"
+            loading={blockMutation.isPending}
+            onClick={() => blockMutation.mutate(blockReason || null)}
+          >
+            {t('admin.tenants.billing.block')}
+          </Button>
+        }
+      >
+        <Typography.Paragraph>
+          {t('admin.tenants.billing.blockWarning')}
+        </Typography.Paragraph>
+        <Form layout="vertical">
+          <Form.Item label={t('admin.tenants.billing.blockReasonLabel')}>
+            <Input.TextArea
+              rows={3}
+              maxLength={1000}
+              value={blockReason}
+              onChange={(e) => setBlockReason(e.target.value)}
+              placeholder={t('admin.tenants.billing.blockReasonPlaceholder')}
+            />
+          </Form.Item>
         </Form>
       </Drawer>
     </div>

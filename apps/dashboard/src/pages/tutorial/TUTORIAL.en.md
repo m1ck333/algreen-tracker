@@ -24,8 +24,8 @@ settings.
 
 | Application | URL |
 |---|---|
-| Dashboard | https://alblue.duckdns.org/login |
-| Tablet | https://alblue-tablet.duckdns.org/login |
+| Dashboard | The URL provided by your company administrator |
+| Tablet | The tablet URL provided by your company administrator |
 
 Sign-in fields:
 
@@ -53,7 +53,13 @@ Click the avatar in the bottom-left corner to open the profile:
 - **Theme:** Light / Dark.
 - **Language:** Serbian / English. Change is instant; the choice is
   remembered.
-- **Change password**.
+- **Change password** — opens a side panel. Enter the current password,
+  then the new one, then confirm. You stay signed in on the current
+  session after saving, but the next sign-in (or after inactivity) needs
+  the new password. Only your own password can be changed here — admins
+  can't change someone else's through this panel; if a user has
+  forgotten theirs, use the "Reset password" action on their row in
+  Users.
 - **Sign out**.
 
 On public pages (Sign in, *About*) the language can also be switched
@@ -460,7 +466,7 @@ Open to Admin and Manager roles.
 | **Order types** | Standard, Complaint etc. "Manual process selection" toggle. |
 | **Special request types** | Per-item process modifiers (add/remove/only listed). |
 | **Shifts** | Define work shifts. Per-shift settings: break, max overtime, **auto-logout overtime** (per session), alarm before logout, and **auto-logout regular (h)** — the time after which the system automatically closes a worker's session (e.g. 8.5h for an 8h shift with 30 min grace). |
-| **Company** | Settings for your own firm: logo (PNG/JPG/SVG, up to 2 MB — shown top-left in the sidebar), order deadlines (days before delivery for yellow warning and red critical), and warning colors. Upload a logo with "Upload logo" (or "Replace logo" if one exists); click the preview to open an enlarged view. |
+| **Company** | Settings for your own firm and subscription overview, split into two tabs: **Settings** (logo, order deadlines, warning colors) and **Billing** (subscription status and payment history). Upload a logo with "Upload logo" (or "Replace logo" if one exists); click the preview to open an enlarged view. The Billing tab opens with a card showing the date your subscription is active through and how many days remain (green when healthy, orange under 14 days, red once expired). Below the card is the payment history table — payment date, duration, amount, invoice number, notes. Sort columns by clicking the header; filter by year. Payments are recorded by support; this view is read-only so you can confirm everything is on file. When the subscription is close to expiring (under 14 days) or has lapsed, Admin users of the company receive a morning notification in the bell — click it to jump straight to the Billing tab. |
 
 ### 3.9 Coordinator dashboard
 
@@ -506,7 +512,7 @@ first sign-in (the system asks for permission).
 
 ### 3.11 Warehouse
 
-Open for roles Administrator, Manager, Coordinator, Super Administrator, and **Warehouse
+Open for roles Administrator, Manager, Coordinator, and **Warehouse
 worker** (Magacioner). Warehouse worker is a separate role that can be
 assigned alongside another (e.g. coordinator + warehouse worker at
 once). The warehouse worker has access to every warehouse page and
@@ -666,7 +672,7 @@ below the minimum, the system automatically notifies management:
   **Materials below min** cell showing how many materials are
   currently below their minimum. The red number is clickable and
   navigates to Warehouse stock with the "Below min" filter applied.
-- **Notification bell** — every user with role Super Administrator,
+- **Notification bell** — every user with role
   Administrator, Manager, or Coordinator (and combinations including the Warehouse
   worker role) receives a "**Material below minimum: CODE — NAME**"
   notification with the current on-hand quantity, the minimum, and
@@ -686,8 +692,8 @@ below the minimum, the system automatically notifies management:
 
 ### 4.1 Installation
 
-1. Open https://alblue-tablet.duckdns.org in Chrome (Android) or
-   Safari (iOS).
+1. Open the tablet app URL (provided by your administrator) in
+   Chrome (Android) or Safari (iOS).
 2. Browser menu → **Add to Home screen**.
 3. The icon appears on the home screen. The app behaves like a native
    app (offline, push notifications).
@@ -880,4 +886,4 @@ language is detected from the visitor's browser preferences.
 
 ---
 
-*For any questions or feedback: **sales@algreen.rs***
+*For any questions or feedback, contact your company administrator.*

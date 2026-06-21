@@ -1,0 +1,33 @@
+version: 2
+
+# Auto-open PRs for npm dependency updates with security advisories or
+# new versions. Grouped by ecosystem so the inbox doesn't drown — minor
+# + patch get bundled into one weekly PR per group; security advisories
+# arrive immediately as their own PR.
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Belgrade
+    open-pull-requests-limit: 5
+    groups:
+      # Lump non-major updates together so we don't open 30 PRs a month.
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+    # Majors stay as individual PRs — they need read-the-changelog
+    # attention and shouldn't be auto-grouped with safe updates.
+    commit-message:
+      prefix: chore(deps)
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore(ci)

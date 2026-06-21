@@ -163,10 +163,10 @@ export function MaterialsImportModal({ open, onClose }: Props) {
       queryClient.invalidateQueries({ queryKey: ['materials'] });
       queryClient.invalidateQueries({ queryKey: ['materials-for-warehouse'] });
       if (resp.data.errors.length === 0) {
-        message.success(t('materials.import.allOk', { defaultValue: 'Svi materijali uspešno uvezeni.' }));
+        message.success(t('materials.import.allOk'));
       }
     },
-    onError: () => message.error(t('materials.import.failed', { defaultValue: 'Uvoz nije uspeo.' })),
+    onError: () => message.error(t('materials.import.failed')),
   });
 
   const handleFile = async (uploadFile: UploadFile) => {
@@ -180,7 +180,7 @@ export function MaterialsImportModal({ open, onClose }: Props) {
     } catch {
       setMissingRequired([]);
       setParsedRows([]);
-      message.error(t('materials.import.parseFailed', { defaultValue: 'Nije moguće pročitati Excel fajl.' }));
+      message.error(t('materials.import.parseFailed'));
     }
     return false;
   };
@@ -190,24 +190,24 @@ export function MaterialsImportModal({ open, onClose }: Props) {
 
   return (
     <Modal
-      title={t('materials.import.title', { defaultValue: 'Uvoz iz Excela' })}
+      title={t('materials.import.title')}
       open={open}
       onCancel={() => { onClose(); reset(); }}
       footer={
         result ? (
           <Button type="primary" onClick={() => { onClose(); reset(); }}>
-            {t('common:actions.close', { defaultValue: 'Zatvori' })}
+            {t('common:actions.close')}
           </Button>
         ) : (
           <>
-            <Button onClick={() => { onClose(); reset(); }}>{t('common:actions.cancel', { defaultValue: 'Otkaži' })}</Button>
+            <Button onClick={() => { onClose(); reset(); }}>{t('common:actions.cancel')}</Button>
             <Button
               type="primary"
               loading={mutation.isPending}
               disabled={validCount === 0}
               onClick={() => mutation.mutate()}
             >
-              {t('materials.import.save', { defaultValue: 'Uvezi ({{n}})', n: validCount })}
+              {t('materials.import.save', { n: validCount })}
             </Button>
           </>
         )
@@ -223,9 +223,9 @@ export function MaterialsImportModal({ open, onClose }: Props) {
           showUploadList={false}
         >
           <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-          <p className="ant-upload-text">{t('materials.import.dropHint', { defaultValue: 'Prevuci .xlsx fajl ovde ili klikni za izbor' })}</p>
+          <p className="ant-upload-text">{t('materials.import.dropHint')}</p>
           <Paragraph type="secondary" style={{ margin: 0 }}>
-            {t('materials.import.formatHint', { defaultValue: 'Zaglavlja: Kod, Naziv, Jedinica mere, Kategorija, Min, Max, Dimenzija X/Y/Z, Pozicija, Napomena' })}
+            {t('materials.import.formatHint')}
           </Paragraph>
         </Dragger>
       )}
@@ -234,7 +234,7 @@ export function MaterialsImportModal({ open, onClose }: Props) {
         <Alert
           type="error"
           showIcon
-          message={t('materials.import.missingHeaders', { defaultValue: 'Nedostaju obavezna zaglavlja' })}
+          message={t('materials.import.missingHeaders')}
           description={missingRequired.join(', ')}
           style={{ marginBottom: 12 }}
         />
@@ -244,9 +244,9 @@ export function MaterialsImportModal({ open, onClose }: Props) {
         <>
           <Paragraph style={{ marginBottom: 8 }}>
             <Text>{file.name}</Text>{' '}
-            <Tag color="green">{t('materials.import.validCount', { defaultValue: 'Spremno: {{n}}', n: validCount })}</Tag>
-            {errorCount > 0 && <Tag color="red">{t('materials.import.errorCount', { defaultValue: 'Greške: {{n}}', n: errorCount })}</Tag>}
-            <Button type="link" size="small" onClick={reset}>{t('materials.import.pickAnother', { defaultValue: 'Drugi fajl' })}</Button>
+            <Tag color="green">{t('materials.import.validCount', { n: validCount })}</Tag>
+            {errorCount > 0 && <Tag color="red">{t('materials.import.errorCount', { n: errorCount })}</Tag>}
+            <Button type="link" size="small" onClick={reset}>{t('materials.import.pickAnother')}</Button>
           </Paragraph>
           <Table
             size="small"
@@ -272,7 +272,7 @@ export function MaterialsImportModal({ open, onClose }: Props) {
               { title: t('materials.dimY'), dataIndex: 'dimensionY', width: 70, align: 'right', render: (v: number | null) => v ?? '—' },
               { title: t('materials.dimZ'), dataIndex: 'dimensionZ', width: 70, align: 'right', render: (v: number | null) => v ?? '—' },
               { title: t('materials.location'), dataIndex: 'location', width: 100, render: (v: string | null) => v || '—' },
-              { title: t('materials.import.parseError', { defaultValue: 'Greška' }), dataIndex: '__error', render: (v: string | undefined) => v ? <Tag color="red">{v}</Tag> : '—' },
+              { title: t('materials.import.parseError'), dataIndex: '__error', render: (v: string | undefined) => v ? <Tag color="red">{v}</Tag> : '—' },
             ]}
           />
         </>
@@ -283,7 +283,7 @@ export function MaterialsImportModal({ open, onClose }: Props) {
           <Alert
             type={result.errors.length === 0 ? 'success' : 'warning'}
             showIcon
-            message={t('materials.import.resultSummary', { defaultValue: 'Uvezeno: {{c}} • Greške: {{e}}', c: result.created, e: result.errors.length })}
+            message={t('materials.import.resultSummary', { c: result.created, e: result.errors.length })}
             style={{ marginBottom: 12 }}
           />
           {result.errors.length > 0 && (
@@ -295,7 +295,7 @@ export function MaterialsImportModal({ open, onClose }: Props) {
               columns={[
                 { title: '#', dataIndex: 'rowIndex', width: 60 },
                 { title: t('materials.code'), dataIndex: 'code', width: 120 },
-                { title: t('materials.import.parseError', { defaultValue: 'Razlog' }), dataIndex: 'reason' },
+                { title: t('materials.import.parseError'), dataIndex: 'reason' },
               ]}
             />
           )}

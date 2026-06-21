@@ -1,9 +1,11 @@
 import { useAuthStore } from '@alblue/auth';
 import { useTranslation } from '@alblue/i18n';
+import { useTenantLogo } from '../hooks/useTenantLogo';
 
 export function StatusBar() {
   const user = useAuthStore((s) => s.user);
   const { i18n } = useTranslation('tablet');
+  const tenantLogoUrl = useTenantLogo();
 
   const toggleLanguage = () => {
     i18n.changeLanguage(i18n.language === 'sr' ? 'en' : 'sr');
@@ -14,7 +16,15 @@ export function StatusBar() {
   return (
     <div className="bg-primary-500 text-white px-4 py-3 flex items-center justify-between">
       <div className="flex items-center gap-3 min-w-0">
-        <img src="/mpms-logo-text.png" alt="MPMS" className="h-6 object-contain flex-shrink-0" />
+        {/* Per-tenant logo when uploaded, MPMS mark as placeholder.
+            Same pattern as dashboard sidebar top — once the tenant
+            Admin uploads a logo on Profil firme, it surfaces here for
+            every worker on every tablet of that tenant. */}
+        <img
+          src={tenantLogoUrl ?? '/mpms-logo-text.png'}
+          alt={tenantLogoUrl ? 'Logo' : 'MPMS'}
+          className="h-10 object-contain flex-shrink-0"
+        />
       </div>
       <div className="flex items-center gap-3 flex-shrink-0">
         {user && (

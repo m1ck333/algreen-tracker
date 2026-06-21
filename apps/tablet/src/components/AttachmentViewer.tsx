@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ordersApi } from '@alblue/api-client';
 import type { OrderAttachmentDto } from '@alblue/shared-types';
@@ -101,7 +101,7 @@ export function AttachmentViewer({ orderId, orderItemId }: AttachmentViewerProps
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between text-tablet-base font-semibold text-gray-700 py-3 px-2 rounded-lg active:bg-gray-100"
       >
-        <span>📎 Dokumenti ({attachments.length})</span>
+        <span>{t('attachments.documentsCount', { count: attachments.length })}</span>
         <svg
           width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"

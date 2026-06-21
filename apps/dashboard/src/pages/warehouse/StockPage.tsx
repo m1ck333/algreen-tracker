@@ -154,7 +154,7 @@ export function StockPage() {
                   // matched nothing", not "you have no materials".
                   !debouncedSearch && !category && !statusFilter
                     ? {
-                        label: t('warehouse.stockEmptyAction', { defaultValue: 'Otvori Materijale' }),
+                        label: t('warehouse.stockEmptyAction'),
                         onClick: () => navigate('/admin/materials'),
                       }
                     : undefined

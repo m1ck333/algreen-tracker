@@ -372,6 +372,7 @@ export function BlockRequestsPage() {
         okText={t('common:actions.approve')}
         cancelText={t('common:actions.cancel')}
         confirmLoading={approveMutation.isPending}
+        destroyOnHidden
       >
         <div style={{ marginTop: 12 }}>
           <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>{t('blockRequests.blockReason')}</label>

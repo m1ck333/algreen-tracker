@@ -7,7 +7,8 @@
     "close": "Zatvori",
     "loadingPdf": "Učitavanje PDF-a...",
     "pdfPageAlt": "Strana {{n}}",
-    "pdfLoadError": "Greška pri učitavanju PDF-a"
+    "pdfLoadError": "Greška pri učitavanju PDF-a",
+    "documentsCount": "📎 Dokumenti ({{count}})"
   },
   "nav": {
     "queue": "Red",
@@ -33,7 +34,6 @@
     "loadingQueue": "Učitavanje reda...",
     "loadFailed": "Učitavanje reda nije uspelo",
     "retry": "Pokušaj ponovo",
-    "items": "{{count}} stavki",
     "qty": "Kol: {{count}}",
     "daysLeft": "{{count}}d preostalo",
     "progress": "{{completed}}/{{total}} procesa",
@@ -41,7 +41,6 @@
     "itemNotes": "Napomena stavke"
   },
   "work": {
-    "title": "Radna sesija",
     "working": "Rad u toku...",
     "readyToStart": "Spremno za početak",
     "subProcesses": "Pod-procesi",
@@ -50,13 +49,10 @@
     "resume": "NASTAVI",
     "paused": "Pauzirano",
     "complete": "ZAVRŠI",
-    "backToQueue": "Nazad u red",
-    "min": "min",
     "startFailed": "Pokretanje procesa nije uspelo",
     "pauseFailed": "Pauziranje procesa nije uspelo",
     "resumeFailed": "Nastavljanje procesa nije uspelo",
     "completeFailed": "Završavanje procesa nije uspelo",
-    "product": "Proizvod",
     "priority": "Prioritet",
     "deliveryDate": "Rok isporuke",
     "quantity": "Količina",
@@ -76,7 +72,6 @@
     "title": "Dolazne narudžbine",
     "subtitle": "Narudžbine iz prethodnih procesa",
     "noOrders": "Nema dolaznih narudžbina",
-    "incoming": "Dolazna",
     "blocked": "{{count}} blokirajućih procesa",
     "blockedBy": "Nije završen prethodni proces:",
     "daysLeft": "{{count}}d preostalo",
@@ -87,11 +82,8 @@
   "checkout": {
     "title": "Kraj smene",
     "checkOut": "ODJAVI SE",
-    "checkOutFailed": "Odjava nije uspela",
-    "goBack": "Nazad",
     "confirmTitle": "Kraj smene",
     "confirmMessage": "Da li ste sigurni da želite da završite smenu i odjavite se?",
-    "process": "Proces",
     "checkedInAt": "Prijavljeni u"
   },
   "offline": {
@@ -103,10 +95,6 @@
     "loggedOutTitle": "Automatski ste odjavljeni",
     "loggedOutBody": "Vaša radna sesija je automatski zatvorena jer je dostignuto vreme za odjavu. Za prekovremeni rad prijavite se ponovo.",
     "loginAgain": "Prijavi se ponovo"
-  },
-  "notifications": {
-    "prompt": "Uključite obaveštenja za nove narudžbine i blokade",
-    "enable": "Uključi"
   },
   "notificationsPage": {
     "title": "Obaveštenja",
@@ -182,8 +170,7 @@
     }
   },
   "common": {
-    "loadMore": "Prikaži još ({{remaining}} preostalo)",
-    "showingOf": "Prikazano {{shown}} od {{total}}"
+    "loadMore": "Prikaži još ({{remaining}} preostalo)"
   },
   "language": {
     "sr": "SR",

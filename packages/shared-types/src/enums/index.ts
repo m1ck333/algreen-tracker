@@ -60,6 +60,13 @@ export enum NotificationType {
   ChangeRequest = 'ChangeRequest',
   ChangeRequestApproved = 'ChangeRequestApproved',
   ChangeRequestRejected = 'ChangeRequestRejected',
+  /** Daily reminder created by the BE BillingReminderService when the
+   *  tenant's paidThrough is within 14 days. Recipients: Admin users
+   *  only. Renders as a warning. */
+  SubscriptionExpiring = 'SubscriptionExpiring',
+  /** Daily reminder when paidThrough is in the past. Renders as an
+   *  error so it can't be tuned out like a yellow warning. */
+  SubscriptionExpired = 'SubscriptionExpired',
 }
 
 export enum HistoryAction {

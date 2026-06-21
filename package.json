@@ -10,16 +10,31 @@
     "build:dashboard": "pnpm --filter dashboard build",
     "build:tablet": "pnpm --filter tablet build",
     "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "check:i18n": "node scripts/check-i18n-keys.mjs",
+    "check:i18n-params": "node scripts/check-locale-placeholders.mjs",
+    "check:brand": "node scripts/check-brand-leaks.mjs",
+    "check:colors": "node scripts/check-hardcoded-colors.mjs",
+    "check:size": "node scripts/check-file-size.mjs",
+    "analyze:dashboard": "ANALYZE=1 pnpm --filter dashboard build",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": "eslint"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-i18next": "^6.1.0",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.0"
+    "eslint-plugin-react-refresh": "^0.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7"
   },
   "engines": {
     "node": ">=22",

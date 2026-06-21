@@ -73,9 +73,9 @@ export function TableExportButton<T>({
       } else if (csvOverride) {
         const csvRows = csvOverride.rowsFor(rows);
         rowCount = csvRows.length;
-        exportToCsv(csvRows, csvOverride.columns, localizedOptions);
+        await exportToCsv(csvRows, csvOverride.columns, localizedOptions);
       } else {
-        exportToCsv(rows, columns, localizedOptions);
+        await exportToCsv(rows, columns, localizedOptions);
       }
       message.success(t('export.success', { count: rowCount }));
     } catch (err) {

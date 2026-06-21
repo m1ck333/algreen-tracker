@@ -1,5 +1,5 @@
 import { Card, Typography, Space, theme, List, Button, Tag, Row, Col } from 'antd';
-import { DesktopOutlined, TabletOutlined, CheckOutlined, ThunderboltOutlined, ArrowLeftOutlined, MailOutlined } from '@ant-design/icons';
+import { DesktopOutlined, TabletOutlined, CheckOutlined, ThunderboltOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '@alblue/i18n';
 
@@ -112,12 +112,7 @@ export function AboutPage() {
       {/* CTA */}
       <Card style={{ textAlign: 'center', background: token.colorPrimaryBg, borderColor: token.colorPrimaryBorder }}>
         <Title level={3} style={{ marginTop: 0 }}>{t('about.ctaTitle')}</Title>
-        <Paragraph>
-          {t('about.ctaText')}{' '}
-          <a href={`mailto:${t('about.ctaEmail')}`}>
-            <MailOutlined /> {t('about.ctaEmail')}
-          </a>
-        </Paragraph>
+        <Paragraph>{t('about.ctaText')}</Paragraph>
         <Link to="/login">
           <Button type="primary" icon={<ArrowLeftOutlined />}>{t('about.backToLogin')}</Button>
         </Link>

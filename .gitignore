@@ -22,6 +22,18 @@ packages/**/*.d.ts.map
 !apps/**/vite.config.ts
 !apps/**/tailwind.config.js
 !apps/**/postcss.config.js
+# Hand-written ambient declarations (vite-env, etc.) live in src, not build output
+!apps/**/vite-env.d.ts
+!packages/**/vite-env.d.ts
+!env.d.ts
 TESTING_CHECKLIST.md
 !CLAUDE.md
 !HANDOFF.md
+_SASA_FEEDBACK_BATCH1.md
+
+# Playwright
+playwright-report/
+test-results/
+
+# Bundle analyzer output
+apps/dashboard/dist/stats.html

@@ -18,14 +18,14 @@ export function NotFoundPage() {
       title="404"
       subTitle={
         <>
-          {t('notFound.subtitle', { defaultValue: 'Stranica ne postoji.' })}
+          {t('notFound.subtitle')}
           <br />
           <code style={{ fontSize: 12, opacity: 0.7 }}>{location.pathname}</code>
         </>
       }
       extra={
         <Button type="primary" onClick={() => navigate('/', { replace: true })}>
-          {t('notFound.backHome', { defaultValue: 'Početna' })}
+          {t('notFound.backHome')}
         </Button>
       }
     />

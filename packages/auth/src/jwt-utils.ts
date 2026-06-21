@@ -11,15 +11,6 @@ export interface JwtPayload {
   exp: number;
   iss: string;
   aud: string;
-
-  /** Present (and "true") only when a SuperAdmin logged into a tenant
-   *  that isn't their home. UI uses this to render the read-only banner;
-   *  BE middleware uses it to block all writes. */
-  cross_tenant_session?: string;
-
-  /** Original home tenant of the SuperAdmin — used to label the
-   *  "vrati se na svoj nalog" affordance. */
-  home_tenant_id?: string;
 }
 
 export function parseJwt(token: string): JwtPayload | null {

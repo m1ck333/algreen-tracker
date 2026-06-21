@@ -102,6 +102,11 @@ export function IncomingOrdersPage() {
         return () => clearTimeout(timer);
       }
     }
+    // visibleCount is intentionally NOT a dependency: this effect reacts
+    // to highlightId / incoming changes and READS the latest visibleCount
+    // to decide whether to bump it. Including it would re-run the effect
+    // every bump and re-trigger the highlight animation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightId, incoming]);
 
 

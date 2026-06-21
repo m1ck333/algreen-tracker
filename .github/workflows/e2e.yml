@@ -1,0 +1,158 @@
+name: E2E
+
+# Full-stack Playwright run on every push to main + PR. Spins up:
+#   - Postgres 16 as a GHA service container
+#   - The BE (.NET 9) checked out from the AlgreenMES repo, migrated +
+#     seeded on startup, listening on :5030
+#   - The FE dashboard built with production config and served via
+#     `vite preview` on :5941
+#   - Chromium via @playwright/test
+#
+# Requires the repo secret BE_CHECKOUT_TOKEN — a fine-grained PAT with
+# Contents:read on NikolaMilanovic22/AlgreenMES. See e2e.yml comments
+# in CLAUDE.md for the exact steps to create it.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: full-stack Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Opt-in gate. Job is skipped (not failed) until both are set up:
+    #   1. Repo VARIABLE `E2E_ENABLED` = "true"
+    #      (Settings → Secrets and variables → Actions → Variables tab)
+    #   2. Repo SECRET `BE_CHECKOUT_TOKEN` = fine-grained GitHub PAT with
+    #      Contents:read on NikolaMilanovic22/AlgreenMES.
+    # Without #1 the job is skipped; without #2 it'll fail at the
+    # "Checkout BE" step. CLAUDE.md has full setup instructions.
+    if: ${{ vars.E2E_ENABLED == 'true' }}
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: algreen_mes
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout FE
+        uses: actions/checkout@v4
+
+      - name: Checkout BE
+        uses: actions/checkout@v4
+        with:
+          repository: NikolaMilanovic22/AlgreenMES
+          token: ${{ secrets.BE_CHECKOUT_TOKEN }}
+          path: backend
+          ref: staging
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore BE
+        working-directory: backend
+        run: dotnet restore
+
+      - name: Build BE
+        working-directory: backend
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Start BE
+        working-directory: backend
+        env:
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=algreen_mes;Username=postgres;Password=postgres"
+          ASPNETCORE_URLS: "http://localhost:5030"
+          ASPNETCORE_ENVIRONMENT: Development
+        run: |
+          nohup dotnet run --project AlgreenMES.API --no-build --configuration Release > be.log 2>&1 &
+          echo "BE_PID=$!" >> $GITHUB_ENV
+
+      - name: Wait for BE health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:5030/api/health/ready >/dev/null 2>&1; then
+              echo "BE ready after ${i}s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "BE did not become ready in 120s — last 100 lines of be.log:"
+          tail -100 backend/be.log || true
+          exit 1
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install FE deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build dashboard
+        env:
+          VITE_API_BASE_URL: http://localhost:5030/api
+          VITE_SIGNALR_URL: http://localhost:5030/hubs/production
+        run: pnpm --filter dashboard build
+
+      - name: Serve dashboard
+        run: |
+          nohup pnpm --filter dashboard exec vite preview --port 5941 --host > fe.log 2>&1 &
+          for i in {1..15}; do
+            if curl -fsS http://localhost:5941/ >/dev/null 2>&1; then
+              echo "FE ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "FE did not start — last 50 lines of fe.log:"
+          tail -50 fe.log || true
+          exit 1
+
+      - name: Run Playwright
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:5941
+          E2E_ADMIN_PASSWORD: Admin123!
+          E2E_TENANT_CODE: DEMO
+          E2E_ADMIN_EMAIL: admin@demo.com
+        run: pnpm e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+      - name: Stop BE
+        if: always()
+        run: |
+          kill ${{ env.BE_PID }} 2>/dev/null || true

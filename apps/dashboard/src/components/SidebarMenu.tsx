@@ -25,10 +25,11 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { useAuthStore } from '@alblue/auth';
-import { UserRole, RequestStatus, hasRole } from '@alblue/shared-types';
+import { UserRole, RequestStatus, TenantFeature, hasRole } from '@alblue/shared-types';
 import { blockRequestsApi } from '@alblue/api-client';
 import { useTranslation } from '@alblue/i18n';
 import { useSignalREvent, SignalREvents } from '@alblue/signalr-client';
+import { useTenantFeatures } from '../hooks/useTenantFeatures';
 
 interface SidebarMenuProps {
   collapsed: boolean;
@@ -53,6 +54,12 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
   // + Magacioner).
   const isMagacionerOrAdmin = isAdminOrManager || hasRole(user, UserRole.Magacioner);
   const canReadMagacin = isCoordOrAbove || hasRole(user, UserRole.Magacioner);
+
+  // Saša 17.06.2026: per-tenant feature gating. Process times + Magacin
+  // are opt-in on the Basic plan; SAs flip them per tenant via Firme.
+  const { isEnabled } = useTenantFeatures();
+  const processTimesEnabled = isEnabled(TenantFeature.ProcessTimes);
+  const magacinEnabled = isEnabled(TenantFeature.Magacin);
 
   const queryClient = useQueryClient();
   const { data: pendingBlockCount } = useQuery({
@@ -104,12 +111,12 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
       icon: <SwapOutlined />,
       label: t('nav.changeRequests'),
     },
-    isCoordOrAbove && {
+    isCoordOrAbove && processTimesEnabled && {
       key: '/reports',
       icon: <BarChartOutlined />,
       label: t('nav.reports'),
     },
-    canReadMagacin && {
+    canReadMagacin && magacinEnabled && {
       key: 'warehouse',
       icon: <InboxOutlined />,
       label: t('nav.warehouse'),
@@ -130,11 +137,11 @@ export function SidebarMenu({ collapsed: _collapsed }: SidebarMenuProps) {
         { key: '/admin/product-categories', icon: <AppstoreOutlined />, label: t('nav.categories') },
         { key: '/admin/order-types', icon: <ProfileOutlined />, label: t('nav.orderTypes') },
         { key: '/admin/special-request-types', icon: <TagOutlined />, label: t('nav.specialRequests') },
-        { key: '/admin/materials', icon: <BlockOutlined />, label: t('nav.materials') },
+        magacinEnabled && { key: '/admin/materials', icon: <BlockOutlined />, label: t('nav.materials') },
         {
-          key: '/admin/firma',
+          key: '/admin/company',
           icon: <BankOutlined />,
-          label: t('nav.firma', { defaultValue: 'Firma' }),
+          label: t('nav.firma'),
         },
         { key: '/admin/shifts', icon: <ClockCircleOutlined />, label: t('nav.shifts') },
       ].filter(Boolean),
