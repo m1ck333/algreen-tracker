@@ -33,6 +33,7 @@ import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 const { Title, Text } = Typography;
 
@@ -76,6 +77,7 @@ interface LocalProcess { processId: string; sequenceOrder: number; defaultComple
 interface LocalDep { processId: string; dependsOnProcessId: string }
 
 export function ProductCategoriesPage() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
@@ -337,7 +339,7 @@ export function ProductCategoriesPage() {
       dataIndex: 'name',
       sorter: true,
       sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
-      fixed: 'left' as const,
+      fixed: fixedCol('left'),
       width: 240,
     },
     { title: t('common:labels.description'), dataIndex: 'description', ellipsis: true },

@@ -425,7 +425,7 @@ export function SidebarFooter({ collapsed, onOverlayAction }: SidebarFooterProps
   );
 
   const profileContent = (
-    <div style={{ width: 240 }}>
+    <div style={{ width: isMobile ? '100%' : 240 }}>
       <Space direction="vertical" size={0} style={{ width: '100%' }}>
         <Text strong>{user?.fullName}</Text>
         <Text type="secondary" style={{ fontSize: 12 }}>{user?.role ? tEnum('UserRole', user.role) : ''}</Text>
@@ -625,29 +625,61 @@ export function SidebarFooter({ collapsed, onOverlayAction }: SidebarFooterProps
           </Popover>
         );
       })()}
-      <Popover
-        content={profileContent}
-        trigger="click"
-        open={profileOpen}
-        onOpenChange={setProfileOpen}
-        placement="rightBottom"
-        arrow={false}
-      >
-        <Tooltip title={collapsed ? user?.fullName ?? t('nav.profile') : ''} placement="right">
-          <div
-            style={rowStyle}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+      {(() => {
+        const profileRow = (
+          <Tooltip title={collapsed ? user?.fullName ?? t('nav.profile') : ''} placement="right">
+            <div
+              style={rowStyle}
+              onClick={isMobile ? () => setProfileOpen(true) : undefined}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <UserOutlined style={{ fontSize: 16 }} />
+              {!collapsed && (
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.fullName ?? t('nav.profile')}
+                </span>
+              )}
+            </div>
+          </Tooltip>
+        );
+
+        // Mobile: same fix as notifications above — a right-placed Popover
+        // anchored to the sidebar row lands off-screen inside the menu
+        // Drawer (sidebar takes most of the viewport width). Use a right-
+        // side Drawer instead so the profile content (theme + language
+        // switchers, change password, logout) stays fully visible.
+        if (isMobile) {
+          return (
+            <>
+              {profileRow}
+              <Drawer
+                title={user?.fullName ?? t('nav.profile')}
+                placement="right"
+                open={profileOpen}
+                onClose={() => setProfileOpen(false)}
+                width={Math.min(360, window.innerWidth - 16)}
+                styles={{ body: { padding: 16 } }}
+              >
+                {profileContent}
+              </Drawer>
+            </>
+          );
+        }
+
+        return (
+          <Popover
+            content={profileContent}
+            trigger="click"
+            open={profileOpen}
+            onOpenChange={setProfileOpen}
+            placement="rightBottom"
+            arrow={false}
           >
-            <UserOutlined style={{ fontSize: 16 }} />
-            {!collapsed && (
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.fullName ?? t('nav.profile')}
-              </span>
-            )}
-          </div>
-        </Tooltip>
-      </Popover>
+            {profileRow}
+          </Popover>
+        );
+      })()}
       {changePasswordDrawer}
     </div>
   );

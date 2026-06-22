@@ -29,9 +29,11 @@ import {
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
 import { formatSeconds } from './reportsHelpers';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 const { RangePicker } = DatePicker;
 export function ProductManufacturingTimeTab() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -120,26 +122,26 @@ export function ProductManufacturingTimeTab() {
       {
         title: t('reports.orderNumber'),
         dataIndex: 'orderNumber',
-        fixed: 'left',
+        fixed: fixedCol('left'),
         width: 140,
       },
       {
         title: t('reports.orderType'),
         dataIndex: 'orderType',
-        fixed: 'left',
+        fixed: fixedCol('left'),
         width: 120,
         render: (code: string) => orderTypeNameByCode.get(code.toLowerCase()) ?? code,
       },
       {
         title: t('reports.productCategory'),
         dataIndex: 'productCategoryName',
-        fixed: 'left',
+        fixed: fixedCol('left'),
         width: 160,
       },
       {
         title: t('reports.manufacturingTopComplexity'),
         dataIndex: 'topComplexity',
-        fixed: 'left',
+        fixed: fixedCol('left'),
         width: 90,
         align: 'center',
         render: (v: string | null) => v ?? t('reports.manufacturingNoComplexity'),
@@ -147,7 +149,7 @@ export function ProductManufacturingTimeTab() {
       {
         title: t('reports.manufacturingComplexityShare'),
         dataIndex: 'complexityShare',
-        fixed: 'left',
+        fixed: fixedCol('left'),
         width: 130,
         align: 'center',
         render: (v: string | null) => v ?? '—',
@@ -235,7 +237,7 @@ export function ProductManufacturingTimeTab() {
 
   const aggregateColumns: ColumnsType<AggRow> = useMemo(() => {
     const cols: ColumnsType<AggRow> = [
-      { title: t('reports.manufacturingAggregateTitle'), dataIndex: 'label', fixed: 'left', width: 280 },
+      { title: t('reports.manufacturingAggregateTitle'), dataIndex: 'label', fixed: fixedCol('left'), width: 280 },
     ];
     processColumns.forEach((pc, idx) => {
       const children: ColumnsType<AggRow> = [

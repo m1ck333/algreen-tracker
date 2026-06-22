@@ -20,6 +20,7 @@ import type { ExportColumn } from '../../utils/exportTable';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
 import { paidAtColumn, durationColumn, amountColumn, invoiceColumn, notesColumn } from '../../utils/paymentColumns';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 // Defaults for warning / critical days seeded at tenant creation time so
 // the new tenant's Admin has something sensible until they tune them via
@@ -36,6 +37,7 @@ interface TenantsPageProps {
 }
 
 export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
+  const fixedCol = useFixedColumn();
   const queryClient = useQueryClient();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editTenant, setEditTenant] = useState<TenantDto | null>(null);
@@ -303,7 +305,7 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
       dataIndex: 'name',
       sorter: true,
       sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
-      fixed: 'left' as const,
+      fixed: fixedCol('left'),
       width: 240,
     },
     {
@@ -752,7 +754,7 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
                       {
                         title: '',
                         width: 90,
-                        fixed: 'right' as const,
+                        fixed: fixedCol('right'),
                         render: (_: unknown, row: TenantPaymentDto) => (
                           <div style={{ display: 'flex', gap: 4 }}>
                             <Button

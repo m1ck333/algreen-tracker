@@ -43,6 +43,7 @@ import { ProcessCell } from './ProcessCell';
 import { StatusText } from './StatusText';
 import { ProcessTimeline } from './ProcessTimeline';
 import { ItemProcessBar } from './ItemProcessBar';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 const { Title, Text } = Typography;
 
@@ -51,6 +52,7 @@ const ATTACHMENT_RECOVERY = import.meta.env.VITE_ATTACHMENT_RECOVERY === 'true';
 // ─── Main Component ──────────────────────────────────────
 
 export function OrderListPage() {
+  const fixedCol = useFixedColumn();
   const user = useAuthStore((s) => s.user);
   const tenantId = useAuthStore((s) => s.tenantId);
   const { token } = theme.useToken();
@@ -607,7 +609,7 @@ export function OrderListPage() {
         title: t('common:labels.priority'),
         dataIndex: 'priority',
         width: 70,
-        fixed: 'left',
+        fixed: fixedCol('left'),
         sorter: true,
         sortOrder: sortBy === 'priority' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
       },
@@ -615,7 +617,7 @@ export function OrderListPage() {
         title: t('orders.orderNumber'),
         dataIndex: 'orderNumber',
         width: 160,
-        fixed: 'left',
+        fixed: fixedCol('left'),
         sorter: true,
         sortOrder: sortBy === 'orderNumber' ? (sortDirection === 'desc' ? 'descend' : 'ascend') : null,
         render: (text: string, record: OrderMasterViewDto) => (
@@ -987,15 +989,33 @@ export function OrderListPage() {
         />
       </div>
 
+      {/* Row tints must be OPAQUE — rgba alpha + opacity break antd's
+          fixed-column overlay (the scrolled-under cells bleed through
+          the fixed Prioritet + Br. narudžbine cells, see Milos
+          22.06.2026 screenshot). Theme tokens give us a backdrop that's
+          already pre-blended with the surface color. */}
       <style>{`
-        .master-table .master-row-completed td {
-          background-color: rgba(146, 208, 80, 0.1) !important;
+        .master-table .master-row-completed td,
+        .master-table .master-row-completed .ant-table-cell-fix-left,
+        .master-table .master-row-completed .ant-table-cell-fix-right {
+          background-color: ${token.colorSuccessBg} !important;
         }
-        .master-table .master-row-cancelled td {
-          opacity: 0.5;
+        /* Cancelled rows: dim the text only, leave the cell background
+           untouched. antd's colorBgContainerDisabled is semi-transparent
+           in dark theme (rgba alpha), so painting it on the fixed cell
+           lets Tag fills from scrolled-under cells (orderType) bleed
+           through. The red "Otkazan" Status tag already signals
+           cancellation strongly enough on its own. */
+        .master-table .master-row-cancelled td,
+        .master-table .master-row-cancelled .ant-table-cell-fix-left,
+        .master-table .master-row-cancelled .ant-table-cell-fix-right {
+          color: ${token.colorTextDisabled} !important;
+        }
+        .master-table .master-row-cancelled .ant-tag {
+          opacity: 0.7;
         }
         .master-table .master-row-separator td {
-          border-bottom: 3px solid #ff9800 !important;
+          border-bottom: 3px solid ${token.colorWarning} !important;
         }
       `}</style>
 
@@ -1436,8 +1456,11 @@ export function OrderListPage() {
               })}
             </div>
 
-            {/* Order-level Attachments section */}
-            <Divider style={{ margin: '12px 0' }} />
+            {/* Order-level Attachments section. Hide the leading divider
+                when there are no item cards above — otherwise it stacks
+                visually with the divider after the add-item form (Milos
+                22.06.2026: two separators with nothing between). */}
+            {createPendingItems.length > 0 && <Divider style={{ margin: '12px 0' }} />}
             <Text strong style={{ display: 'block', marginBottom: 8 }}>
               {t('attachments.title')} ({(pendingFiles.get(-1) ?? []).length}/10)
             </Text>

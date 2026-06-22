@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { materialsApi } from '@alblue/api-client';
 import type { ImportMaterialItem, ImportMaterialsResult } from '@alblue/api-client';
 import { useTranslation } from '@alblue/i18n';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 const { Dragger } = Upload;
 const { Text, Paragraph } = Typography;
@@ -145,6 +146,7 @@ interface Props {
 }
 
 export function MaterialsImportModal({ open, onClose }: Props) {
+  const fixedCol = useFixedColumn();
   const { t } = useTranslation('dashboard');
   const { message } = App.useApp();
   const queryClient = useQueryClient();
@@ -260,7 +262,7 @@ export function MaterialsImportModal({ open, onClose }: Props) {
                 title: t('materials.code'),
                 dataIndex: 'code',
                 width: 100,
-                fixed: 'left',
+                fixed: fixedCol('left'),
                 render: (v: string, r: ParsedRow) => r.__error ? <Text type="danger">{v}</Text> : v,
               },
               { title: t('materials.name'), dataIndex: 'name', width: 220 },

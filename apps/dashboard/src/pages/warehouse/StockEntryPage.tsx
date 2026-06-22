@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Typography, Form, Input, InputNumber, DatePicker, Button, Table, Select, Space, App, Popconfirm, Modal } from 'antd';
+import { Typography, Form, Input, InputNumber, DatePicker, Button, Table, Select, Space, App, Popconfirm, Drawer } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { warehouseApi, materialsApi, processesApi } from '@alblue/api-client';
@@ -245,16 +245,17 @@ export function StockEntryPage({ type }: { type: StockMovementType }) {
         </div>
       </Form>
 
-      <Modal
+      <Drawer
         title={t('warehouse.newMaterial')}
         open={newMaterialOpen}
-        onCancel={() => { setNewMaterialOpen(false); setPendingLineForNewMaterial(null); }}
-        onOk={() => newMaterialForm.submit()}
-        confirmLoading={createMaterialMutation.isPending}
-        okText={t('common:actions.save')}
-        cancelText={t('common:actions.cancel')}
+        onClose={() => { setNewMaterialOpen(false); setPendingLineForNewMaterial(null); }}
         destroyOnHidden
-        width={600}
+        width={Math.min(600, typeof window !== 'undefined' ? window.innerWidth - 16 : 600)}
+        extra={
+          <Button type="primary" loading={createMaterialMutation.isPending} onClick={() => newMaterialForm.submit()}>
+            {t('common:actions.save')}
+          </Button>
+        }
       >
         <Form<CreateMaterialRequest>
           form={newMaterialForm}
@@ -322,7 +323,7 @@ export function StockEntryPage({ type }: { type: StockMovementType }) {
             <Input.TextArea rows={2} maxLength={1000} />
           </Form.Item>
         </Form>
-      </Modal>
+      </Drawer>
     </div>
   );
 }

@@ -17,6 +17,7 @@ import type { ExportColumn } from '../../utils/exportTable';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
 import { passwordRules } from '../../utils/password';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 
 /**
@@ -127,6 +128,7 @@ interface UsersPageProps {
 }
 
 export function UsersPage({ hideHeader = false }: UsersPageProps = {}) {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const currentUserRole = useAuthStore((s) => s.user?.role);
@@ -268,7 +270,7 @@ export function UsersPage({ hideHeader = false }: UsersPageProps = {}) {
       dataIndex: 'fullName',
       sorter: true,
       sortOrder: sortBy === 'lastName' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
-      fixed: 'left' as const,
+      fixed: fixedCol('left'),
       width: 220,
     },
     {

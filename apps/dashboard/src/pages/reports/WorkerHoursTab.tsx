@@ -9,10 +9,12 @@ import type { WorkerHoursDto, UserDto } from '@alblue/shared-types';
 import { UserRole } from '@alblue/shared-types';
 import dayjs from 'dayjs';
 import { TableExportButton } from '../../components/TableExportButton';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 const { RangePicker } = DatePicker;
 
 export function WorkerHoursTab() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -69,7 +71,7 @@ export function WorkerHoursTab() {
   // worker's daily block). Daily detail is on the expand. Sale/Bojan 29.05.2026.
   const columns: ColumnsType<WorkerHoursDto> = useMemo(
     () => [
-      { title: t('reports.workerName'), dataIndex: 'fullName', fixed: 'left', width: 180 },
+      { title: t('reports.workerName'), dataIndex: 'fullName', fixed: fixedCol('left'), width: 180 },
       { title: t('reports.regularHours'), dataIndex: 'regularMinutes', align: 'right', render: (v: number) => formatMinutesAsHM(v) },
       { title: t('reports.overtimeHours'), dataIndex: 'overtimeMinutes', align: 'right', render: (v: number) => formatMinutesAsHM(v) },
       {

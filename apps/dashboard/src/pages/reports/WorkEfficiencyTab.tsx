@@ -21,9 +21,11 @@ import {
 } from 'recharts';
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 const { RangePicker } = DatePicker;
 export function WorkEfficiencyTab() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -94,7 +96,7 @@ export function WorkEfficiencyTab() {
   // lives in the "Sati radnika" tab.
   const columns: ColumnsType<WorkEfficiencyRowDto> = useMemo(
     () => [
-      { title: t('reports.workerName'), dataIndex: 'fullName', fixed: 'left', width: 180, sorter: (a, b) => a.fullName.localeCompare(b.fullName) },
+      { title: t('reports.workerName'), dataIndex: 'fullName', fixed: fixedCol('left'), width: 180, sorter: (a, b) => a.fullName.localeCompare(b.fullName) },
       { title: t('reports.loggedHours'), dataIndex: 'loggedMinutes', align: 'right', sorter: (a, b) => a.loggedMinutes - b.loggedMinutes, render: (v: number) => formatMinutesAsHM(v) },
       { title: t('reports.effectiveHours'), dataIndex: 'effectiveMinutes', align: 'right', sorter: (a, b) => a.effectiveMinutes - b.effectiveMinutes, render: (v: number) => formatMinutesAsHM(v) },
       { title: t('reports.activeHours'), dataIndex: 'activeOnProcessesMinutes', align: 'right', sorter: (a, b) => a.activeOnProcessesMinutes - b.activeOnProcessesMinutes, render: (v: number) => formatMinutesAsHM(v) },

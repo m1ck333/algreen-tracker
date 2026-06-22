@@ -13,10 +13,12 @@ import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
 import dayjs from 'dayjs';
 import { PageHeader } from '../../components/PageHeader';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 const { RangePicker } = DatePicker;
 
 export function HistoryPage() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
@@ -194,7 +196,7 @@ export function HistoryPage() {
               title: t('warehouse.movementDate'),
               dataIndex: 'movementDate',
               width: 140,
-              fixed: 'left' as const,
+              fixed: fixedCol('left'),
               sorter: true,
               sortOrder: sortOrder('movementDate'),
               render: (v: string) => dayjs(v).format('DD.MM.YYYY HH:mm'),
@@ -203,7 +205,7 @@ export function HistoryPage() {
               title: t('warehouse.type'),
               dataIndex: 'type',
               width: 100,
-              fixed: 'left' as const,
+              fixed: fixedCol('left'),
               align: 'center' as const,
               sorter: true,
               sortOrder: sortOrder('type'),
@@ -214,7 +216,7 @@ export function HistoryPage() {
               title: t('warehouse.code'),
               dataIndex: 'materialCode',
               width: 100,
-              fixed: 'left' as const,
+              fixed: fixedCol('left'),
               sorter: true,
               sortOrder: sortOrder('materialCode'),
             },
@@ -222,7 +224,7 @@ export function HistoryPage() {
               title: t('warehouse.name'),
               dataIndex: 'materialName',
               width: 240,
-              fixed: 'left' as const,
+              fixed: fixedCol('left'),
               sorter: true,
               sortOrder: sortOrder('materialName'),
             },

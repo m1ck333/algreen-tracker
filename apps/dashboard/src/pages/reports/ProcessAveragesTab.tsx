@@ -32,10 +32,12 @@ import { formatMinutes, COMPLEXITY_ORDER } from './reportsHelpers';
 import { ProcessTimeTrendChart } from './ProcessTimeTrendChart';
 import { DeliveryComplianceChart } from './DeliveryComplianceChart';
 import { ActiveProcessFunnelChart } from './ActiveProcessFunnelChart';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 const { RangePicker } = DatePicker;
 
 export function ProcessAveragesTab() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -120,14 +122,14 @@ export function ProcessAveragesTab() {
         title: t('reports.processCode'),
         dataIndex: 'processCode',
         width: 60,
-        fixed: 'left',
+        fixed: fixedCol('left'),
         sorter: (a, b) => a.processCode.localeCompare(b.processCode),
       },
       {
         title: t('reports.processName'),
         dataIndex: 'processName',
         width: 160,
-        fixed: 'left',
+        fixed: fixedCol('left'),
       },
       {
         title: t('reports.productCategory'),

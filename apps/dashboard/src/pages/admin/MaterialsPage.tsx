@@ -19,8 +19,10 @@ import type { ExportColumn } from '../../utils/exportTable';
 import dayjs from 'dayjs';
 import { PageHeader } from '../../components/PageHeader';
 import { getErrorMessage } from '../../utils/errors';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 export function MaterialsPage() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const queryClient = useQueryClient();
   const { message } = App.useApp();
@@ -230,8 +232,8 @@ export function MaterialsPage() {
             if (pagination.current !== page) setPage(pagination.current ?? 1);
           }}
           columns={[
-            { title: t('materials.code'), dataIndex: 'code', width: 110, sorter: true, fixed: 'left' },
-            { title: t('materials.name'), dataIndex: 'name', width: 260, sorter: true, fixed: 'left' },
+            { title: t('materials.code'), dataIndex: 'code', width: 110, sorter: true, fixed: fixedCol('left') },
+            { title: t('materials.name'), dataIndex: 'name', width: 260, sorter: true, fixed: fixedCol('left') },
             { title: t('materials.unit'), dataIndex: 'unit', width: 70, align: 'center' as const },
             { title: t('materials.category'), dataIndex: 'category', width: 160, sorter: true },
             {

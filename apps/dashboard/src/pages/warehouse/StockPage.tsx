@@ -13,8 +13,10 @@ import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
 import dayjs from 'dayjs';
 import { PageHeader } from '../../components/PageHeader';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 export function StockPage() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
@@ -167,14 +169,14 @@ export function StockPage() {
               title: t('warehouse.code'),
               dataIndex: 'code',
               width: 110,
-              fixed: 'left',
+              fixed: fixedCol('left'),
               sorter: (a, b) => a.code.localeCompare(b.code, 'sr-RS'),
             },
             {
               title: t('warehouse.name'),
               dataIndex: 'name',
               width: 240,
-              fixed: 'left',
+              fixed: fixedCol('left'),
               sorter: (a, b) => a.name.localeCompare(b.name, 'sr-RS'),
             },
             {

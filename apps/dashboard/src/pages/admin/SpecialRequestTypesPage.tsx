@@ -15,10 +15,12 @@ import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 const { Text } = Typography;
 
 export function SpecialRequestTypesPage() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -154,7 +156,7 @@ export function SpecialRequestTypesPage() {
       dataIndex: 'code',
       sorter: true,
       sortOrder: sortBy === 'code' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
-      fixed: 'left' as const,
+      fixed: fixedCol('left'),
       width: 120,
     },
     {
@@ -162,7 +164,7 @@ export function SpecialRequestTypesPage() {
       dataIndex: 'name',
       sorter: true,
       sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
-      fixed: 'left' as const,
+      fixed: fixedCol('left'),
       width: 240,
     },
     { title: t('common:labels.description'), dataIndex: 'description', ellipsis: true },

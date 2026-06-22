@@ -27,6 +27,7 @@ import { CSS } from '@dnd-kit/utilities';
 import React from 'react';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 const { Title, Text } = Typography;
 
@@ -69,6 +70,7 @@ function DragHandle() {
 }
 
 export function ProcessesPage() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -320,7 +322,7 @@ export function ProcessesPage() {
       title: '',
       dataIndex: 'dragHandle',
       width: 40,
-      fixed: 'left' as const,
+      fixed: fixedCol('left'),
       render: () => <DragHandle />,
     },
     {
@@ -328,7 +330,7 @@ export function ProcessesPage() {
       dataIndex: 'code',
       sorter: true,
       sortOrder: sortBy === 'code' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
-      fixed: 'left' as const,
+      fixed: fixedCol('left'),
       width: 120,
     },
     {
@@ -336,7 +338,7 @@ export function ProcessesPage() {
       dataIndex: 'name',
       sorter: true,
       sortOrder: sortBy === 'name' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
-      fixed: 'left' as const,
+      fixed: fixedCol('left'),
       width: 240,
     },
     {

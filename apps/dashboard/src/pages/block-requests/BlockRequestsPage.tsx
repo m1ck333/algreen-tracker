@@ -17,9 +17,11 @@ import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
+import { useFixedColumn } from '../../hooks/useFixedColumn';
 
 
 export function BlockRequestsPage() {
+  const fixedCol = useFixedColumn();
   const tenantId = useAuthStore((s) => s.tenantId);
   const userId = useAuthStore((s) => s.user?.id);
   const { token } = theme.useToken();
@@ -114,14 +116,14 @@ export function BlockRequestsPage() {
       title: t('common:labels.status'),
       dataIndex: 'status',
       width: 110,
-      fixed: 'left' as const,
+      fixed: fixedCol('left'),
       render: (s: RequestStatus) => <StatusBadge status={s} />,
     },
     {
       title: t('common:labels.orderNumber'),
       dataIndex: 'orderNumber',
       width: 140,
-      fixed: 'left' as const,
+      fixed: fixedCol('left'),
       render: (orderNumber: string | null, record: BlockRequestDto) =>
         orderNumber && record.orderId ? (
           <Button type="link" size="small" style={{ padding: 0 }} onClick={(e) => { e.stopPropagation(); navigate(`/orders?detail=${record.orderId}`); }}>
