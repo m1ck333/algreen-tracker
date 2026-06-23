@@ -30,10 +30,12 @@ import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
 import { formatSeconds } from './reportsHelpers';
 import { useFixedColumn } from '../../hooks/useFixedColumn';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 const { RangePicker } = DatePicker;
 export function ProductManufacturingTimeTab() {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -309,7 +311,7 @@ export function ProductManufacturingTimeTab() {
           value={tezina}
           onChange={setTezina}
           allowClear
-          style={{ width: 160 }}
+          style={{ width: filterW(160) }}
           options={[
             { label: t('reports.complexityT'), value: 'T' },
             { label: t('reports.complexityS'), value: 'S' },

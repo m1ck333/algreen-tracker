@@ -22,10 +22,12 @@ import {
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
 import { useFixedColumn } from '../../hooks/useFixedColumn';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 const { RangePicker } = DatePicker;
 export function WorkEfficiencyTab() {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -143,7 +145,7 @@ export function WorkEfficiencyTab() {
           value={userId}
           onChange={setUserId}
           allowClear
-          style={{ width: 220 }}
+          style={{ width: filterW(220) }}
           showSearch
           optionFilterProp="label"
           options={users?.map((u: UserDto) => ({

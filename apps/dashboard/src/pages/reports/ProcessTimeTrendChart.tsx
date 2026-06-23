@@ -20,6 +20,7 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { formatMinutes } from './reportsHelpers';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 // Per Sale/Bojan feedback 29.05.2026: the chart shows two lines plus a
 // target, NOT a min/max band (the band was flagged as wrong — they want
@@ -32,6 +33,7 @@ import { formatMinutes } from './reportsHelpers';
 // Chart is empty until both Proces + Kompleksnost are picked, since the
 // trend has no meaning across mixed (process × complexity) populations.
 export function ProcessTimeTrendChart() {
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -107,7 +109,7 @@ export function ProcessTimeTrendChart() {
           placeholder={t('reports.allProcesses')}
           value={processId}
           onChange={setProcessId}
-          style={{ width: 220 }}
+          style={{ width: filterW(220) }}
           showSearch
           optionFilterProp="label"
           options={processes?.map((p: ProcessDto) => ({
@@ -119,7 +121,7 @@ export function ProcessTimeTrendChart() {
           placeholder={t('reports.allComplexities')}
           value={complexity}
           onChange={setComplexity}
-          style={{ width: 180 }}
+          style={{ width: filterW(180) }}
           options={[
             { label: t('reports.complexityT'), value: ComplexityType.T },
             { label: t('reports.complexityS'), value: ComplexityType.S },
@@ -129,7 +131,7 @@ export function ProcessTimeTrendChart() {
         <Select
           value={granularity}
           onChange={setGranularity}
-          style={{ width: 140 }}
+          style={{ width: filterW(140) }}
           options={[
             { label: t('reports.granularityWeek'), value: 'Week' },
             { label: t('reports.granularityMonth'), value: 'Month' },
@@ -138,7 +140,7 @@ export function ProcessTimeTrendChart() {
         <Select
           value={periodDays}
           onChange={setPeriodDays}
-          style={{ width: 160 }}
+          style={{ width: filterW(160) }}
           options={[
             { label: t('reports.period1Month'), value: 30 },
             { label: t('reports.period3Months'), value: 90 },

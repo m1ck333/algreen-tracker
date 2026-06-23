@@ -15,11 +15,13 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 // 100% stacked bar per period bucket (week/month): green = % completed
 // on time (CompletedAt ≤ DeliveryDate, day-precision), red = % completed
 // late. Per-tenant order-type filter. Sale/Bojan spec 22.05.2026.
 export function DeliveryComplianceChart() {
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -73,7 +75,7 @@ export function DeliveryComplianceChart() {
         <Select
           value={granularity}
           onChange={(v) => setGranularity(v)}
-          style={{ width: 140 }}
+          style={{ width: filterW(140) }}
           options={[
             { label: t('reports.granularityWeek'), value: 'Week' },
             { label: t('reports.granularityMonth'), value: 'Month' },

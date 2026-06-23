@@ -44,6 +44,7 @@ import { StatusText } from './StatusText';
 import { ProcessTimeline } from './ProcessTimeline';
 import { ItemProcessBar } from './ItemProcessBar';
 import { useFixedColumn } from '../../hooks/useFixedColumn';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 const { Title, Text } = Typography;
 
@@ -53,6 +54,7 @@ const ATTACHMENT_RECOVERY = import.meta.env.VITE_ATTACHMENT_RECOVERY === 'true';
 
 export function OrderListPage() {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const user = useAuthStore((s) => s.user);
   const tenantId = useAuthStore((s) => s.tenantId);
   const { token } = theme.useToken();
@@ -881,14 +883,14 @@ export function OrderListPage() {
           allowClear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 220 }}
+          style={{ width: filterW(220) }}
         />
         <Select
           placeholder={t('orders.filterByStatus')}
           allowClear
           value={statusFilter}
           onChange={(v) => setStatusFilter(v)}
-          style={{ width: 160 }}
+          style={{ width: filterW(160) }}
           options={Object.values(OrderStatus).map((s) => ({ label: tEnum('OrderStatus', s), value: s }))}
         />
         <Select
@@ -896,7 +898,7 @@ export function OrderListPage() {
           allowClear
           value={orderTypeFilter}
           onChange={(v) => setOrderTypeFilter(v)}
-          style={{ width: 160 }}
+          style={{ width: filterW(160) }}
           options={(orderTypes ?? []).map((ot) => ({
             label: ot.name,
             value: ot.code,
@@ -907,7 +909,7 @@ export function OrderListPage() {
           allowClear
           value={isInvoicedFilter}
           onChange={(v) => setIsInvoicedFilter(v)}
-          style={{ width: 140 }}
+          style={{ width: filterW(140) }}
           options={[
             { label: t('common:actions.yes'), value: true },
             { label: t('common:actions.no'), value: false },

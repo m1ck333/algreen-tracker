@@ -31,10 +31,12 @@ import { ComplexityType } from '@alblue/shared-types';
 import dayjs from 'dayjs';
 import { TableExportButton } from '../../components/TableExportButton';
 import { formatSeconds } from './reportsHelpers';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 const { RangePicker } = DatePicker;
 
 export function TimeTrackingTab() {
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { tEnum } = useEnumTranslation();
@@ -307,14 +309,14 @@ export function TimeTrackingTab() {
           value={orderNumber}
           onChange={(e) => setOrderNumber(e.target.value)}
           allowClear
-          style={{ width: 220 }}
+          style={{ width: filterW(220) }}
         />
         <Select
           placeholder={t('reports.allProcesses')}
           value={processId}
           onChange={setProcessId}
           allowClear
-          style={{ width: 180 }}
+          style={{ width: filterW(180) }}
           options={processes?.map((p: ProcessDto) => ({ label: `${p.code} — ${p.name}`, value: p.id }))}
         />
         <Select
@@ -322,7 +324,7 @@ export function TimeTrackingTab() {
           value={complexity}
           onChange={setComplexity}
           allowClear
-          style={{ width: 160 }}
+          style={{ width: filterW(160) }}
           options={[
             { label: t('reports.complexityT'), value: ComplexityType.T },
             { label: t('reports.complexityS'), value: ComplexityType.S },

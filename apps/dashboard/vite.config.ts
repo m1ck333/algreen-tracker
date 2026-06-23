@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
@@ -35,5 +36,11 @@ export default defineConfig({
     // production (caught 12.06.2026 post-deploy). Reverted to the default
     // Rollup chunking — one bigger bundle, but stable. Re-attempt later
     // with a more surgical split if cache reuse becomes a measured pain.
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    css: false,
   },
 });

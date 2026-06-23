@@ -15,6 +15,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 // Horizontal bar per process, with three stacked segments:
 //   • U toku (blue)            — InProgress
@@ -26,6 +27,7 @@ import {
 // Pending-but-waiting-on-deps rows are excluded — the chart only shows
 // rows that are actively in the pipeline for that process.
 export function ActiveProcessFunnelChart() {
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { token } = theme.useToken();
@@ -87,7 +89,7 @@ export function ActiveProcessFunnelChart() {
           value={complexity}
           onChange={setComplexity}
           allowClear
-          style={{ width: 180 }}
+          style={{ width: filterW(180) }}
           options={[
             { label: t('reports.complexityT'), value: ComplexityType.T },
             { label: t('reports.complexityS'), value: ComplexityType.S },

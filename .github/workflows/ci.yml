@@ -56,6 +56,9 @@ jobs:
       - name: typecheck
         run: pnpm typecheck
 
+      - name: vitest (dashboard unit tests)
+        run: pnpm --filter dashboard test
+
       - name: build dashboard
         run: pnpm --filter dashboard build
 

@@ -18,9 +18,11 @@ import type { ExportColumn } from '../../utils/exportTable';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
 import { useFixedColumn } from '../../hooks/useFixedColumn';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 export function ChangeRequestsPage() {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const userId = useAuthStore((s) => s.user?.id);
   const [statusFilter, setStatusFilter] = useState<RequestStatus | undefined>(undefined);
@@ -248,14 +250,14 @@ export function ChangeRequestsPage() {
           allowClear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 260 }}
+          style={{ width: filterW(260) }}
         />
         <Select
           placeholder={t('common:labels.status')}
           allowClear
           value={statusFilter}
           onChange={(v) => setStatusFilter(v)}
-          style={{ width: 160 }}
+          style={{ width: filterW(160) }}
           options={Object.values(RequestStatus).map((s) => ({ label: tEnum('RequestStatus', s), value: s }))}
         />
         <DatePicker
