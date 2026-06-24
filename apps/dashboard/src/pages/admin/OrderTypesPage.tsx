@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useTableHeight } from '../../hooks/useTableHeight';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 import { Typography, Table, Button, Drawer, Form, Input, Select, Tag, Switch, App, Popconfirm, DatePicker } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
@@ -21,6 +22,7 @@ const { Text } = Typography;
 
 export function OrderTypesPage() {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -217,14 +219,14 @@ export function OrderTypesPage() {
           allowClear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 260 }}
+          style={{ width: filterW(260) }}
         />
         <Select
           placeholder={t('common:labels.status')}
           allowClear
           value={isActiveFilter}
           onChange={(v) => setIsActiveFilter(v)}
-          style={{ width: 150 }}
+          style={{ width: filterW(150) }}
           options={[
             { label: t('common:status.active'), value: true },
             { label: t('common:status.inactive'), value: false },

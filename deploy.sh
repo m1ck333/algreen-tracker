@@ -14,10 +14,13 @@ set -e
 export VITE_API_BASE_URL=https://tracker-api.algreen.rs/api
 export VITE_SIGNALR_URL=https://tracker-api.algreen.rs/hubs/production
 
-# Sentry — leave empty so SDK no-ops until pilot is unfrozen and ready
-# to take Sprint 3 changes. To activate, uncomment the DSN line.
-# SENTRY_DSN="https://315954545e637502fd5497b3090b5c9c@o4511398917177344.ingest.de.sentry.io/4511398994313296"
-export VITE_SENTRY_DSN="${SENTRY_DSN:-}"
+# Sentry — activated 24.06.2026 (pilot unfreeze + Sprint 3 observability
+# is shipped). Same DSN as alblue staging — events land in the same
+# project, distinguished by VITE_SENTRY_ENVIRONMENT (algreen-pilot vs
+# alblue-staging). Override via `SENTRY_DSN=... ./deploy.sh` if rotating
+# the project.
+SENTRY_DSN="${SENTRY_DSN:-https://315954545e637502fd5497b3090b5c9c@o4511398917177344.ingest.de.sentry.io/4511398994313296}"
+export VITE_SENTRY_DSN="$SENTRY_DSN"
 export VITE_SENTRY_ENVIRONMENT="algreen-pilot"
 export VITE_SENTRY_RELEASE="$(git rev-parse --short HEAD)"
 

@@ -18,6 +18,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
 import { passwordRules } from '../../utils/password';
 import { useFixedColumn } from '../../hooks/useFixedColumn';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 
 /**
@@ -129,6 +130,7 @@ interface UsersPageProps {
 
 export function UsersPage({ hideHeader = false }: UsersPageProps = {}) {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const currentUserRole = useAuthStore((s) => s.user?.role);
@@ -420,14 +422,14 @@ export function UsersPage({ hideHeader = false }: UsersPageProps = {}) {
           allowClear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 260 }}
+          style={{ width: filterW(260) }}
         />
         <Select
           placeholder={t('common:labels.role')}
           allowClear
           value={roleFilter}
           onChange={(v) => setRoleFilter(v)}
-          style={{ width: 160 }}
+          style={{ width: filterW(160) }}
           options={Object.values(UserRole).map((r) => ({ label: tEnum('UserRole', r), value: r }))}
         />
         <Select
@@ -435,7 +437,7 @@ export function UsersPage({ hideHeader = false }: UsersPageProps = {}) {
           allowClear
           value={isActiveFilter}
           onChange={(v) => setIsActiveFilter(v)}
-          style={{ width: 150 }}
+          style={{ width: filterW(150) }}
           options={[
             { label: t('common:status.active'), value: true },
             { label: t('common:status.inactive'), value: false },

@@ -20,9 +20,11 @@ import dayjs from 'dayjs';
 import { PageHeader } from '../../components/PageHeader';
 import { getErrorMessage } from '../../utils/errors';
 import { useFixedColumn } from '../../hooks/useFixedColumn';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 export function MaterialsPage() {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const queryClient = useQueryClient();
   const { message } = App.useApp();
@@ -162,12 +164,12 @@ export function MaterialsPage() {
           allowClear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 260 }}
+          style={{ width: filterW(260) }}
         />
         <Select
           allowClear
           placeholder={t('materials.allCategories')}
-          style={{ width: 200 }}
+          style={{ width: filterW(200) }}
           options={categoryOptions}
           value={categoryFilter}
           onChange={setCategoryFilter}
@@ -175,7 +177,7 @@ export function MaterialsPage() {
         <Select
           placeholder={t('materials.status')}
           allowClear
-          style={{ width: 150 }}
+          style={{ width: filterW(150) }}
           value={isActiveFilter}
           onChange={setIsActiveFilter}
           options={[

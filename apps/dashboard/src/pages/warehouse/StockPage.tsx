@@ -14,9 +14,11 @@ import type { ExportColumn } from '../../utils/exportTable';
 import dayjs from 'dayjs';
 import { PageHeader } from '../../components/PageHeader';
 import { useFixedColumn } from '../../hooks/useFixedColumn';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 export function StockPage() {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
@@ -114,12 +116,12 @@ export function StockPage() {
           allowClear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 260 }}
+          style={{ width: filterW(260) }}
         />
         <Select
           allowClear
           placeholder={t('warehouse.allCategories')}
-          style={{ width: 200 }}
+          style={{ width: filterW(200) }}
           options={categoryOptions}
           value={category}
           onChange={setCategory}
@@ -127,7 +129,7 @@ export function StockPage() {
         <Select
           allowClear
           placeholder={t('warehouse.allStatuses')}
-          style={{ width: 200 }}
+          style={{ width: filterW(200) }}
           options={[
             { label: t('warehouse.statusBelowMin'), value: 'BelowMin' },
             { label: t('warehouse.statusAboveMax'), value: 'AboveMax' },

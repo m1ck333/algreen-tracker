@@ -12,6 +12,7 @@ import dayjs from 'dayjs';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
 import { useTenantLogo } from '../../hooks/useTenantLogo';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 import { compressFile } from '../../utils/compressImage';
 import { paidAtColumn, durationColumn, amountColumn, invoiceColumn, notesColumn } from '../../utils/paymentColumns';
 import { EmptyState } from '../../components/EmptyState';
@@ -48,6 +49,7 @@ export function TenantProfilePage({ hideHeader = false }: TenantProfilePageProps
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
+  const filterW = useFilterWidth();
 
   const { data: tenant } = useQuery({
     queryKey: ['my-tenant'],
@@ -348,7 +350,7 @@ export function TenantProfilePage({ hideHeader = false }: TenantProfilePageProps
             allowClear
             value={paymentsYearFilter}
             onChange={(v) => setPaymentsYearFilter(v)}
-            style={{ width: 140 }}
+            style={{ width: filterW(140) }}
             disabled={years.length === 0}
             options={years.map((y) => ({ label: String(y), value: y }))}
           />

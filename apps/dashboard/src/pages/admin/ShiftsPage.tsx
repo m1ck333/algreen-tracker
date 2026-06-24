@@ -16,10 +16,12 @@ import type { ExportColumn } from '../../utils/exportTable';
 import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
 import { useFixedColumn } from '../../hooks/useFixedColumn';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 
 export function ShiftsPage() {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -279,14 +281,14 @@ export function ShiftsPage() {
           allowClear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 260 }}
+          style={{ width: filterW(260) }}
         />
         <Select
           placeholder={t('common:labels.status')}
           allowClear
           value={isActiveFilter}
           onChange={(v) => setIsActiveFilter(v)}
-          style={{ width: 150 }}
+          style={{ width: filterW(150) }}
           options={[
             { label: t('common:status.active'), value: true },
             { label: t('common:status.inactive'), value: false },

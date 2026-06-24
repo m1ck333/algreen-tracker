@@ -21,6 +21,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { getTranslatedError } from '../../utils/errors';
 import { paidAtColumn, durationColumn, amountColumn, invoiceColumn, notesColumn } from '../../utils/paymentColumns';
 import { useFixedColumn } from '../../hooks/useFixedColumn';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 // Defaults for warning / critical days seeded at tenant creation time so
 // the new tenant's Admin has something sensible until they tune them via
@@ -38,6 +39,7 @@ interface TenantsPageProps {
 
 export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const queryClient = useQueryClient();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editTenant, setEditTenant] = useState<TenantDto | null>(null);
@@ -452,14 +454,14 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
           allowClear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 260 }}
+          style={{ width: filterW(260) }}
         />
         <Select
           placeholder={t('admin.tenants.billing.accountStatus')}
           allowClear
           value={isActiveFilter}
           onChange={(v) => setIsActiveFilter(v)}
-          style={{ width: 170 }}
+          style={{ width: filterW(170) }}
           options={[
             { label: t('admin.tenants.billing.statusAccountActive'), value: true },
             { label: t('admin.tenants.billing.statusBlocked'), value: false },
@@ -470,7 +472,7 @@ export function TenantsPage({ hideHeader = false }: TenantsPageProps = {}) {
           allowClear
           value={subscriptionFilter}
           onChange={(v) => setSubscriptionFilter(v)}
-          style={{ width: 180 }}
+          style={{ width: filterW(180) }}
           options={[
             { label: t('admin.tenants.billing.statusPaid'), value: 'paid' },
             { label: t('admin.tenants.billing.statusOverdue'), value: 'overdue' },

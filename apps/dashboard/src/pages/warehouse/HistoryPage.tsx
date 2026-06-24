@@ -14,11 +14,13 @@ import type { ExportColumn } from '../../utils/exportTable';
 import dayjs from 'dayjs';
 import { PageHeader } from '../../components/PageHeader';
 import { useFixedColumn } from '../../hooks/useFixedColumn';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 
 const { RangePicker } = DatePicker;
 
 export function HistoryPage() {
   const fixedCol = useFixedColumn();
+  const filterW = useFilterWidth();
   const tenantId = useAuthStore((s) => s.tenantId);
   const { t } = useTranslation('dashboard');
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
@@ -134,7 +136,7 @@ export function HistoryPage() {
         <Select
           allowClear
           placeholder={t('warehouse.type')}
-          style={{ width: 140 }}
+          style={{ width: filterW(140) }}
           options={[
             { label: t('warehouse.inflowLabel'), value: StockMovementType.Inflow },
             { label: t('warehouse.outflowLabel'), value: StockMovementType.Outflow },
@@ -147,7 +149,7 @@ export function HistoryPage() {
           showSearch
           optionFilterProp="label"
           placeholder={t('warehouse.allMaterials')}
-          style={{ width: 260 }}
+          style={{ width: filterW(260) }}
           options={(materials ?? []).map((m) => ({ label: `${m.code} — ${m.name}`, value: m.id }))}
           value={materialId}
           onChange={(v) => { setMaterialId(v); setPage(1); }}
@@ -157,7 +159,7 @@ export function HistoryPage() {
           showSearch
           optionFilterProp="label"
           placeholder={t('warehouse.allCategories')}
-          style={{ width: 200 }}
+          style={{ width: filterW(200) }}
           options={categoryOptions}
           value={category}
           onChange={(v) => { setCategory(v); setPage(1); }}
@@ -165,7 +167,7 @@ export function HistoryPage() {
         <Input
           allowClear
           placeholder={t('warehouse.documentReferenceSearch')}
-          style={{ width: 260 }}
+          style={{ width: filterW(260) }}
           value={docRef}
           onChange={(e) => setDocRef(e.target.value)}
         />

@@ -9,6 +9,7 @@ import { useTranslation } from '@alblue/i18n';
 import dayjs from 'dayjs';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useTableHeight } from '../../hooks/useTableHeight';
+import { useFilterWidth } from '../../hooks/useFilterWidth';
 import { TableExportButton } from '../../components/TableExportButton';
 import type { ExportColumn } from '../../utils/exportTable';
 import { paidAtColumn, durationColumn, amountColumn, invoiceColumn, notesColumn } from '../../utils/paymentColumns';
@@ -22,6 +23,7 @@ import { paidAtColumn, durationColumn, amountColumn, invoiceColumn, notesColumn 
 export function AllPaymentsPage() {
   const { t, i18n } = useTranslation('dashboard');
   const { ref: tableWrapperRef, height: tableBodyHeight } = useTableHeight();
+  const filterW = useFilterWidth();
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400);
@@ -167,14 +169,14 @@ export function AllPaymentsPage() {
           allowClear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 260 }}
+          style={{ width: filterW(260) }}
         />
         <Select
           placeholder={t('admin.tenants.billing.tenant')}
           allowClear
           value={tenantFilter}
           onChange={(v) => setTenantFilter(v)}
-          style={{ width: 220 }}
+          style={{ width: filterW(220) }}
           showSearch
           optionFilterProp="label"
           options={tenants.map((tn) => ({ label: `${tn.name} · ${tn.code}`, value: tn.id }))}
@@ -198,7 +200,7 @@ export function AllPaymentsPage() {
           allowClear
           value={currencyFilter}
           onChange={(v) => setCurrencyFilter(v)}
-          style={{ width: 110 }}
+          style={{ width: filterW(110) }}
           options={currencyOptions}
         />
       </div>
