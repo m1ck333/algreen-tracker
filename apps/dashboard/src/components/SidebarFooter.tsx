@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Badge, Button, Popover, List, Menu, Typography, Space, Empty, Tooltip, Divider, Segmented, theme, Grid, Drawer, Form, Input, App } from 'antd';
 import {
   BellOutlined,
@@ -289,6 +289,20 @@ export function SidebarFooter({ collapsed, onOverlayAction }: SidebarFooterProps
     mutationFn: () => notificationsApi.markAllAsRead(userId!),
     onSuccess: invalidateAll,
   });
+
+  // Auto-mark-all-read when the bell popover opens. Without this, users
+  // accumulate hundreds of unread notifications because nobody clicks the
+  // explicit "Mark all read" button (verified on alblue staging 28.06.2026
+  // — three users at 300+ unread, virtually nothing marked read). The
+  // 800ms delay lets the user briefly see the unread state + scan what's
+  // new before the badge clears, so the auto-mark doesn't feel like
+  // notifications disappeared. Cancelling the timer on close means a
+  // quick open/close (e.g., accidental click) doesn't silently mark.
+  useEffect(() => {
+    if (!notifOpen || (count ?? 0) === 0) return;
+    const timer = window.setTimeout(() => markAllAsRead.mutate(), 800);
+    return () => window.clearTimeout(timer);
+  }, [notifOpen, count]);
   const deleteOne = useMutation({
     mutationFn: (id: string) => notificationsApi.delete(id),
     onSuccess: invalidateAll,
