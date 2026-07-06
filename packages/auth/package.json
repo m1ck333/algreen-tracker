@@ -11,7 +11,7 @@
   "dependencies": {
     "@alblue/api-client": "workspace:*",
     "@alblue/shared-types": "workspace:*",
-    "@sentry/react": "^10.53.1",
+    "@sentry/react": "^10.63.0",
     "zustand": "^4.5.0"
   },
   "peerDependencies": {
