@@ -142,11 +142,11 @@ export function ChangeRequestsPage() {
     },
     {
       title: t('common:labels.handledAt'),
-      dataIndex: 'updatedAt',
+      dataIndex: 'handledAt',
       width: 150,
       render: (d: string | null) => d ? dayjs(d).format('DD.MM.YYYY.') : '—',
       sorter: true,
-      sortOrder: sortBy === 'updatedAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
+      sortOrder: sortBy === 'handledAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.actions'),

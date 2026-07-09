@@ -1,4 +1,5 @@
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { PendingFileThumbnail } from './PendingFileThumbnail';
 import { Upload, Button, List, Space, Typography, Modal, App, theme } from 'antd';
 import { UploadOutlined, CloseCircleOutlined, FilePdfOutlined, EyeOutlined, UndoOutlined, DownloadOutlined } from '@ant-design/icons';
 import { ordersApi } from '@alblue/api-client';
@@ -250,13 +251,7 @@ export const OrderAttachments = forwardRef<OrderAttachmentsHandle, OrderAttachme
               >
                 <Space size={8}>
                   {file.type.startsWith('image/') ? (
-                    <img
-                      src={URL.createObjectURL(file)}
-                      width={40} height={40}
-                      style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
-                      onClick={() => openPendingFilePreview(file)}
-                      alt={file.name}
-                    />
+                    <PendingFileThumbnail file={file} onClick={() => openPendingFilePreview(file)} />
                   ) : (
                     <FilePdfOutlined style={{ fontSize: 24, color: token.colorError }} />
                   )}

@@ -1,4 +1,4 @@
-import { ChangeRequestType, ComplexityType, OrderType, UserRole } from '../enums';
+import { ChangeRequestType, ComplexityType, UserRole } from '../enums';
 
 // ─── Auth ────────────────────────────────────────────────
 
@@ -172,17 +172,32 @@ export interface CheckOutRequest {
 
 // ─── Process Workflow ────────────────────────────────────
 
-export interface StartProcessWorkRequest {
+/**
+ * Optional metadata the tablet attaches to workflow actions for offline
+ * support. The server treats both as optional: `occurredAt` absent → "now";
+ * `actionId` absent → no idempotency dedupe (today's behaviour).
+ */
+export interface OfflineActionMeta {
+  /** ISO timestamp of when the worker tapped (for actions replayed later). */
+  occurredAt?: string;
+  /** Client idempotency key so a replayed/duplicate request applies once. */
+  actionId?: string;
+}
+
+export interface StartProcessWorkRequest extends OfflineActionMeta {
   userId: string;
 }
 
-export interface StopProcessWorkRequest {
+export interface StopProcessWorkRequest extends OfflineActionMeta {
   userId: string;
 }
 
-export interface ResumeProcessWorkRequest {
+export interface ResumeProcessWorkRequest extends OfflineActionMeta {
   userId: string;
 }
+
+/** Body for the complete-process endpoint (historically body-less). */
+export type CompleteProcessRequest = OfflineActionMeta;
 
 export interface BlockProcessRequest {
   userId: string;
@@ -196,11 +211,11 @@ export interface UnblockProcessRequest {
 
 // ─── Sub-Process Workflow ────────────────────────────────
 
-export interface StartSubProcessRequest {
+export interface StartSubProcessRequest extends OfflineActionMeta {
   userId: string;
 }
 
-export interface CompleteSubProcessRequest {
+export interface CompleteSubProcessRequest extends OfflineActionMeta {
   userId: string;
 }
 

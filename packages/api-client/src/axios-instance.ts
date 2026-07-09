@@ -24,6 +24,13 @@ export function setOnForbidden(callback: (errorCode?: string) => void) {
 }
 
 function forceLogout() {
+  // Offline tolerance: never tear down the session while disconnected. A 401
+  // can't legitimately arrive without a network reply, but a connectivity flap
+  // racing with an in-flight request must not log a worker out and discard
+  // their queued offline actions — the token refresh recovers on reconnect.
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return;
+  }
   tokenManager.clear();
   if (_onForceLogout) {
     _onForceLogout();

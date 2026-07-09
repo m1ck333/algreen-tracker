@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Layout, theme, Grid, Button, Drawer, Spin } from 'antd';
 import { MenuOutlined, CloseOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@alblue/auth';
+import { useTranslation } from '@alblue/i18n';
 import {
   createConnection,
   startConnection,
@@ -19,6 +20,7 @@ import { useLayoutStore } from '../stores/layout-store';
 const { Sider, Content } = Layout;
 
 export function MainLayout() {
+  const { t } = useTranslation('dashboard');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const tenantId = useAuthStore((s) => s.tenantId);
@@ -127,7 +129,7 @@ export function MainLayout() {
             size="small"
             icon={<CloseOutlined style={{ color: 'rgba(255,255,255,0.85)', fontSize: 16 }} />}
             onClick={() => setMobileDrawerOpen(false)}
-            aria-label="Zatvori meni"
+            aria-label={t('nav.aria.closeMenu')}
             style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)' }}
           />
         </div>
@@ -138,7 +140,7 @@ export function MainLayout() {
             size="small"
             icon={<RightOutlined style={{ color: 'rgba(255,255,255,0.85)' }} />}
             onClick={() => setCollapsed(false)}
-            aria-label="Otvori sidebar"
+            aria-label={t('nav.aria.expandSidebar')}
           />
         </div>
       ) : (
@@ -157,7 +159,7 @@ export function MainLayout() {
             size="small"
             icon={<LeftOutlined style={{ color: 'rgba(255,255,255,0.85)' }} />}
             onClick={() => setCollapsed(true)}
-            aria-label="Skupi sidebar"
+            aria-label={t('nav.aria.collapseSidebar')}
             style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)' }}
           />
         </div>
@@ -194,7 +196,7 @@ export function MainLayout() {
               zIndex: 999,
               boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
             }}
-            aria-label="Otvori meni"
+            aria-label={t('nav.aria.openMenu')}
           />
           <Drawer
             placement="left"

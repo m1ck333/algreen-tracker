@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useTranslation, useEnumTranslation } from '@alblue/i18n';
 import { useWorkSessionStore } from '../../stores/work-session-store';
 import { useOfflineStore } from '../../offline/offline-store';
+import { clearPersistedQueryCache } from '../../offline/query-persister';
 import { unsubscribeFromPush } from '../../services/push';
 
 export function CheckOutPage() {
@@ -46,6 +47,7 @@ export function CheckOutPage() {
     clearWorkSession();
     useOfflineStore.getState().clearPendingActions();
     queryClient.clear();
+    clearPersistedQueryCache();
     logout();
     navigate('/login', { replace: true });
   };

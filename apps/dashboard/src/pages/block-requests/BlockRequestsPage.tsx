@@ -170,11 +170,11 @@ export function BlockRequestsPage() {
     },
     {
       title: t('common:labels.handledAt'),
-      dataIndex: 'updatedAt',
+      dataIndex: 'handledAt',
       width: 150,
       render: (d: string | null) => d ? (<div><div>{dayjs(d).format('DD.MM.YYYY.')}</div><div style={{ fontSize: 11, color: token.colorTextSecondary }}>{dayjs(d).format('HH:mm')}</div></div>) : '—',
       sorter: true,
-      sortOrder: sortBy === 'updatedAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
+      sortOrder: sortBy === 'handledAt' ? (sortDirection === 'desc' ? ('descend' as const) : ('ascend' as const)) : null,
     },
     {
       title: t('common:labels.actions'),

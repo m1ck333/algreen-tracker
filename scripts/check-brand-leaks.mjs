@@ -28,6 +28,7 @@ const EXEMPT_LINE_PATTERNS = [
   /^\s*\*/,                          // continuation of block / JSDoc comment
   /from\s+['"]@(?:alblue|algreen)\//, // npm package import
   /import\s+['"]@(?:alblue|algreen)\//,
+  /['"]@(?:alblue|algreen)\//,        // package namespace in any quoted module specifier (e.g. vi.mock('@alblue/...'))
   /name:\s*['"](?:alblue|algreen)-/,  // zustand persist storage key
   /algreen_/,                        // algreen storage key prefix (underscore form)
   /alblue_/,                         // alblue storage key prefix (underscore form)

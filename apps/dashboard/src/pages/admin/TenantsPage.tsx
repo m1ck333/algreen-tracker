@@ -32,7 +32,7 @@ const DEFAULT_CRITICAL_DAYS = 3;
 
 interface TenantsPageProps {
   /** When true, suppress the top PageHeader — used when embedding this
-   *  component as a tab panel inside FirmaPage so the parent owns the
+   *  component as a tab panel inside CompanyPage so the parent owns the
    *  header. */
   hideHeader?: boolean;
 }

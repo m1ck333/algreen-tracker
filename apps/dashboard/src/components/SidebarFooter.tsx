@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Badge, Button, Popover, List, Menu, Typography, Space, Empty, Tooltip, Divider, Segmented, theme, Grid, Drawer, Form, Input, App } from 'antd';
 import {
   BellOutlined,
@@ -298,11 +298,22 @@ export function SidebarFooter({ collapsed, onOverlayAction }: SidebarFooterProps
   // new before the badge clears, so the auto-mark doesn't feel like
   // notifications disappeared. Cancelling the timer on close means a
   // quick open/close (e.g., accidental click) doesn't silently mark.
+  // Keyed on `notifOpen` ONLY (unread count read via a ref at fire time), so a
+  // notification arriving while the popover is open doesn't restart the timer
+  // and indefinitely defer the mark.
+  const unreadCountRef = useRef(count);
+  unreadCountRef.current = count;
+  // markAllAsRead is intentionally NOT a dep: it's a useMutation object (new
+  // identity each render), so including it would re-run this effect every render
+  // and restart the timer — the exact restart bug being fixed. Its .mutate is stable.
   useEffect(() => {
-    if (!notifOpen || (count ?? 0) === 0) return;
-    const timer = window.setTimeout(() => markAllAsRead.mutate(), 800);
+    if (!notifOpen) return;
+    const timer = window.setTimeout(() => {
+      if ((unreadCountRef.current ?? 0) > 0) markAllAsRead.mutate();
+    }, 800);
     return () => window.clearTimeout(timer);
-  }, [notifOpen, count]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifOpen]);
   const deleteOne = useMutation({
     mutationFn: (id: string) => notificationsApi.delete(id),
     onSuccess: invalidateAll,

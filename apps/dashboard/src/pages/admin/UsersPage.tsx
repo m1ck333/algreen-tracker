@@ -124,7 +124,7 @@ function RoleHistorySection({ userId }: { userId: string }) {
 
 interface UsersPageProps {
   /** When true, suppress the top PageHeader — used when embedding as a
-   *  tab panel inside KorisniciPage so the parent owns the header. */
+   *  tab panel inside UserManagementPage so the parent owns the header. */
   hideHeader?: boolean;
 }
 
@@ -185,7 +185,7 @@ export function UsersPage({ hideHeader = false }: UsersPageProps = {}) {
 
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
-    queryFn: () => processesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
+    queryFn: () => processesApi.getAll({ pageSize: 10000 }).then((r) => r.data.items),
     enabled: !!tenantId,
   });
 

@@ -328,7 +328,7 @@ function IncomingCard({
             <span className="text-gray-500">
               {t('queue.progress', { completed: item.completedProcessCount, total: item.totalProcessCount })}
             </span>
-            <AttachmentIndicator orderId={item.orderId} orderItemId={item.orderItemId} />
+            <AttachmentIndicator orderId={item.orderId} orderItemId={item.orderItemId} count={item.attachmentCount} />
           </div>
           {item.specialRequestNames.length > 0 && (
             <div className="flex flex-wrap gap-1">

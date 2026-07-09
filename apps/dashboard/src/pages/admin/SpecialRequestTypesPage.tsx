@@ -67,7 +67,7 @@ export function SpecialRequestTypesPage() {
 
   const { data: processes } = useQuery({
     queryKey: ['processes', tenantId],
-    queryFn: () => processesApi.getAll({ pageSize: 100 }).then((r) => r.data.items),
+    queryFn: () => processesApi.getAll({ pageSize: 10000 }).then((r) => r.data.items),
     enabled: !!tenantId && (!!detailItem || createOpen),
   });
 

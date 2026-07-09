@@ -43,7 +43,13 @@
     "profile": "Profil",
     "tutorial": "Uputstvo",
     "whatsNew": "Šta je novo",
-    "info": "Info"
+    "info": "Info",
+    "aria": {
+      "openMenu": "Otvori meni",
+      "closeMenu": "Zatvori meni",
+      "expandSidebar": "Proširi bočni meni",
+      "collapseSidebar": "Skupi bočni meni"
+    }
   },
   "whatsNew": {
     "title": "Šta je novo",
@@ -197,6 +203,9 @@
     "saveBeforeActivate": "Sačuvajte izmene pre aktivacije",
     "pending": "Nesačuvano",
     "attachments": "Dokumenti",
+    "attachmentsCount_one": "{{count}} dokument",
+    "attachmentsCount_few": "{{count}} dokumenta",
+    "attachmentsCount_other": "{{count}} dokumenata",
     "cancelOrder": "Otkaži narudžbinu",
     "cancelConfirm": "Da li ste sigurni da želite da otkažete ovu narudžbinu?",
     "reopenOrder": "Ponovo otvori",

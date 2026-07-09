@@ -58,6 +58,15 @@ function flatten(obj, prefix = '', out = new Set()) {
 const srKeys = flatten(JSON.parse(readFileSync(LOCALES.sr, 'utf8')));
 const enKeys = flatten(JSON.parse(readFileSync(LOCALES.en, 'utf8')));
 
+// i18next plural keys live as `key_<category>` in the JSON, but call-sites
+// reference the bare `key` with a { count } param. Treat a key as present if
+// the bare key OR any CLDR plural variant exists in that locale.
+const PLURAL_SUFFIXES = ['zero', 'one', 'two', 'few', 'many', 'other'];
+function hasKey(keySet, key) {
+  if (keySet.has(key)) return true;
+  return PLURAL_SUFFIXES.some((s) => keySet.has(`${key}_${s}`));
+}
+
 // Match `t('key')`, `t('key', ...)`, `t("key")`, `t("key", ...)`.
 // Does NOT match template literals or variables — those are skipped on
 // purpose; we can't statically verify dynamic keys.
@@ -84,8 +93,8 @@ for (const dir of SCAN_DIRS) {
     while ((m = T_CALL.exec(text)) !== null) {
       const key = m[2];
       if (!isStaticI18nKey(key)) continue;
-      const missSr = !srKeys.has(key);
-      const missEn = !enKeys.has(key);
+      const missSr = !hasKey(srKeys, key);
+      const missEn = !hasKey(enKeys, key);
       if (missSr || missEn) {
         // Approximate line number from the match index.
         const upto = text.slice(0, m.index);

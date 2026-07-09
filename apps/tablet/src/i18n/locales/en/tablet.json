@@ -41,6 +41,7 @@
     "itemNotes": "Item note"
   },
   "work": {
+    "savedOffline": "Saved. Will sync when you're back online.",
     "working": "Working...",
     "readyToStart": "Ready to start",
     "subProcesses": "Sub-processes",
@@ -87,7 +88,12 @@
     "checkedInAt": "Checked in at"
   },
   "offline": {
-    "message": "You are offline. Some features may be unavailable."
+    "message": "You are offline. Some features may be unavailable.",
+    "queued": "Saved offline: {{count}}",
+    "syncing": "Syncing… ({{count}})",
+    "failedTitle": "Some actions weren't saved",
+    "failedMessage": "Not synced: {{count}}. Please re-check the item and try again.",
+    "dismiss": "Dismiss"
   },
   "autoLogout": {
     "warning": "Your shift expires in {{minutes}} min. Please check out.",

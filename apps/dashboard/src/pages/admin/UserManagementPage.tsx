@@ -15,7 +15,7 @@ import { SuperAdminsPanel } from './SuperAdminsPanel';
  * — we shortcut the Tabs render and just embed UsersPage with its own
  * header. SuperAdmin sees the merged page header + two tabs.
  */
-export function KorisniciPage() {
+export function UserManagementPage() {
   const { t } = useTranslation('dashboard');
   const userRole = useAuthStore((s) => s.user?.role);
   const isSuperAdmin = userRole === UserRole.SuperAdmin;
@@ -28,10 +28,10 @@ export function KorisniciPage() {
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <PageHeader title={t('admin.users.title')} />
       <Tabs
-        defaultActiveKey="korisnici"
+        defaultActiveKey="users"
         items={[
           {
-            key: 'korisnici',
+            key: 'users',
             label: t('admin.users.tabTenantUsers'),
             children: <UsersPage hideHeader />,
           },

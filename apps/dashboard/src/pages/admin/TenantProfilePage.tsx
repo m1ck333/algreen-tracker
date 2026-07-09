@@ -40,7 +40,7 @@ function resolveColor(value: unknown, fallback: string): string {
  */
 interface TenantProfilePageProps {
   /** When true, suppress the top PageHeader — used when embedding this
-   *  component as a tab panel inside FirmaPage. */
+   *  component as a tab panel inside CompanyPage. */
   hideHeader?: boolean;
 }
 

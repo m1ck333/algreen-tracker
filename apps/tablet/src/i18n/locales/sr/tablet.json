@@ -41,6 +41,7 @@
     "itemNotes": "Napomena stavke"
   },
   "work": {
+    "savedOffline": "Sačuvano. Sinhronizovaće se kad se vratite na mrežu.",
     "working": "Rad u toku...",
     "readyToStart": "Spremno za početak",
     "subProcesses": "Pod-procesi",
@@ -87,7 +88,12 @@
     "checkedInAt": "Prijavljeni u"
   },
   "offline": {
-    "message": "Niste povezani. Neke funkcije možda neće biti dostupne."
+    "message": "Niste povezani. Neke funkcije možda neće biti dostupne.",
+    "queued": "Sačuvano van mreže: {{count}}",
+    "syncing": "Sinhronizacija u toku… ({{count}})",
+    "failedTitle": "Neke akcije nisu sačuvane",
+    "failedMessage": "Nije sinhronizovano: {{count}}. Proverite status stavke i pokušajte ponovo.",
+    "dismiss": "U redu"
   },
   "autoLogout": {
     "warning": "Vaša smena ističe za {{minutes}} min. Odjavite se.",

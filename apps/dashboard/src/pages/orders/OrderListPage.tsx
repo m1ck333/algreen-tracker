@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { PendingFileThumbnail } from '../../components/PendingFileThumbnail';
 import {
   Typography, Table, Button, Space, Select, Tag, Drawer, Form, Input,
   InputNumber, DatePicker, App, Row, Col, Spin, Popconfirm, Divider,
@@ -626,7 +627,7 @@ export function OrderListPage() {
           <Space size={4}>
             <span style={{ fontWeight: 500 }}>{text}</span>
             {record.attachmentCount > 0 && (
-              <Tooltip title={`${record.attachmentCount} ${record.attachmentCount === 1 ? 'dokument' : 'dokumenata'}`}>
+              <Tooltip title={t('orders.attachmentsCount', { count: record.attachmentCount })}>
                 <PaperClipOutlined style={{ color: token.colorPrimary, fontSize: 13 }} />
               </Tooltip>
             )}
@@ -1431,13 +1432,7 @@ export function OrderListPage() {
                           >
                             <Space size={8}>
                               {file.type.startsWith('image/') ? (
-                                <img
-                                  src={URL.createObjectURL(file)}
-                                  width={40} height={40}
-                                  style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
-                                  onClick={() => openPendingPreview(file)}
-                                  alt={file.name}
-                                />
+                                <PendingFileThumbnail file={file} onClick={() => openPendingPreview(file)} />
                               ) : (
                                 <FilePdfOutlined style={{ fontSize: 24, color: token.colorError }} />
                               )}
@@ -1521,13 +1516,7 @@ export function OrderListPage() {
                 >
                   <Space size={8}>
                     {file.type.startsWith('image/') ? (
-                      <img
-                        src={URL.createObjectURL(file)}
-                        width={40} height={40}
-                        style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
-                        onClick={() => openPendingPreview(file)}
-                        alt={file.name}
-                      />
+                      <PendingFileThumbnail file={file} onClick={() => openPendingPreview(file)} />
                     ) : (
                       <FilePdfOutlined style={{ fontSize: 24, color: token.colorError }} />
                     )}
@@ -1909,7 +1898,7 @@ export function OrderListPage() {
                           >
                             <Space size={8}>
                               {file.type.startsWith('image/') ? (
-                                <img src={URL.createObjectURL(file)} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }} onClick={() => openPendingPreview(file)} alt={file.name} />
+                                <PendingFileThumbnail file={file} onClick={() => openPendingPreview(file)} />
                               ) : (
                                 <FilePdfOutlined style={{ fontSize: 24, color: token.colorError }} />
                               )}

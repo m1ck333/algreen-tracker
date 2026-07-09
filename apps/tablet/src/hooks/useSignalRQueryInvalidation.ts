@@ -57,7 +57,11 @@ export function useSignalRQueryInvalidation() {
   });
 
   useSignalREvent(SignalREvents.ProcessDefinitionUpdated, () => {
-    queryClient.invalidateQueries({ queryKey: ['processes-batch'] });
+    // Actual keys the tablet uses for process definitions — 'processes-batch'
+    // matched nothing (queue uses 'tablet-process-definitions', incoming uses
+    // 'processes'), so process renames/reordering stayed stale for workers.
+    queryClient.invalidateQueries({ queryKey: ['tablet-process-definitions'] });
+    queryClient.invalidateQueries({ queryKey: ['processes'] });
     queryClient.invalidateQueries({ queryKey: ['tablet-queue'] });
     queryClient.invalidateQueries({ queryKey: ['tablet-active'] });
   });

@@ -583,6 +583,7 @@ export interface TabletQueueItemDto {
   totalDurationMinutes: number;
   orderNotes: string | null;
   itemNotes: string | null;
+  attachmentCount: number;
 }
 
 export interface TabletActiveWorkDto {
@@ -607,6 +608,7 @@ export interface TabletActiveWorkDto {
   subProcesses: TabletSubProcessDto[];
   orderNotes: string | null;
   itemNotes: string | null;
+  attachmentCount: number;
 }
 
 export interface TabletSubProcessDto {
@@ -637,6 +639,7 @@ export interface TabletIncomingDto {
   blockingProcesses: BlockingProcessDto[];
   orderNotes: string | null;
   itemNotes: string | null;
+  attachmentCount: number;
 }
 
 export interface BlockingProcessDto {

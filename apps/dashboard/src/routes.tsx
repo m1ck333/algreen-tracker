@@ -20,12 +20,12 @@ const OrderListPage = lazy(() => import('./pages/orders/OrderListPage').then((m)
 const SalesDashboard = lazy(() => import('./pages/sales/SalesDashboard').then((m) => ({ default: m.SalesDashboard })));
 const BlockRequestsPage = lazy(() => import('./pages/block-requests/BlockRequestsPage').then((m) => ({ default: m.BlockRequestsPage })));
 const ChangeRequestsPage = lazy(() => import('./pages/change-requests/ChangeRequestsPage').then((m) => ({ default: m.ChangeRequestsPage })));
-const KorisniciPage = lazy(() => import('./pages/admin/KorisniciPage').then((m) => ({ default: m.KorisniciPage })));
+const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage').then((m) => ({ default: m.UserManagementPage })));
 const ProcessesPage = lazy(() => import('./pages/admin/ProcessesPage').then((m) => ({ default: m.ProcessesPage })));
 const ProductCategoriesPage = lazy(() => import('./pages/admin/ProductCategoriesPage').then((m) => ({ default: m.ProductCategoriesPage })));
 const SpecialRequestTypesPage = lazy(() => import('./pages/admin/SpecialRequestTypesPage').then((m) => ({ default: m.SpecialRequestTypesPage })));
 const OrderTypesPage = lazy(() => import('./pages/admin/OrderTypesPage').then((m) => ({ default: m.OrderTypesPage })));
-const FirmaPage = lazy(() => import('./pages/admin/FirmaPage').then((m) => ({ default: m.FirmaPage })));
+const CompanyPage = lazy(() => import('./pages/admin/CompanyPage').then((m) => ({ default: m.CompanyPage })));
 const ShiftsPage = lazy(() => import('./pages/admin/ShiftsPage').then((m) => ({ default: m.ShiftsPage })));
 const MaterialsPage = lazy(() => import('./pages/admin/MaterialsPage').then((m) => ({ default: m.MaterialsPage })));
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })));
@@ -116,7 +116,7 @@ export function AppRoutes() {
           path="/admin/users"
           element={
             <RequireRole roles={[UserRole.Admin, UserRole.Manager, UserRole.SuperAdmin]}>
-              <KorisniciPage />
+              <UserManagementPage />
             </RequireRole>
           }
         />
@@ -156,7 +156,7 @@ export function AppRoutes() {
           path="/admin/company"
           element={
             <RequireRole roles={[UserRole.SuperAdmin, UserRole.Admin]}>
-              <FirmaPage />
+              <CompanyPage />
             </RequireRole>
           }
         />

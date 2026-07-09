@@ -11,6 +11,14 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { AttachmentIndicator } from '../../components/AttachmentIndicator';
 import { useTranslation, useEnumTranslation } from '@alblue/i18n';
+import { runWorkflowAction } from '../../offline/workflow-actions';
+import {
+  applySubProcessTransition,
+  freezeProcessTimer,
+  resumeProcessTimer,
+  removeProcessFromActive,
+  type ActiveGroups,
+} from '../../offline/optimistic';
 
 function formatDuration(totalSeconds: number): string {
   if (totalSeconds < 60) return `${totalSeconds}s`;
@@ -178,6 +186,7 @@ export function OrderQueuePage() {
             totalDurationMinutes: w.totalDurationMinutes ?? 0,
             orderNotes: w.orderNotes,
             itemNotes: w.itemNotes,
+            attachmentCount: w.attachmentCount,
           });
           seen.add(w.orderItemProcessId);
         }
@@ -416,7 +425,7 @@ function QueueCard({
             {item.totalDurationMinutes > 0 && !activeWork && (
               <span className="text-gray-500">⏱ {formatDuration(item.totalDurationMinutes)}</span>
             )}
-            <AttachmentIndicator orderId={item.orderId} orderItemId={item.orderItemId} />
+            <AttachmentIndicator orderId={item.orderId} orderItemId={item.orderItemId} count={item.attachmentCount} />
           </div>
           {item.specialRequestNames.length > 0 && (
             <div className="flex flex-wrap gap-1">
@@ -525,6 +534,14 @@ function WorkPanel({
   };
 
   const invalidateAndWait = async (keys: string[]) => {
+    // Offline, React Query pauses fetches (networkMode), so awaiting a refetch
+    // would hang the button indefinitely. Just mark the queries stale (no
+    // refetch) and let the optimistic state stand; the sync manager refetches
+    // after replaying the queue on reconnect.
+    if (!navigator.onLine) {
+      keys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k], refetchType: 'none' }));
+      return;
+    }
     setPendingAction(true);
     await Promise.all(
       keys.map((k) => queryClient.invalidateQueries({ queryKey: [k] })),
@@ -535,56 +552,113 @@ function WorkPanel({
     setPendingAction(false);
   };
 
+  // When an action was queued offline (vs. confirmed by the server), tell the
+  // worker it's saved and will sync — otherwise clear any stale success note.
+  const noteResult = (result: { status: 'done' | 'queued' }) => {
+    setSuccess(result?.status === 'queued' ? t('work.savedOffline') : null);
+  };
+
+  // Optimistically apply a change to the active-work cache while a tap settles
+  // (so offline actions reflect immediately), snapshotting for rollback if the
+  // server later rejects it.
+  const optimisticActive = async (apply: (old: ActiveGroups | undefined) => ActiveGroups | undefined) => {
+    await queryClient.cancelQueries({ queryKey: ['tablet-active'] });
+    const snapshot = queryClient.getQueriesData({ queryKey: ['tablet-active'] });
+    queryClient.setQueriesData<ActiveGroups>({ queryKey: ['tablet-active'] }, (old) => apply(old));
+    return { snapshot };
+  };
+
+  const optimisticSubMutate = (id: string, transition: 'start' | 'complete') =>
+    optimisticActive((old) => applySubProcessTransition(old, id, transition, new Date().toISOString()));
+
+  const rollbackSnapshot = (ctx?: { snapshot: [readonly unknown[], unknown][] }) => {
+    ctx?.snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
+  };
+
   const startMutation = useMutation({
-    mutationFn: () => processWorkflowApi.start(orderItemProcessId, { userId }),
-    onSuccess: async () => {
+    networkMode: 'always', // run mutationFn even offline (we queue it ourselves)
+    mutationFn: () => runWorkflowAction({
+      type: 'start-process', targetId: orderItemProcessId, userId,
+      call: (meta) => processWorkflowApi.start(orderItemProcessId, { userId, ...meta }),
+    }),
+    onSuccess: async (result) => {
       setError(null);
+      noteResult(result);
       await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']);
     },
     onError: (err) => handleError(err, 'work.startFailed'),
   });
 
   const pauseMutation = useMutation({
-    mutationFn: () => processWorkflowApi.stop(orderItemProcessId, { userId }),
-    onSuccess: async () => {
+    networkMode: 'always',
+    mutationFn: () => runWorkflowAction({
+      type: 'stop-process', targetId: orderItemProcessId, userId,
+      call: (meta) => processWorkflowApi.stop(orderItemProcessId, { userId, ...meta }),
+    }),
+    onMutate: () => optimisticActive((old) => freezeProcessTimer(old, orderItemProcessId, Date.now())),
+    onSuccess: async (result) => {
       setError(null);
+      noteResult(result);
       await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']);
     },
-    onError: (err) => handleError(err, 'work.pauseFailed'),
+    onError: (err, _v, ctx) => { rollbackSnapshot(ctx); handleError(err, 'work.pauseFailed'); },
   });
 
   const resumeMutation = useMutation({
-    mutationFn: () => processWorkflowApi.resume(orderItemProcessId, { userId }),
-    onSuccess: async () => {
+    networkMode: 'always',
+    mutationFn: () => runWorkflowAction({
+      type: 'resume-process', targetId: orderItemProcessId, userId,
+      call: (meta) => processWorkflowApi.resume(orderItemProcessId, { userId, ...meta }),
+    }),
+    onMutate: () => optimisticActive((old) => resumeProcessTimer(old, orderItemProcessId, new Date().toISOString())),
+    onSuccess: async (result) => {
       setError(null);
+      noteResult(result);
       await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']);
     },
-    onError: (err) => handleError(err, 'work.resumeFailed'),
+    onError: (err, _v, ctx) => { rollbackSnapshot(ctx); handleError(err, 'work.resumeFailed'); },
   });
 
   const completeMutation = useMutation({
-    mutationFn: () => processWorkflowApi.complete(orderItemProcessId),
-    onSuccess: async () => {
+    networkMode: 'always',
+    mutationFn: () => runWorkflowAction({
+      type: 'complete-process', targetId: orderItemProcessId, userId,
+      call: (meta) => processWorkflowApi.complete(orderItemProcessId, meta),
+    }),
+    onMutate: () => optimisticActive((old) => removeProcessFromActive(old, orderItemProcessId)),
+    onSuccess: async (result) => {
       setError(null);
       setShowCompleteConfirm(false);
+      noteResult(result);
       await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']);
     },
-    onError: (err) => {
+    onError: (err, _v, ctx) => {
+      rollbackSnapshot(ctx);
       setShowCompleteConfirm(false);
       handleError(err, 'work.completeFailed');
     },
   });
 
   const startSubMutation = useMutation({
-    mutationFn: (id: string) => subProcessWorkflowApi.start(id, { userId }),
-    onSuccess: async () => { setError(null); setActiveMutationId(null); await invalidateAndWait(['tablet-active']); },
-    onError: (err) => { setActiveMutationId(null); handleError(err, 'work.startFailed'); },
+    networkMode: 'always',
+    mutationFn: (id: string) => runWorkflowAction({
+      type: 'start-subprocess', targetId: id, userId,
+      call: (meta) => subProcessWorkflowApi.start(id, { userId, ...meta }),
+    }),
+    onMutate: (id: string) => optimisticSubMutate(id, 'start'),
+    onSuccess: async (result) => { setError(null); setActiveMutationId(null); noteResult(result); await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']); },
+    onError: (err, _id, ctx) => { rollbackSnapshot(ctx); setActiveMutationId(null); handleError(err, 'work.startFailed'); },
   });
 
   const completeSubMutation = useMutation({
-    mutationFn: (id: string) => subProcessWorkflowApi.complete(id, { userId }),
-    onSuccess: async () => { setError(null); setActiveMutationId(null); await invalidateAndWait(['tablet-active']); },
-    onError: (err) => { setActiveMutationId(null); handleError(err, 'work.completeFailed'); },
+    networkMode: 'always',
+    mutationFn: (id: string) => runWorkflowAction({
+      type: 'complete-subprocess', targetId: id, userId,
+      call: (meta) => subProcessWorkflowApi.complete(id, { userId, ...meta }),
+    }),
+    onMutate: (id: string) => optimisticSubMutate(id, 'complete'),
+    onSuccess: async (result) => { setError(null); setActiveMutationId(null); noteResult(result); await invalidateAndWait(['tablet-active', 'tablet-queue', 'tablet-incoming']); },
+    onError: (err, _id, ctx) => { rollbackSnapshot(ctx); setActiveMutationId(null); handleError(err, 'work.completeFailed'); },
   });
 
   const blockMutation = useMutation({

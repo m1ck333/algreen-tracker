@@ -23,7 +23,7 @@ import { AllPaymentsPage } from './AllPaymentsPage';
  * Why merge: sidebar bloat (Milos 15.06.2026). Same mental model "manage
  * the tenant" lives in one entry point.
  */
-export function FirmaPage() {
+export function CompanyPage() {
   const { t } = useTranslation('dashboard');
   const userRole = useAuthStore((s) => s.user?.role);
   const isSuperAdmin = userRole === UserRole.SuperAdmin;

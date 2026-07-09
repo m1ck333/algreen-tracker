@@ -320,73 +320,6 @@ export function ProductManufacturingTimeTab() {
         />
       </Space>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <TableExportButton
-          onFetchAll={async () => filteredRows}
-          columns={[
-            { header: t('reports.orderNumber'), value: (r: ProductManufacturingTimeOrderDto) => r.orderNumber, width: 16 },
-            { header: t('reports.orderType'), value: (r: ProductManufacturingTimeOrderDto) => orderTypeNameByCode.get(r.orderType.toLowerCase()) ?? r.orderType, width: 14 },
-            { header: t('reports.productCategory'), value: (r: ProductManufacturingTimeOrderDto) => r.productCategoryName, width: 22 },
-            { header: t('reports.manufacturingTopComplexity'), value: (r: ProductManufacturingTimeOrderDto) => r.topComplexity ?? '—', width: 10 },
-            { header: t('reports.manufacturingComplexityShare'), value: (r: ProductManufacturingTimeOrderDto) => r.complexityShare ?? '—', width: 16 },
-            ...processColumns.flatMap((pc, idx) => {
-              const dur: ExportColumn<ProductManufacturingTimeOrderDto> = {
-                header: `${pc.processCode} — ${t('reports.manufacturingProcessDuration')}`,
-                value: (r: ProductManufacturingTimeOrderDto) => {
-                  const proc = r.processes.find((p) => p.processId === pc.processId);
-                  return proc ? formatSeconds(proc.durationSeconds) : '—';
-                },
-                align: 'right',
-                width: 16,
-              };
-              if (idx === processColumns.length - 1) return [dur];
-              const gap: ExportColumn<ProductManufacturingTimeOrderDto> = {
-                header: `${pc.processCode} — ${t('reports.manufacturingGapToNext')}`,
-                value: (r: ProductManufacturingTimeOrderDto) => {
-                  const proc = r.processes.find((p) => p.processId === pc.processId);
-                  return proc ? formatSeconds(proc.gapToNextSeconds) : '—';
-                },
-                align: 'right',
-                width: 14,
-              };
-              return [dur, gap];
-            }),
-          ] satisfies ExportColumn<ProductManufacturingTimeOrderDto>[]}
-          options={{
-            fileName: `reports-product-manufacturing-time-${dayjs().format('YYYY-MM-DD')}`,
-            title: `${t('common:appName')} — ${t('reports.tabProductManufacturingTime')}`,
-            sheetName: t('reports.tabProductManufacturingTime'),
-            filters: [
-              { label: t('export.dateFrom'), value: dateRange[0].format('DD.MM.YYYY.') },
-              { label: t('export.dateTo'), value: dateRange[1].format('DD.MM.YYYY.') },
-              ...(orderTypes.length ? [{ label: t('reports.orderType'), value: orderTypes.map((c) => orderTypeNameByCode.get(c.toLowerCase()) ?? c).join(', ') }] : []),
-              ...(productCategoryIds.length ? [{ label: t('reports.productCategory'), value: (productCategoryList ?? []).filter((c: ProductCategoryDto) => productCategoryIds.includes(c.id)).map((c: ProductCategoryDto) => c.name).join(', ') }] : []),
-            ],
-          }}
-        />
-      </div>
-
-      <Card
-        size="small"
-        title={t('reports.manufacturingTableTitle')}
-        style={{ marginBottom: 16 }}
-      >
-        <Table
-          columns={columns}
-          dataSource={filteredRows}
-          rowKey="orderItemId"
-          loading={isLoading}
-          pagination={{
-            defaultPageSize: 20,
-            showSizeChanger: true,
-            pageSizeOptions: [10, 20, 50, 100],
-          }}
-          scroll={{ x: 'max-content' }}
-          size="small"
-          bordered
-        />
-      </Card>
-
       {aggregateRows.length > 0 && (
         <Card
           size="small"
@@ -469,7 +402,7 @@ export function ProductManufacturingTimeTab() {
           // Width budget for the right-side total label — increase the
           // chart's right margin so the label has room to render.
           return (
-            <Card size="small" title={t('reports.manufacturingChartTitle')}>
+            <Card size="small" title={t('reports.manufacturingChartTitle')} style={{ marginBottom: 16 }}>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData} layout="vertical" margin={{ top: 8, right: 80, left: 16, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -531,6 +464,75 @@ export function ProductManufacturingTimeTab() {
             </Card>
           );
         })()}
+
+      {/* "Trajanje izrade proizvoda po narudžbini" — moved to the bottom of the
+          section per Saša 08.07.2026. Its export button moves with it (was
+          stranded at the top of the tab). */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <TableExportButton
+          onFetchAll={async () => filteredRows}
+          columns={[
+            { header: t('reports.orderNumber'), value: (r: ProductManufacturingTimeOrderDto) => r.orderNumber, width: 16 },
+            { header: t('reports.orderType'), value: (r: ProductManufacturingTimeOrderDto) => orderTypeNameByCode.get(r.orderType.toLowerCase()) ?? r.orderType, width: 14 },
+            { header: t('reports.productCategory'), value: (r: ProductManufacturingTimeOrderDto) => r.productCategoryName, width: 22 },
+            { header: t('reports.manufacturingTopComplexity'), value: (r: ProductManufacturingTimeOrderDto) => r.topComplexity ?? '—', width: 10 },
+            { header: t('reports.manufacturingComplexityShare'), value: (r: ProductManufacturingTimeOrderDto) => r.complexityShare ?? '—', width: 16 },
+            ...processColumns.flatMap((pc, idx) => {
+              const dur: ExportColumn<ProductManufacturingTimeOrderDto> = {
+                header: `${pc.processCode} — ${t('reports.manufacturingProcessDuration')}`,
+                value: (r: ProductManufacturingTimeOrderDto) => {
+                  const proc = r.processes.find((p) => p.processId === pc.processId);
+                  return proc ? formatSeconds(proc.durationSeconds) : '—';
+                },
+                align: 'right',
+                width: 16,
+              };
+              if (idx === processColumns.length - 1) return [dur];
+              const gap: ExportColumn<ProductManufacturingTimeOrderDto> = {
+                header: `${pc.processCode} — ${t('reports.manufacturingGapToNext')}`,
+                value: (r: ProductManufacturingTimeOrderDto) => {
+                  const proc = r.processes.find((p) => p.processId === pc.processId);
+                  return proc ? formatSeconds(proc.gapToNextSeconds) : '—';
+                },
+                align: 'right',
+                width: 14,
+              };
+              return [dur, gap];
+            }),
+          ] satisfies ExportColumn<ProductManufacturingTimeOrderDto>[]}
+          options={{
+            fileName: `reports-product-manufacturing-time-${dayjs().format('YYYY-MM-DD')}`,
+            title: `${t('common:appName')} — ${t('reports.tabProductManufacturingTime')}`,
+            sheetName: t('reports.tabProductManufacturingTime'),
+            filters: [
+              { label: t('export.dateFrom'), value: dateRange[0].format('DD.MM.YYYY.') },
+              { label: t('export.dateTo'), value: dateRange[1].format('DD.MM.YYYY.') },
+              ...(orderTypes.length ? [{ label: t('reports.orderType'), value: orderTypes.map((c) => orderTypeNameByCode.get(c.toLowerCase()) ?? c).join(', ') }] : []),
+              ...(productCategoryIds.length ? [{ label: t('reports.productCategory'), value: (productCategoryList ?? []).filter((c: ProductCategoryDto) => productCategoryIds.includes(c.id)).map((c: ProductCategoryDto) => c.name).join(', ') }] : []),
+            ],
+          }}
+        />
+      </div>
+      <Card
+        size="small"
+        title={t('reports.manufacturingTableTitle')}
+        style={{ marginBottom: 16 }}
+      >
+        <Table
+          columns={columns}
+          dataSource={filteredRows}
+          rowKey="orderItemId"
+          loading={isLoading}
+          pagination={{
+            defaultPageSize: 20,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
+          }}
+          scroll={{ x: 'max-content' }}
+          size="small"
+          bordered
+        />
+      </Card>
     </>
   );
 }

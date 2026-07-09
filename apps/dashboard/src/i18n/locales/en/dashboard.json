@@ -43,7 +43,13 @@
     "profile": "Profile",
     "tutorial": "Tutorial",
     "whatsNew": "What's new",
-    "info": "Info"
+    "info": "Info",
+    "aria": {
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "expandSidebar": "Expand sidebar",
+      "collapseSidebar": "Collapse sidebar"
+    }
   },
   "whatsNew": {
     "title": "What's new",
@@ -197,6 +203,8 @@
     "saveBeforeActivate": "Save changes before activating",
     "pending": "Unsaved",
     "attachments": "Documents",
+    "attachmentsCount_one": "{{count}} document",
+    "attachmentsCount_other": "{{count}} documents",
     "cancelOrder": "Cancel Order",
     "cancelConfirm": "Are you sure you want to cancel this order?",
     "reopenOrder": "Reopen Order",

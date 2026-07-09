@@ -5,6 +5,7 @@ import type {
   ResumeProcessWorkRequest,
   BlockProcessRequest,
   UnblockProcessRequest,
+  CompleteProcessRequest,
 } from '@alblue/shared-types';
 import { apiClient } from '../axios-instance';
 
@@ -21,8 +22,8 @@ export const processWorkflowApi = {
     return apiClient.post(`/order-item-processes/${id}/resume`, data);
   },
 
-  complete(id: string) {
-    return apiClient.post(`/order-item-processes/${id}/complete`);
+  complete(id: string, data?: CompleteProcessRequest) {
+    return apiClient.post(`/order-item-processes/${id}/complete`, data);
   },
 
   restart(id: string, data: { resetTime: boolean }) {

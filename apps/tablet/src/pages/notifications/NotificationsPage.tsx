@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@alblue/auth';
@@ -129,6 +129,23 @@ export function NotificationsPage() {
   const filtered = tab === 'unread' ? allNotifications.filter((n) => !n.isRead) : allNotifications;
   const hasUnread = allNotifications.some((n) => !n.isRead);
   const unreadCount = allNotifications.filter((n) => !n.isRead).length;
+
+  // Auto-mark-all-read shortly after the worker opens this page — same rationale
+  // as the dashboard bell (nobody taps "mark all", so the unread badge grows
+  // meaningless). Fires ONCE per visit (ref-guarded) and is NOT restarted by a
+  // notification arriving while the page is open (unlike the dashboard version).
+  // 800ms lets them see the unread state briefly; marking read doesn't delete —
+  // actionable items stay in the list.
+  const autoMarkedRef = useRef(false);
+  const autoMarkTimerRef = useRef<number>();
+  useEffect(() => {
+    if (autoMarkedRef.current || isLoading || !userId || !hasUnread) return;
+    autoMarkedRef.current = true;
+    autoMarkTimerRef.current = window.setTimeout(() => markAllReadMutation.mutate(), 800);
+  }, [isLoading, userId, hasUnread, markAllReadMutation]);
+  useEffect(() => () => {
+    if (autoMarkTimerRef.current) window.clearTimeout(autoMarkTimerRef.current);
+  }, []);
 
   const handleTap = (n: NotificationDto) => {
     if (!n.isRead) {

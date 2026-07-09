@@ -1,23 +1,24 @@
 import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { AppRoutes } from './routes';
+import { queryClient } from './query-client';
+import { queryPersister, QUERY_CACHE_BUSTER } from './offline/query-persister';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: queryPersister,
+        maxAge: ONE_DAY_MS, // discard caches older than a day
+        buster: QUERY_CACHE_BUSTER,
+      }}
+    >
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppRoutes />
       </BrowserRouter>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
