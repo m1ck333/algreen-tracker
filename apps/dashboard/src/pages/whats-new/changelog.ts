@@ -19,8 +19,8 @@
  * business language. Rule of thumb: "would Sale or Bojan say this in
  * a meeting?" If no, rephrase.
  *
- * NEVER mention internal brand names (algreen / alblue / easy-mes /
- * etc.) in the user-visible text fields. The MES product is white-
+ * NEVER mention internal brand names (algreen / alblue / etc.)
+ * in the user-visible text fields. The MES product is white-
  * labeled; the in-app changelog must read as if it belongs to whoever
  * is looking at it.
  *
@@ -45,6 +45,52 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    id: '2026-07-09-efikasnost-i-tabela',
+    date: '2026-07-09',
+    title: {
+      sr: 'Efikasnost ograničena na 100% + premeštena tabela',
+      en: 'Efficiency capped at 100% + relocated table',
+    },
+    bullets: [
+      {
+        sr: 'Efikasnost operatera se više ne prikazuje preko 100% — vrednost je ograničena na najviše 100% na svim mestima (zbir po radniku, dnevni prikaz i tab „Efikasnost radnog vremena").',
+        en: 'Operator efficiency no longer shows above 100% — it is capped at 100% everywhere (per-worker total, daily breakdown, and the "Work Efficiency" tab).',
+      },
+      {
+        sr: 'Na tabu „Trajanje izrade proizvoda" tabela „Trajanje izrade proizvoda po narudžbini" je premeštena na dno strane, ispod proseka po procesu i grafikona — tako prvo vidite zbirne podatke, pa detalje po narudžbini.',
+        en: 'On the "Product Manufacturing Time" tab, the per-order table has been moved to the bottom of the page, below the per-process averages and the chart — so you see the summary first, then the per-order detail.',
+      },
+    ],
+  },
+  {
+    id: '2026-06-28-obavestenja-auto-procitano',
+    date: '2026-06-28',
+    title: {
+      sr: 'Obaveštenja se automatski označavaju kao pročitana',
+      en: 'Notifications auto-mark as read on open',
+    },
+    bullets: [
+      {
+        sr: 'Kada otvorite zvonce sa obaveštenjima (kontrolna tabla) ili stranicu obaveštenja na tabletu, obaveštenja se kratko nakon otvaranja automatski označavaju kao pročitana — brojač nepročitanih se sam čisti, ne morate više ručno da klikćete „Označi sve kao pročitano". Obaveštenja se ne brišu, samo prelaze u pročitana.',
+        en: 'When you open the notifications bell (dashboard) or the notifications page (tablet), the items are automatically marked as read shortly after opening — the unread counter clears itself, no more clicking "Mark all as read". Notifications are not deleted, only marked read.',
+      },
+    ],
+  },
+  {
+    id: '2026-06-23-tip-narudzbine-aktivacija',
+    date: '2026-06-23',
+    title: {
+      sr: 'Ispravka: aktivacija narudžbine sa prilagođenim tipom',
+      en: 'Fix: activating an order with a custom type',
+    },
+    bullets: [
+      {
+        sr: 'Narudžbine sa tipom koji ste sami dodali u Administracija → Tipovi narudžbina (npr. „Novi") sada se pravilno aktiviraju. Ranije se posle aktivacije javljalo „narudžbina nije nađena".',
+        en: 'Orders using an order type you added yourself in Administration → Order Types (e.g. "Novi") now activate correctly. Previously activation surfaced a "order not found" error.',
+      },
+    ],
+  },
   {
     id: '2026-06-18-firma-naplata',
     date: '2026-06-18',

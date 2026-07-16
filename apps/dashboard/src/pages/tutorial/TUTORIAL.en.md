@@ -87,7 +87,8 @@ The sidebar shows only items the user's role can access.
 - **Process times** — reports on process duration and worker hours.
 - **Administration** — users, processes, product categories, order
   types, special requests, shifts.
-- **Tutorial** (this document) — in the sidebar footer.
+- **Tutorial** (this document) and **What's new** (a list of recent
+  changes and new features) — in the "Information" group of the sidebar footer.
 
 The bottom-left corner also has:
 - **Notifications** (bell with unread count) — see 3.10.
@@ -507,6 +508,11 @@ Actions:
 - **Delete** (trash).
 - **Mark all read** or **Clear all**.
 
+When you open the bell, notifications are **automatically marked as read**
+shortly after (the unread counter clears itself) — no need to click "Mark
+all read" manually. Notifications are not deleted, only marked read. The
+same applies to the notifications page on the tablet.
+
 Push notifications (browser and mobile) are set up automatically on
 first sign-in (the system asks for permission).
 
@@ -698,13 +704,15 @@ below the minimum, the system automatically notifies management:
 3. The icon appears on the home screen. The app behaves like a native
    app (offline, push notifications).
 
-### 4.2 Sign in and check-in
+### 4.2 Sign in
 
 1. Sign in with the same credentials as on the desktop (Tenant code +
    email + password).
-2. **Check-in** — choose the process you'll work on today (e.g.
-   PRESSING). Only processes you're registered for appear.
-3. From the moment of check-in the system tracks your shift hours.
+2. After signing in the **Queue** opens right away, with items for the
+   processes you're registered for — there is no separate "check-in" step.
+3. Your shift starts **automatically** the moment you sign in (the system
+   opens the work session for you); time is tracked from then, and it is
+   formally closed when you sign out (or by auto-logout at shift end).
 
 #### Auto-logout and overtime
 
@@ -800,13 +808,29 @@ process), they're shown as separate cards:
 Shows orders that will **soon be ready** for you — the process you
 depend on is still in progress. Useful for preparation.
 
-### 4.6 Block request
+### 4.6 Notifications
+
+The tablet has its own **Notifications** page (bell icon in the bottom
+navigation). It shows the same notifications as the dashboard (order
+activated, block request approved/rejected, delivery deadline, etc.),
+newest first. Tabs: "All" and "Unread".
+
+- Tap a notification to jump to the linked order (queue / incoming).
+- Swipe a card left to reveal the delete button.
+- When you open the page, notifications are **automatically marked as
+  read** shortly after — no need to do it manually; there's also a
+  "Mark all read" button. Notifications are not deleted, only marked read.
+
+Push notifications (while the tablet is locked or in another app) are set
+up automatically on first sign-in (the system asks for permission).
+
+### 4.7 Block request
 
 1. Tap **Block request** on the Active Work screen.
 2. Enter the reason (e.g. "no sheet metal in color 7016").
 3. Send. The process stops; awaits the decision from the dashboard.
 
-### 4.7 Sign out (Checkout)
+### 4.8 Sign out (Checkout)
 
 At the end of the shift → **Sign out**. The system records the work
 hours that appear in the *Worker hours* report.

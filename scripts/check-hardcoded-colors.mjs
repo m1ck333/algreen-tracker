@@ -36,12 +36,10 @@ const EXEMPT_FILES = [
   /pages\/admin\/MaterialsPage\.tsx$/,
   /pages\/admin\/MaterialsImportModal\.tsx$/,
   /pages\/admin\/SuperAdminsPanel\.tsx$/,
-  /pages\/admin\/KorisniciPage\.tsx$/,
   /pages\/admin\/ProcessesPage\.tsx$/,
   /pages\/admin\/ProductCategoriesPage\.tsx$/,
   /pages\/admin\/AllPaymentsPage\.tsx$/,
   /pages\/admin\/CategoryDetailPage\.tsx$/,
-  /pages\/admin\/FirmaPage\.tsx$/,
   /pages\/reports\/.+\.tsx$/,        // chart palettes (Excel parity)
   /pages\/coordinator\/CoordinatorDashboard\.tsx$/, // status palette
   /pages\/sales\/SalesDashboard\.tsx$/,
@@ -68,6 +66,44 @@ const EXEMPT_FILES = [
 // Match #abc / #aabbcc / #aabbccdd, rgb(...), rgba(...), named CSS colors
 // like 'red' / 'blue' are too noisy to flag — skip those.
 const COLOR_RE = /(?:#[0-9a-fA-F]{3,8}\b|\brgba?\([^)]+\))/g;
+
+// ── Neutral-surface pass (runs on EXEMPT files) ─────────────────────────
+// A whole-file exemption for ONE legit color (an Excel fill, a chart palette,
+// a picker default) silently hides OTHER theme-breaking colors in the same
+// file — e.g. a hardcoded `background: '#fafafa'` on a container that then
+// looks white on the dark theme (the logo-box bug). So even in exempt files
+// we still flag a NEUTRAL (grayscale/white/black) color used as a
+// `background`/`border` surface — those must always be antd tokens. We do NOT
+// flag semantic colors (greens/reds/blues = palettes) or `fillColor:` (Excel),
+// and we skip the intentionally fixed dark-UI shells.
+const NEUTRAL_SURFACE_PROP = /\b(background(Color)?|border(Color|Top|Bottom|Left|Right)?)\b/;
+const DARK_UI_EXEMPT = [
+  /components\/SidebarFooter\.tsx$/,
+  /components\/SidebarMenu\.tsx$/,
+  /layouts\/MainLayout\.tsx$/,
+  /layouts\/AuthLayout\.tsx$/,
+  /pages\/login\/LoginPage\.tsx$/,
+];
+
+/** A color is "neutral" if its RGB channels are near-equal (gray/white/black). */
+function isNeutralColor(c) {
+  let r, g, b;
+  const hex = c.match(/^#([0-9a-fA-F]{3,8})$/);
+  if (hex) {
+    let h = hex[1];
+    if (h.length === 3) h = h.split('').map((x) => x + x).join('');
+    if (h.length === 8) h = h.slice(0, 6); // drop alpha
+    if (h.length !== 6) return false;
+    r = parseInt(h.slice(0, 2), 16);
+    g = parseInt(h.slice(2, 4), 16);
+    b = parseInt(h.slice(4, 6), 16);
+  } else {
+    const m = c.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (!m) return false;
+    [r, g, b] = [+m[1], +m[2], +m[3]];
+  }
+  return Math.max(r, g, b) - Math.min(r, g, b) <= 20;
+}
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
@@ -99,6 +135,30 @@ for (const dir of SCAN_DIRS) {
   }
 }
 
+// Second pass: neutral background/border colors in EXEMPT files (non-exempt
+// files are already fully covered above). Catches the logo-box class of bug.
+for (const dir of SCAN_DIRS) {
+  for (const file of walk(dir)) {
+    const rel = file.slice(ROOT.length + 1);
+    if (!EXEMPT_FILES.some((re) => re.test(rel))) continue;      // only exempt files
+    if (DARK_UI_EXEMPT.some((re) => re.test(rel))) continue;     // fixed dark shells
+    const lines = readFileSync(file, 'utf8').split('\n');
+    lines.forEach((line, i) => {
+      if (/^\s*(?:\/\/|\*|\/\*)/.test(line)) return;             // comments
+      if (/fillColor/.test(line)) return;                        // Excel export ARGB
+      if (/palette-ok/.test(line)) return;                       // explicit opt-out: intentional palette color
+      if (!NEUTRAL_SURFACE_PROP.test(line)) return;              // only background/border
+      const matches = line.match(COLOR_RE);
+      if (!matches) return;
+      for (const c of matches) {
+        if (isNeutralColor(c)) {
+          hits.push({ file: rel, line: i + 1, text: line.trim(), color: c });
+        }
+      }
+    });
+  }
+}
+
 if (hits.length === 0) {
   console.log(`✓ hardcoded colors in non-exempt .tsx files: 0`);
   process.exit(0);
@@ -108,5 +168,5 @@ console.error(`✗ ${hits.length} hardcoded color${hits.length === 1 ? '' : 's'}
 for (const h of hits) {
   console.error(`  ${h.file}:${h.line}  ${h.color}  ← ${h.text.slice(0, 80)}${h.text.length > 80 ? '…' : ''}`);
 }
-console.error(`\nUse antd theme tokens via theme.useToken() instead. If the color is intentional (Excel parity, dark sidebar, configurable default), add the file to EXEMPT_FILES in scripts/check-hardcoded-colors.mjs.`);
+console.error(`\nUse antd theme tokens via theme.useToken() instead (e.g. token.colorFillTertiary / token.colorBorder / token.colorSplit).\n- Non-exempt files: any color literal is flagged.\n- Exempt files: only NEUTRAL background/border colors are flagged (the logo-box class of bug). If such a color is an intentional palette value, add an inline /* palette-ok */ comment on that line.`);
 process.exit(1);

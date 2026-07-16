@@ -86,7 +86,8 @@ Sidebar prikazuje samo one stavke koje uloga korisnika može da otvori.
 - **Vremena procesa** — izveštaji o trajanju procesa i radnim satima.
 - **Administracija** — korisnici, procesi, kategorije proizvoda, tipovi
   narudžbina, specijalni zahtevi, smene.
-- **Uputstvo** (ovaj dokument) — u footeru sidebar-a.
+- **Uputstvo** (ovaj dokument) i **Šta je novo** (spisak nedavnih
+  izmena i novih funkcija) — u grupi „Informacije" u footeru sidebar-a.
 
 U levom donjem uglu su i:
 - **Obaveštenja** (zvonce sa brojem nepročitanih) — videti 3.9.
@@ -511,6 +512,12 @@ Akcije:
 - **Obriši** (kanta).
 - **Označi sve kao pročitano** ili **Obriši sve**.
 
+Kada otvorite zvonce, obaveštenja se kratko potom **automatski
+označavaju kao pročitana** (brojač nepročitanih se sam čisti) — ne
+morate ručno da klikćete „Označi sve kao pročitano". Obaveštenja se ne
+brišu, samo prelaze u pročitana. Isto važi i za stranicu obaveštenja na
+tabletu.
+
 Push obaveštenja (browser i mobile) se podešavaju automatski kod prve
 prijave (sistem traži dozvolu).
 
@@ -703,13 +710,15 @@ ispod minimuma, sistem automatski obaveštava menadžment:
 3. Ikona se pojavljuje na home screen-u. Aplikacija se ponaša kao
    native app (offline, push obaveštenja).
 
-### 4.2 Prijava i check-in
+### 4.2 Prijava
 
 1. Prijavi se istim podacima kao na desktopu (Kod firme + email +
    lozinka).
-2. **Check-in** — bira se proces na kome ćeš danas raditi (npr.
-   PRESOVANJE). Vide se samo procesi za koje si registrovan u sistemu.
-3. Od trenutka check-in-a sistem prati vreme tvoje smene.
+2. Posle prijave odmah se otvara **Red čekanja** sa stavkama za procese
+   za koje si registrovan u sistemu — nema zasebnog koraka „check-in".
+3. Radna smena počinje **automatski** od trenutka prijave (sistem sam
+   otvara radnu sesiju); vreme se prati od tada, a formalno se zatvara
+   kada se odjaviš (ili automatskom odjavom po isteku smene).
 
 #### Auto-odjava i prekovremeni rad
 
@@ -799,13 +808,30 @@ se prikazuju kao zasebne kartice:
 Pokazuje narudžbine koje će **uskoro biti spremne** za tebe — proces
 od kog ti zavisiš još traje. Korisno za pripremu.
 
-### 4.6 Zahtev za blokadu
+### 4.6 Obaveštenja
+
+Tablet ima svoju stranicu **Obaveštenja** (ikonica zvona u donjoj
+navigaciji). Prikazuje ista obaveštenja kao dashboard (aktivirana
+narudžbina, odobren/odbijen zahtev za blokadu, rok isporuke i sl.),
+sortirana od najnovijih. Kartice: „Sve" i „Nepročitane".
+
+- Tap na obaveštenje vodi na povezanu narudžbinu (red čekanja /
+  dolazeće).
+- Prevlačenje kartice ulevo otkriva dugme za brisanje.
+- Kada otvoriš stranicu, obaveštenja se kratko potom **automatski
+  označavaju kao pročitana** — ne moraš ručno; postoji i dugme „Označi
+  sve kao pročitano". Obaveštenja se ne brišu, samo prelaze u pročitana.
+
+Push obaveštenja (dok je tablet zaključan ili u drugoj aplikaciji)
+podešavaju se automatski pri prvoj prijavi (sistem traži dozvolu).
+
+### 4.7 Zahtev za blokadu
 
 1. Klik **Zahtev za blokadu** u Active Work ekranu.
 2. Upiši razlog (npr. "nema lima u boji 7016").
 3. Pošalji. Proces se zaustavlja; čeka odluku iz dashboarda.
 
-### 4.7 Odjava (Checkout)
+### 4.8 Odjava (Checkout)
 
 Na kraju smene → **Odjavi se**. Sistem zapisuje radne sate koji se
 pojavljuju u izveštaju *Sati rada radnika*.

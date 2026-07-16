@@ -50,6 +50,7 @@ export function TenantProfilePage({ hideHeader = false }: TenantProfilePageProps
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const filterW = useFilterWidth();
+  const { token } = theme.useToken();
 
   const { data: tenant } = useQuery({
     queryKey: ['my-tenant'],
@@ -240,12 +241,12 @@ export function TenantProfilePage({ hideHeader = false }: TenantProfilePageProps
               style={{
                 width: 120,
                 height: 80,
-                border: '1px dashed #d9d9d9',
+                border: `1px dashed ${token.colorBorder}`,
                 borderRadius: 6,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: '#fafafa',
+                background: token.colorFillTertiary,
                 overflow: 'hidden',
                 padding: 8,
               }}

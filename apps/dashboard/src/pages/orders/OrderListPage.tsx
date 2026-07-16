@@ -822,7 +822,7 @@ export function OrderListPage() {
                   { color: '#BFBFBF', label: t('orders.legend.pending') },
                 ].map((entry) => (
                   <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 18, height: 18, background: entry.color, border: '1px solid #ccc', display: 'inline-block' }} />
+                    <span style={{ width: 18, height: 18, background: entry.color, border: `1px solid ${token.colorBorder}`, display: 'inline-block' }} />
                     <span>{entry.label}</span>
                   </div>
                 ))}
@@ -832,7 +832,7 @@ export function OrderListPage() {
                   <span>{t('orders.legend.notApplicable')}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 18, height: 18, background: '#BFBFBF', border: `3px solid ${READY_BORDER_COLOR}`, display: 'inline-block' }} />
+                  <span style={{ width: 18, height: 18, background: '#BFBFBF' /* palette-ok: pending status swatch */, border: `3px solid ${READY_BORDER_COLOR}`, display: 'inline-block' }} />
                   <span>{t('orders.legend.readyBorder')}</span>
                 </div>
               </div>
@@ -1583,7 +1583,7 @@ export function OrderListPage() {
                                 {startedProcesses.map((proc) => {
                                   const process = processMap.get(proc.processId);
                                   return (
-                                    <div key={proc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
+                                    <div key={proc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: `1px solid ${token.colorSplit}` }}>
                                       <span><b>{process?.code ?? '?'}</b> — {process?.name ?? proc.processId} ({formatDurationSec(proc.totalDurationMinutes)})</span>
                                       <Select
                                         size="small"

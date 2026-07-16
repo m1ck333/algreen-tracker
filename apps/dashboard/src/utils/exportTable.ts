@@ -51,7 +51,7 @@ function formatTimestamp(d: Date): string {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}. ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function toExcelArgb(hex: string | undefined): string | undefined {
+export function toExcelArgb(hex: string | undefined): string | undefined {
   if (!hex) return undefined;
   const clean = hex.replace('#', '').toUpperCase();
   if (clean.length === 6) return `FF${clean}`;
@@ -59,14 +59,14 @@ function toExcelArgb(hex: string | undefined): string | undefined {
   return undefined;
 }
 
-function valueToString(v: unknown): string {
+export function valueToString(v: unknown): string {
   if (v === null || v === undefined) return '';
   if (v instanceof Date) return v.toISOString();
   if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
   return String(v);
 }
 
-function escapeCsv(s: string): string {
+export function escapeCsv(s: string): string {
   if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
     return `"${s.replace(/"/g, '""')}"`;
   }

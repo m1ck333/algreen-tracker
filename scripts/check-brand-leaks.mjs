@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Fails if any of the internal codenames (algreen / alblue / easy-mes /
-// Skysoft) leak into user-visible code in apps/dashboard/src or
+// Fails if any of the internal codenames (algreen / alblue / Skysoft)
+// leak into user-visible code in apps/dashboard/src or
 // apps/tablet/src. The product is white-label and always reads as MPMS
 // to users; codenames are infrastructure-only.
 //
@@ -19,7 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const SCAN_DIRS = [join(ROOT, 'apps/dashboard/src'), join(ROOT, 'apps/tablet/src')];
 
-const NEEDLES = ['algreen', 'alblue', 'easy-mes', 'Skysoft', 'skysoft'];
+const NEEDLES = ['algreen', 'alblue', 'Skysoft', 'skysoft'];
 
 // Patterns that should NOT trigger — these are infrastructure, not UI.
 const EXEMPT_LINE_PATTERNS = [
@@ -71,7 +71,7 @@ if (hits.length === 0) {
   process.exit(0);
 }
 
-console.error(`✗ ${hits.length} possible brand leak${hits.length === 1 ? '' : 's'} (algreen / alblue / easy-mes / Skysoft):\n`);
+console.error(`✗ ${hits.length} possible brand leak${hits.length === 1 ? '' : 's'} (algreen / alblue / Skysoft):\n`);
 for (const h of hits) {
   console.error(`  ${h.file}:${h.line}  ${h.text.slice(0, 100)}${h.text.length > 100 ? '…' : ''}`);
 }

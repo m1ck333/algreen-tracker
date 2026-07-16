@@ -54,7 +54,7 @@ export function ProcessTimeline({
                 top: CIRCLE / 2 - 1,
                 width: x2 - x1,
                 height: 2,
-                backgroundColor: prevCompleted ? '#92D050' : '#D9D9D9',
+                backgroundColor: prevCompleted ? '#92D050' : '#D9D9D9', // palette-ok: connector (done / not-done)
               }}
             />
           );
@@ -103,7 +103,7 @@ export function ProcessTimeline({
                 <Text style={{
                   fontSize: 10,
                   marginTop: 2,
-                  color: '#888',
+                  color: token.colorTextSecondary,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',

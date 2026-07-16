@@ -15,7 +15,7 @@ export function SubProcessTooltip({ subProcesses, processMap }: { subProcesses: 
   const active = subProcesses.filter((sp) => !sp.isWithdrawn);
   if (active.length === 0) return null;
   return (
-    <div style={{ marginTop: 4, paddingTop: 4, borderTop: '2px solid rgba(255,255,255,0.5)', fontSize: 11 }}>
+    <div style={{ marginTop: 4, paddingTop: 4, borderTop: '2px solid rgba(255,255,255,0.5)' /* palette-ok: divider on colored status cell */, fontSize: 11 }}>
       {active.map((sp) => {
         const spTime = sp.totalDurationMinutes + (sp.isTimerRunning && sp.currentLogStartedAt ? Math.floor((Date.now() - new Date(sp.currentLogStartedAt).getTime()) / 1000) : 0);
         // Find sub-process name from process definitions
