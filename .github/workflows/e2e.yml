@@ -99,7 +99,7 @@ jobs:
           tail -100 backend/be.log || true
           exit 1
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
